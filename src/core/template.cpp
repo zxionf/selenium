@@ -1,0 +1,50 @@
+#include "core/template.hpp"
+#include <chrono>
+#include <ctime>
+#include <sstream>
+#include <iomanip>
+
+namespace core {
+
+std::string render_design_template(const std::string& id) {
+    return "# " + id + "\n\n"
+           "## Context\n"
+           "<!-- 为什么发起这次变更 -->\n\n"
+           "## 变更内容\n"
+           "<!-- 改什么，只写设计决策，不写实现步骤 -->\n\n"
+           "## 影响面\n"
+           "<!-- 影响哪些模块、接口、数据 -->\n\n"
+           "## 兼容性与迁移\n"
+           "<!-- 是否需要迁移、是否破坏兼容 -->\n";
+}
+
+std::string render_tasks_template(const std::string& id) {
+    return "# " + id + " 任务清单\n\n"
+           "- [ ] 步骤 1\n"
+           "- [ ] 步骤 2\n";
+}
+
+std::string render_decisions_header() {
+    return "# Decisions\n";
+}
+
+std::string render_decision_entry(int index, const std::string& change_id,
+                                  const std::string& context,
+                                  const std::string& decision,
+                                  const std::string& consequences) {
+    auto now = std::chrono::system_clock::now();
+    auto time_t = std::chrono::system_clock::to_time_t(now);
+    std::tm tm = *std::gmtime(&time_t);
+
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S UTC");
+    std::string timestamp = oss.str();
+
+    return "## [" + std::to_string(index) + "] " + timestamp + "\n"
+           "Change: " + change_id + "\n"
+           "Context: " + context + "\n"
+           "Decision: " + decision + "\n"
+           "Consequences: " + consequences + "\n";
+}
+
+} // namespace core

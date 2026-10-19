@@ -4,6 +4,25 @@
 
 namespace core {
 
+bool is_initialized(const std::filesystem::path& start) {
+    std::filesystem::path current = std::filesystem::absolute(start);
+
+    while (true) {
+        if (std::filesystem::is_directory(current / ".design") &&
+            std::filesystem::is_directory(current / ".agent")) {
+            return true;
+        }
+
+        auto parent = current.parent_path();
+        if (parent == current) {
+            break;
+        }
+        current = parent;
+    }
+
+    return false;
+}
+
 std::filesystem::path find_design_root(const std::filesystem::path& start) {
     std::filesystem::path current = std::filesystem::absolute(start);
 

@@ -1,0 +1,85 @@
+#include "cli/commands.hpp"
+
+#include <nlohmann/json.hpp>
+
+#include <filesystem>
+#include <fstream>
+#include <memory>
+#include <string>
+
+#include "core/template.hpp"
+#include "util/exit_codes.hpp"
+#include "util/output.hpp"
+
+namespace fs = std::filesystem;
+
+namespace cli {
+
+namespace {
+
+void write_file(const fs::path& path, const std::string& content) {
+    std::ofstream out(path);
+    out << content;
+}
+
+} // namespace
+
+void register_init(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
+    struct Args {
+        std::string directory;
+    };
+    auto args = std::make_shared<Args>();
+
+    auto* cmd_init = app.add_subcommand("init", "Initialize .design/ and .agent/ directories");
+    cmd_init->add_option("--root", global_opts.root, "Target directory to initialize (default: current directory)");
+    add_output_opt(cmd_init, global_opts);
+    cmd_init->add_option("directory", args->directory, "Target directory (overrides --root)");
+    cmd_init->footer("Example:\n  sele init\n  sele init ./my-project");
+    cmd_init->callback([&global_opts, &exit_code, args]() {
+        util::Output output(global_opts.output_format);
+        try {
+            fs::path target;
+            if (!args->directory.empty()) {
+                target = args->directory;
+            } else if (!global_opts.root.empty()) {
+                target = global_opts.root;
+            } else {
+                target = fs::current_path();
+            }
+            target = fs::absolute(target);
+
+            fs::path design_dir = target / ".design";
+            fs::path agent_dir = target / ".agent";
+
+            if (fs::exists(design_dir) || fs::exists(agent_dir)) {
+                output.error("Already initialized: .design/ or .agent/ already exists in " + target.string(), "");
+                exit_code = exit_codes::STATE_CONFLICT;
+                return;
+            }
+
+            fs::create_directories(design_dir / "changes");
+            fs::create_directories(agent_dir / "work");
+
+            write_file(design_dir / "INDEX.md", core::render_design_index_template());
+            write_file(design_dir / "SPEC.md", core::render_spec_template());
+            write_file(design_dir / "DECISIONS.log", core::render_decisions_header());
+            write_file(agent_dir / "INDEX.md", core::render_agent_index_template());
+            write_file(agent_dir / "CONTRACT.md", core::render_contract_template());
+            write_file(agent_dir / "STATE.md", core::render_state_template());
+
+            nlohmann::json result;
+            result["initialized"] = true;
+            result["root"] = target.string();
+            result["design_path"] = design_dir.string();
+            result["agent_path"] = agent_dir.string();
+
+            output.print_json(result);
+            exit_code = exit_codes::SUCCESS;
+        } catch (const std::exception& e) {
+            output.error(e.what(), "");
+            exit_code = exit_codes::ENV_ERROR;
+        }
+    });
+}
+
+} // namespace cli

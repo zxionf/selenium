@@ -1,108 +1,159 @@
-# design CLI
+# sele CLI
 
-A C++20 command-line tool for managing `.design/` and `.agent/` directories, supporting the minimal closed loop of "change creation → decision append → status query → rule check → fold preview".
+一个用于管理 `.design/` 与 `.agent/` 目录的 C++20 命令行工具，支撑「创建变更 → 追加决策 → 查询状态 → 规则检查 → 归档预览」这一最小闭环。
 
-## Build
+## 构建
 
 ```bash
-# Requires: CMake ≥ 3.20, C++20 compiler
+# 依赖：CMake ≥ 3.20、C++20 编译器
 cmake -B build -S .
 cmake --build build
 ```
 
-The binary will be at `build/design` (or `build/build/design.exe` on Windows).
+生成的二进制文件位于 `build/build/sele`（Windows 下为 `build/build/sele.exe`）。
 
-Dependencies (CLI11, nlohmann/json) are fetched automatically via CMake FetchContent and statically linked.
+依赖项（CLI11、nlohmann/json）通过 CMake FetchContent 自动拉取，二者均为 header-only。
 
-## Commands
-
-All commands support:
-- `--root <path>` — Project root (default: current dir, searches upward for `.design/`)
-- `--output text|json` — Output format (default: text)
-
-### `design new --slug <name>`
-
-Create a new change with design/ and work/ directories.
+默认（`SELE_SHARED_DEPS=OFF`）直接将其包含进程序内部，不生成任何共享库：
 
 ```bash
-design new --slug my-feature
+cmake -B build -S .
+cmake --build build
 ```
 
-Exit codes: 0=success, 1=invalid slug, 2=ID exists, 4=env error
-
-### `design append-decision --context <c> --decision <d> --consequences <e> [--change-id <id>]`
-
-Append a decision record to `.design/DECISIONS.log`.
+如需改为动态链接，可开启选项，将两个依赖分别封装为共享库 `cli11_shared`、`nlohmann_json_shared`（导出 `sele_cli11_version()`、`sele_nlohmann_json_version()`）再链接：
 
 ```bash
-design append-decision --context "Choose C++20" --decision "Use modules" --consequences "Cleaner imports" --change-id 20261018-my-feature
+cmake -B build -S . -DSELE_SHARED_DEPS=ON
+cmake --build build
 ```
 
-Exit codes: 0=success, 1=missing params, 4=env error
+开启后，Windows 下会在与 `sele.exe` 相同的输出目录生成 `libcli11_shared.dll`、`libnlohmann_json_shared.dll`（Linux 下为 `lib*.so`，通过 `$ORIGIN` rpath 定位）。无论哪种模式，都可用 `sele --version` 查看 `sele` 及依赖库版本。
 
-### `design status [--output json]`
+> 说明：这两个库是 header-only，其模板代码无论如何都会随头文件编译进 `sele.exe`；共享库仅承载版本符号，用于建立并验证运行时的动态依赖关系。
 
-Show current active change status (read-only, fast).
+## 命令
+
+所有命令均支持以下全局选项：
+
+- `--root <path>` — 项目根目录（默认：当前目录，并向上查找 `.design/`）
+- `--output text|json` — 输出格式（默认：text）
+
+### `sele init [directory]`
+
+初始化项目，创建 `.design/`、`.agent/` 目录及其模板文件（INDEX.md、SPEC.md、DECISIONS.log、CONTRACT.md、STATE.md 等）。
 
 ```bash
-design status --output json
+sele init                 # 默认使用当前工作目录
+sele init ./my-project    # 指定目录（位置参数）
+sele init --root ./my-project  # 也可用 --root 指定
 ```
 
-Exit codes: 0=success, 4=env error
+- 若目标目录已存在 `.design/` 或 `.agent/`，则报错退出（不会覆盖）。
+- 退出码：0=成功，2=已初始化，4=环境错误
 
-### `design lint [--fix]`
+### `sele new --slug <name>`
 
-Run mechanical rule checks:
-1. ID bidirectional consistency
-2. DECISIONS.log append-only (via git diff)
-3. SPEC.md process words (TODO, WIP, 待办, 下一步, 进行中)
-4. Directory integrity (design.md, tasks.md exist)
+创建一次新的变更，同时生成 design 与 work 目录。
+
+> 必须先执行 `sele init` 完成初始化，否则 `new` 会报错并提示先初始化。
 
 ```bash
-design lint
-design lint --fix  # auto-fix missing template files
+sele new --slug my-feature
 ```
 
-Exit codes: 0=all pass, 3=any check fails, 4=env error
+退出码：0=成功，1=slug 非法，2=ID 已存在，4=未初始化或环境错误
 
-### `design close <id> --dry-run`
+### `sele append-decision --context <c> --decision <d> --consequences <e> [--change-id <id>]`
 
-Preview closing a change (MVP: only `--dry-run` implemented).
+向 `.design/DECISIONS.log` 追加一条决策记录。
 
 ```bash
-design close 20261018-my-feature --dry-run
+sele append-decision --context "选用 C++20" --decision "使用 modules" --consequences "导入更简洁" --change-id 20261018-my-feature
 ```
 
-Exit codes: 0=success, 1=missing --dry-run, 2=ID not found, 4=env error
+退出码：0=成功，1=缺少参数，4=环境错误
 
-## Exit Codes
+### `sele status [--output json]`
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | Usage error (missing/invalid params) |
-| 2 | State conflict (ID exists, ID not found) |
-| 3 | Lint check failed |
-| 4 | Environment error (dir not found, git unavailable, permission) |
+查看当前活动变更的状态（只读、快速）。
 
-## JSON Output
+```bash
+sele status --output json
+```
 
-Every command supports `--output json` with stable field names. Output is parsable by `jq`.
+退出码：0=成功，4=环境错误
 
-Example:
+### `sele lint [--fix]`
+
+运行机械化的规则检查：
+
+1. ID 双向一致性（`.design/changes/<id>` 与 `.agent/work/<id>` 互相对应）
+2. DECISIONS.log 只允许追加（通过 git diff 判断）
+3. SPEC.md 不得包含过程性词汇（TODO、WIP、待办、下一步、进行中）
+4. 目录完整性（design.md、tasks.md 是否存在）
+
+```bash
+sele lint
+sele lint --fix  # 自动补齐缺失的模板文件
+```
+
+退出码：0=全部通过，3=存在检查失败，4=环境错误
+
+### `sele close <id> --dry-run`
+
+预览关闭一次变更（MVP 仅实现 `--dry-run`）。
+
+```bash
+sele close 20261018-my-feature --dry-run
+```
+
+退出码：0=成功，1=缺少 --dry-run，2=ID 不存在，4=环境错误
+
+## 退出码
+
+| 代码 | 含义 |
+|------|------|
+| 0 | 成功 |
+| 1 | 用法错误（缺少或非法参数） |
+| 2 | 状态冲突（ID 已存在、ID 不存在） |
+| 3 | lint 检查未通过 |
+| 4 | 环境错误（目录不存在、git 不可用、权限不足） |
+
+## JSON 输出
+
+每个命令都支持 `--output json`，字段名稳定，可被 `jq` 解析。
+
+示例：
+
 ```json
 {"id":"20261018-my-feature","design_path":".design/changes/.../design.md","work_path":".agent/work/.../tasks.md","state_updated":true}
 ```
 
-## Testing
+## 项目结构
 
-```bash
-ctest --output-on-failure
+```
+src/
+├── main.cpp              # 入口：解析全局选项、注册子命令、统一错误处理
+├── cli/                  # 各子命令实现
+│   ├── commands.hpp/.cpp # 共享的 GlobalOptions 与子命令注册声明
+│   ├── init.cpp
+│   ├── new.cpp
+│   ├── append_decision.cpp
+│   ├── status.cpp
+│   ├── lint.cpp
+│   └── close.cpp
+├── core/                 # 核心逻辑
+│   ├── root.hpp/.cpp     # 查找 .design/ 与 .agent/ 根目录
+│   ├── id.hpp/.cpp       # slug 校验、ID 生成与解析
+│   ├── template.hpp/.cpp # design.md / tasks.md / DECISIONS.log 模板渲染
+│   └── git.hpp/.cpp      # git 调用与仓库状态探测
+└── util/                 # 通用工具
+    ├── output.hpp/.cpp   # text/json 输出与错误输出
+    └── exit_codes.hpp    # 退出码常量
 ```
 
-Runs 10 test cases covering happy paths and error conditions.
-
-## Project Structure
+被管理的目录结构：
 
 ```
 .design/
@@ -121,8 +172,22 @@ Runs 10 test cases covering happy paths and error conditions.
         └── tasks.md
 ```
 
-ID format: `<YYYYMMDD>-<slug>` (e.g., `20261018-my-feature`)
+ID 格式：`<YYYYMMDD>-<slug>`（例如 `20261018-my-feature`）。
 
-## Decisions
+## 测试
 
-See `.design/DECISIONS.log` for implementation decisions.
+```bash
+ctest --output-on-failure
+```
+
+覆盖 10 个测试用例，涉及正常路径与错误场景。
+
+> 注意：Windows 下 `tests/cli_tests.ps1` 的参数名为 `-DesignBin`，而 CMake 以 `-SeleBin` 调用，二者不一致会导致测试无法启动；此外测试用例中硬编码了日期（如 `20261018`），而 ID 使用运行时的 UTC 日期生成，因此跨日期运行时可能出现不匹配。可手动运行：
+>
+> ```powershell
+> powershell -ExecutionPolicy Bypass -File tests/cli_tests.ps1 -DesignBin build/build/sele.exe
+> ```
+
+## 决策
+
+实现过程中的决策记录见 `.design/DECISIONS.log`。

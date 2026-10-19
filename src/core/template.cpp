@@ -6,6 +6,32 @@
 
 namespace core {
 
+std::string render_design_index_template() {
+    return "# Design Index\n\n"
+           "<!-- 设计文档索引：列出 SPEC、changes 等入口 -->\n";
+}
+
+std::string render_spec_template() {
+    return "# Spec\n\n"
+           "## 目标\n"
+           "<!-- 只写稳定的规格，不写过程性内容 -->\n\n"
+           "## 约束\n\n";
+}
+
+std::string render_agent_index_template() {
+    return "# Agent Index\n\n"
+           "<!-- agent 工作区索引：列出契约、状态与任务入口 -->\n";
+}
+
+std::string render_contract_template() {
+    return "# Contract\n\n"
+           "<!-- 约定 agent 的行为边界与交付标准 -->\n";
+}
+
+std::string render_state_template() {
+    return "# Agent State\n\nActive Change: 无\n";
+}
+
 std::string render_design_template(const std::string& id) {
     return "# " + id + "\n\n"
            "## Context\n"

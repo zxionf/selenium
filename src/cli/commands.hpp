@@ -1,0 +1,25 @@
+#pragma once
+
+#include <CLI/CLI.hpp>
+#include <filesystem>
+
+#include "util/output.hpp"
+
+struct GlobalOptions {
+    std::filesystem::path root;
+    util::Output::Format output_format = util::Output::Format::TEXT;
+};
+
+void add_output_opt(CLI::App* sub, GlobalOptions& global_opts);
+void add_global_opts(CLI::App* sub, GlobalOptions& global_opts);
+
+namespace cli {
+
+void register_init(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_new(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_append_decision(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_lint(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+
+} // namespace cli

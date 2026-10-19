@@ -30,8 +30,30 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(CLI11 nlohmann_json)
 
+# CLI11 and nlohmann/json are header-only. By default they are compiled
+# directly into the executable (no shared libraries). Set SELE_SHARED_DEPS=ON
+# to instead wrap each into a shared library and link them dynamically.
+option(SELE_SHARED_DEPS "Link CLI11 and nlohmann/json as shared libraries" OFF)
+
+if(SELE_SHARED_DEPS)
+    # Wrap each header-only dependency into a shared library that exports the
+    # version symbols; the executable references these symbols (via --version)
+    # and therefore depends on the shared libraries at runtime.
+    add_library(cli11_shared SHARED src/thirdparty/cli11_shared.cpp)
+    target_link_libraries(cli11_shared PUBLIC CLI11::CLI11)
+    target_compile_definitions(cli11_shared PRIVATE SELE_DEP_BUILD)
+    target_include_directories(cli11_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+    add_library(nlohmann_json_shared SHARED src/thirdparty/nlohmann_json_shared.cpp)
+    target_link_libraries(nlohmann_json_shared PUBLIC nlohmann_json::nlohmann_json)
+    target_compile_definitions(nlohmann_json_shared PRIVATE SELE_DEP_BUILD)
+    target_include_directories(nlohmann_json_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+endif()
+
 add_executable(sele
     src/main.cpp
+    src/cli/commands.cpp
+    src/cli/init.cpp
     src/cli/new.cpp
     src/cli/append_decision.cpp
     src/cli/status.cpp
@@ -48,14 +70,29 @@ target_include_directories(sele PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_link_libraries(sele PRIVATE
-    CLI11::CLI11
-    nlohmann_json::nlohmann_json
-)
+if(SELE_SHARED_DEPS)
+    target_compile_definitions(sele PRIVATE SELE_DEPS_SHARED)
+    target_link_libraries(sele PRIVATE cli11_shared nlohmann_json_shared)
 
-set_target_properties(sele PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build
-)
+    set_target_properties(sele cli11_shared nlohmann_json_shared PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build
+        LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build
+        ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build
+    )
+
+    if(UNIX)
+        set_target_properties(sele PROPERTIES
+            BUILD_RPATH "$ORIGIN"
+            INSTALL_RPATH "$ORIGIN"
+        )
+    endif()
+else()
+    target_link_libraries(sele PRIVATE CLI11::CLI11 nlohmann_json::nlohmann_json)
+
+    set_target_properties(sele PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build
+    )
+endif()
 
 enable_testing()
 if(WIN32)

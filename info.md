@@ -182,11 +182,13 @@ ctest --output-on-failure
 
 覆盖 10 个测试用例，涉及正常路径与错误场景。
 
-> 注意：Windows 下 `tests/cli_tests.ps1` 的参数名为 `-DesignBin`，而 CMake 以 `-SeleBin` 调用，二者不一致会导致测试无法启动；此外测试用例中硬编码了日期（如 `20261018`），而 ID 使用运行时的 UTC 日期生成，因此跨日期运行时可能出现不匹配。可手动运行：
+> 说明：测试用例中的 ID 在运行时从 `new` 的 JSON 输出读取（不再硬编码日期），因此跨日期运行不会失败。Windows 下手动运行：
 >
 > ```powershell
-> powershell -ExecutionPolicy Bypass -File tests/cli_tests.ps1 -DesignBin build/build/sele.exe
+> powershell -ExecutionPolicy Bypass -File tests/cli_tests.ps1 -SeleBin build/build/sele.exe
 > ```
+>
+> Linux/macOS 下为 `bash tests/cli_tests.sh build/build/sele`（需要 `jq`）。
 
 ## 决策
 

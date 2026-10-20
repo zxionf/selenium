@@ -5,10 +5,11 @@
 - 依赖为 header-only，默认直接编入可执行文件。`-DSELE_SHARED_DEPS=ON` 才把它们封装成共享库（`.dll`/`.so`）动态链接，相关代码在 `src/thirdparty/`。
 - 默认未设置 `CMAKE_BUILD_TYPE`，CMake 会加 `-g`，exe 约 1.4 MB；需要更小可加 `-DCMAKE_BUILD_TYPE=Release`。
 
-## 测试（当前已知损坏，别盲信 ctest）
-- `ctest --output-on-failure` **无法启动测试**：CMake 传 `-SeleBin`，而 `tests/cli_tests.ps1` 声明的参数是 `-DesignBin`。
-- 即使能启动，`tests/cli_tests.ps1` 与 `tests/cli_tests.sh` 硬编码日期 `20261018`，而 ID 用运行时 UTC 日期（`<YYYYMMDD>-<slug>`），非该日期必然失败。
-- 手动运行：`powershell -ExecutionPolicy Bypass -File tests/cli_tests.ps1 -DesignBin build/build/sele.exe`。
+## 测试
+- `ctest --output-on-failure` 可用（10 个用例，工作目录为仓库根）。
+- 用例 ID 不再硬编码：从 `new` 的 JSON 输出读取 `.id` 再用于路径与断言，跨 UTC 日期运行稳定。
+- ps1 脚本参数名为 `-SeleBin`，与 CMakeLists 的调用一致。手动运行：`powershell -ExecutionPolicy Bypass -File tests/cli_tests.ps1 -SeleBin build/build/sele.exe`。
+- Linux 手动运行：`bash tests/cli_tests.sh build/build/sele`，需要 `jq`。脚本用了 `sed -i` 与 `stat -c %Y`（GNU 语法），macOS 上需先换用 `gsed`/`gstat`。
 - 测试脚本直接手工创建 `.design/`/`.agent/` 目录（绕过 `sele init`），因此 `new` 的初始化检查能通过。
 
 ## 架构

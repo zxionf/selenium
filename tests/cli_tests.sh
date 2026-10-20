@@ -36,12 +36,13 @@ Active Change: 无" > "$tmpdir/.agent/STATE.md"
 test_new_success() {
     local proj=$(setup_project)
     local out=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json)
-    echo "$out" | jq -e '.id == "20261018-demo-change"' >/dev/null
-    [[ -d "$proj/.design/changes/20261018-demo-change" ]]
-    [[ -d "$proj/.agent/work/20261018-demo-change" ]]
-    [[ -f "$proj/.design/changes/20261018-demo-change/design.md" ]]
-    [[ -f "$proj/.agent/work/20261018-demo-change/tasks.md" ]]
-    grep -q "Active Change: 20261018-demo-change" "$proj/.agent/STATE.md"
+    echo "$out" | jq -e '.id | test("^[0-9]{8}-demo-change$")' >/dev/null
+    local id=$(echo "$out" | jq -r '.id')
+    [[ -d "$proj/.design/changes/$id" ]]
+    [[ -d "$proj/.agent/work/$id" ]]
+    [[ -f "$proj/.design/changes/$id/design.md" ]]
+    [[ -f "$proj/.agent/work/$id/tasks.md" ]]
+    grep -q "Active Change: $id" "$proj/.agent/STATE.md"
     rm -rf "$proj"
 }
 
@@ -65,12 +66,12 @@ test_new_invalid_slug() {
 # Test 4: append-decision success
 test_append_decision_success() {
     local proj=$(setup_project)
-    "$DESIGN_BIN" --root "$proj" new --slug demo-change --output json >/dev/null
+    local id=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json | jq -r '.id')
     "$DESIGN_BIN" --root "$proj" append-decision \
         --context "Test context" \
         --decision "Test decision" \
         --consequences "Test consequences" \
-        --change-id 20261018-demo-change \
+        --change-id "$id" \
         --output json >/dev/null
     "$DESIGN_BIN" --root "$proj" append-decision \
         --context "Test context 2" \
@@ -93,11 +94,11 @@ test_append_decision_missing() {
 # Test 6: status JSON output
 test_status_json() {
     local proj=$(setup_project)
-    "$DESIGN_BIN" --root "$proj" new --slug demo-change --output json >/dev/null
+    local id=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json | jq -r '.id')
     # Add a task as done
-    sed -i 's/- \[ \] 步骤 1/- [x] 步骤 1/' "$proj/.agent/work/20261018-demo-change/tasks.md"
+    sed -i 's/- \[ \] 步骤 1/- [x] 步骤 1/' "$proj/.agent/work/$id/tasks.md"
     local out=$("$DESIGN_BIN" --root "$proj" status --output json)
-    echo "$out" | jq -e '.active_id == "20261018-demo-change"' >/dev/null
+    echo "$out" | jq -e --arg id "$id" '.active_id == $id' >/dev/null
     echo "$out" | jq -e '.tasks.total == 2' >/dev/null
     echo "$out" | jq -e '.tasks.done == 1' >/dev/null
     rm -rf "$proj"
@@ -106,9 +107,9 @@ test_status_json() {
 # Test 7: lint ID inconsistency
 test_lint_id_inconsistency() {
     local proj=$(setup_project)
-    "$DESIGN_BIN" --root "$proj" new --slug demo-change --output json >/dev/null
+    local id=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json | jq -r '.id')
     # Remove work dir to create inconsistency
-    rm -rf "$proj/.agent/work/20261018-demo-change"
+    rm -rf "$proj/.agent/work/$id"
     local out=$("$DESIGN_BIN" --root "$proj" lint --output json 2>&1 || true)
     echo "$out" | jq -e '.passed == false' >/dev/null
     echo "$out" | jq -e '.checks[] | select(.name=="id_consistency") | .passed == false' >/dev/null
@@ -128,17 +129,17 @@ test_lint_spec_words() {
 # Test 9: close dry-run
 test_close_dry_run() {
     local proj=$(setup_project)
-    "$DESIGN_BIN" --root "$proj" new --slug demo-change --output json >/dev/null
-    local out=$("$DESIGN_BIN" --root "$proj" close 20261018-demo-change --dry-run --output json)
+    local id=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json | jq -r '.id')
+    local out=$("$DESIGN_BIN" --root "$proj" close "$id" --dry-run --output json)
     echo "$out" | jq -e '.dry_run == true' >/dev/null
-    echo "$out" | jq -e '.id == "20261018-demo-change"' >/dev/null
+    echo "$out" | jq -e --arg id "$id" '.id == $id' >/dev/null
     # Verify no files modified
-    local mtime1=$(stat -c %Y "$proj/.design/changes/20261018-demo-change/design.md")
-    local mtime2=$(stat -c %Y "$proj/.agent/work/20261018-demo-change/tasks.md")
+    local mtime1=$(stat -c %Y "$proj/.design/changes/$id/design.md")
+    local mtime2=$(stat -c %Y "$proj/.agent/work/$id/tasks.md")
     sleep 1
-    "$DESIGN_BIN" --root "$proj" close 20261018-demo-change --dry-run --output json >/dev/null
-    local mtime3=$(stat -c %Y "$proj/.design/changes/20261018-demo-change/design.md")
-    local mtime4=$(stat -c %Y "$proj/.agent/work/20261018-demo-change/tasks.md")
+    "$DESIGN_BIN" --root "$proj" close "$id" --dry-run --output json >/dev/null
+    local mtime3=$(stat -c %Y "$proj/.design/changes/$id/design.md")
+    local mtime4=$(stat -c %Y "$proj/.agent/work/$id/tasks.md")
     [[ $mtime1 -eq $mtime3 ]]
     [[ $mtime2 -eq $mtime4 ]]
     rm -rf "$proj"
@@ -147,8 +148,8 @@ test_close_dry_run() {
 # Test 10: close without dry-run
 test_close_no_dry_run() {
     local proj=$(setup_project)
-    "$DESIGN_BIN" --root "$proj" new --slug demo-change --output json >/dev/null
-    local out=$("$DESIGN_BIN" --root "$proj" close 20261018-demo-change --output json 2>&1 || true)
+    local id=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json | jq -r '.id')
+    local out=$("$DESIGN_BIN" --root "$proj" close "$id" --output json 2>&1 || true)
     echo "$out" | jq -e '.error' >/dev/null
     rm -rf "$proj"
 }

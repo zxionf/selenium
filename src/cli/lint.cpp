@@ -29,7 +29,7 @@ void register_lint(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     auto* cmd_lint = app.add_subcommand("lint", "Run mechanical rule checks on design/ and agent/");
     add_global_opts(cmd_lint, global_opts);
     cmd_lint->add_flag("--fix", args->fix, "Auto-fix missing template files (dir_integrity only)");
-    cmd_lint->footer("Example:\n  design lint\n  design lint --fix");
+    cmd_lint->footer("Example:\n  sele lint\n  sele lint --fix");
     cmd_lint->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
         try {

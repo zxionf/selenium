@@ -18,7 +18,7 @@ namespace cli {
 void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     auto* cmd_status = app.add_subcommand("status", "Show current active change status");
     add_global_opts(cmd_status, global_opts);
-    cmd_status->footer("Example:\n  design status --output json");
+    cmd_status->footer("Example:\n  sele status --output json");
     cmd_status->callback([&global_opts, &exit_code]() {
         util::Output output(global_opts.output_format);
         try {

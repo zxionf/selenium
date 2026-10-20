@@ -27,7 +27,7 @@ void register_new(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     cmd_new->set_help_all_flag("--help-all", "Expand all help");
     add_global_opts(cmd_new, global_opts);
     cmd_new->add_option("--slug", args->slug, "Slug for the change ID (lowercase, numbers, hyphens)")->required();
-    cmd_new->footer("Example:\n  design new --slug my-feature");
+    cmd_new->footer("Example:\n  sele new --slug my-feature");
     cmd_new->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
         try {
@@ -45,7 +45,7 @@ void register_new(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
 
             if (!core::validate_slug(args->slug)) {
                 output.error("Invalid slug: must contain only lowercase letters, numbers, and hyphens",
-                             "design new --slug valid-slug-name");
+                             "sele new --slug valid-slug-name");
                 exit_code = exit_codes::USAGE_ERROR;
                 return;
             }

@@ -27,12 +27,12 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     add_global_opts(cmd_close, global_opts);
     cmd_close->add_option("id", args->id, "Change ID to close")->required();
     cmd_close->add_flag("--dry-run", args->dry_run, "Preview only (required for MVP)");
-    cmd_close->footer("Example:\n  design close 20261018-my-feature --dry-run");
+    cmd_close->footer("Example:\n  sele close 20261018-my-feature --dry-run");
     cmd_close->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
         try {
             if (!args->dry_run) {
-                output.error("MVP does not implement actual close", "design close <id> --dry-run");
+                output.error("MVP does not implement actual close", "sele close <id> --dry-run");
                 exit_code = exit_codes::USAGE_ERROR;
                 return;
             }

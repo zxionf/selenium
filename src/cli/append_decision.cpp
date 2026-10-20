@@ -31,7 +31,7 @@ void register_append_decision(CLI::App& app, GlobalOptions& global_opts, int& ex
     cmd_append->add_option("--decision", args->decision, "The decision made")->required();
     cmd_append->add_option("--consequences", args->consequences, "Consequences of the decision")->required();
     cmd_append->add_option("--change-id", args->change_id, "Associated change ID (optional)");
-    cmd_append->footer("Example:\n  design append-decision --context \"Use C++20\" --decision \"Adopt modules\" --consequences \"Cleaner imports\" --change-id 20261018-my-feature");
+    cmd_append->footer("Example:\n  sele append-decision --context \"Use C++20\" --decision \"Adopt modules\" --consequences \"Cleaner imports\" --change-id 20261018-my-feature");
     cmd_append->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
         try {

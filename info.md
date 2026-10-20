@@ -192,17 +192,19 @@ sele lint --fix  # 自动补齐缺失的模板文件
 关闭一次变更：把 `.design/changes/<id>/design.md` 的各 `##` 小节折叠进 `.design/SPEC.md`。
 
 - 命中 SPEC.md 已有同名（互为子串）小节 → **替换该小节正文**（修订式折叠，不追加补丁段）。
-- 未命中 → 在 SPEC.md 末尾**追加新小节**。
-- 正文为空或只含 `<!-- -->` 占位的小节跳过，不写入 SPEC.md。
+- 未命中 → 在 SPEC.md 末尾**追加新小节**；同一份 design.md 内重复的标题合并到同一小节。
+- 正文为空或只含 HTML 注释的小节跳过，不写入 SPEC.md；注释后面还有正文的按内容处理。
+- fenced code 块里的 `## ` 行不算小节，代码块整体原样保留。
 - `.design/changes/<id>/` 与 `.agent/work/<id>/` **原地保留**，历史交给 git。
 - 仅当 `STATE.md` 的 `Active Change:` 正是该 id 时复位为 `无`；指向其他变更时保持不变。
+- 折叠结果与折叠前一致时不重写 SPEC.md（JSON `spec_updated` 为 `false`），重复关闭不会产生无意义的 diff。
 
 ```bash
 sele close 20261018-my-feature --dry-run   # 只预览折叠计划，不写任何文件
 sele close 20261018-my-feature             # 执行折叠并复位指针
 ```
 
-`--dry-run` 输出真实解析出的小节（不再用写死的标题），匹配不到时映射值为空字符串，并在文本中提示将追加为新小节。
+`--dry-run` 输出真实解析出的小节（不再用写死的标题），匹配不到时映射值为空字符串；计划用 `replaced` / `appended` / `skipped` 一套动作词，文本与 JSON 的 `plan` 字段一致。
 
 退出码：0=成功，1=缺少参数，2=两侧目录或 design.md 缺失，4=环境错误
 
@@ -279,7 +281,7 @@ ID 格式：`<YYYYMMDD>-<slug>`（例如 `20261018-my-feature`）。
 ctest --output-on-failure
 ```
 
-覆盖 15 个测试用例，涉及正常路径、错误场景、text 输出、close 折叠与版本查询。
+覆盖 18 个测试用例，涉及正常路径、错误场景、text 输出、close 折叠（重复标题、注释正文、代码块）、版本查询。
 
 > 说明：测试用例中的 ID 在运行时从 `new` 的 JSON 输出读取（不再硬编码日期），因此跨日期运行不会失败。Windows 下手动运行：
 >

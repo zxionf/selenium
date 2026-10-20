@@ -7,7 +7,9 @@
 #include <fstream>
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include "core/root.hpp"
@@ -32,9 +34,25 @@ std::string read_file(const fs::path& path) {
     return std::string((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 }
 
+// Write through a temp file so an interrupted run cannot leave a truncated
+// SPEC.md behind, and fail loudly instead of reporting a silent success.
 void write_file(const fs::path& path, const std::string& content) {
-    std::ofstream out(path, std::ios::binary);
-    out << content;
+    fs::path temp = path;
+    temp += ".tmp";
+    {
+        std::ofstream out(temp, std::ios::binary | std::ios::trunc);
+        if (!out) throw std::runtime_error("Cannot open " + temp.string() + " for writing");
+        out << content;
+        out.flush();
+        if (!out) throw std::runtime_error("Failed to write " + temp.string());
+    }
+    std::error_code ec;
+    fs::rename(temp, path, ec);
+    if (ec) {
+        std::error_code ignored;
+        fs::remove(temp, ignored);
+        throw std::runtime_error("Cannot replace " + path.string() + ": " + ec.message());
+    }
 }
 
 std::string trim(const std::string& value) {
@@ -74,25 +92,65 @@ std::string trim_block(const std::string& text) {
     return out;
 }
 
-// A section counts as content only when it holds something other than blank
-// lines and HTML comment placeholders.
+// A section counts as content when anything is left after stripping HTML
+// comments and whitespace. "<!-- note --> real text" is content, "<!-- x -->"
+// alone is a template placeholder.
 bool has_content(const std::string& body) {
-    std::istringstream iss(body);
-    std::string line;
-    while (std::getline(iss, line)) {
-        std::string trimmed = trim(line);
-        if (trimmed.empty()) continue;
-        if (trimmed.rfind("<!--", 0) == 0) continue;
+    size_t i = 0;
+    while (i < body.size()) {
+        if (body.compare(i, 4, "<!--") == 0) {
+            size_t end = body.find("-->", i + 4);
+            if (end == std::string::npos) return false;
+            i = end + 3;
+            continue;
+        }
+        if (std::isspace(static_cast<unsigned char>(body[i])) != 0) {
+            ++i;
+            continue;
+        }
         return true;
     }
     return false;
 }
 
+// CommonMark fenced code block opening: up to three spaces, then at least
+// three backticks or tildes.
+bool fence_open(const std::string& line, std::string* marker) {
+    size_t i = 0;
+    while (i < line.size() && i < 3 && line[i] == ' ') ++i;
+    if (i >= line.size()) return false;
+    char fence = line[i];
+    if (fence != '`' && fence != '~') return false;
+    size_t run_begin = i;
+    while (i < line.size() && line[i] == fence) ++i;
+    if (i - run_begin < 3) return false;
+    *marker = line.substr(run_begin, i - run_begin);
+    return true;
+}
+
+bool fence_close(const std::string& line, const std::string& marker) {
+    if (marker.empty()) return false;
+    size_t i = 0;
+    while (i < line.size() && i < 3 && line[i] == ' ') ++i;
+    if (i >= line.size() || line[i] != marker.front()) return false;
+    size_t run_begin = i;
+    while (i < line.size() && line[i] == marker.front()) ++i;
+    if (i - run_begin < marker.size()) return false;
+    while (i < line.size() && std::isspace(static_cast<unsigned char>(line[i])) != 0) ++i;
+    return i == line.size();
+}
+
 // Split a markdown document into the preamble (everything before the first
-// "## " heading, e.g. "# Spec") and the ordered list of sections.
+// "## " heading, e.g. "# Spec") and the ordered list of sections. Fenced code
+// blocks are copied verbatim: a "## " line inside them is not a heading.
 void parse_sections(const std::string& content, std::string* preamble, std::vector<Section>* sections) {
-    std::istringstream iss(content);
-    std::string line;
+    std::vector<std::string> lines;
+    {
+        std::istringstream iss(content);
+        std::string line;
+        while (std::getline(iss, line)) lines.push_back(line);
+    }
+
     std::string collected;
     Section current{"", ""};
     bool in_section = false;
@@ -103,14 +161,7 @@ void parse_sections(const std::string& content, std::string* preamble, std::vect
         sections->push_back(current);
         current = Section{"", ""};
     };
-
-    while (std::getline(iss, line)) {
-        if (line.rfind("## ", 0) == 0) {
-            flush();
-            in_section = true;
-            current.title = trim(line.substr(3));
-            continue;
-        }
+    auto append = [&](const std::string& line) {
         if (in_section) {
             current.body += line;
             current.body += '\n';
@@ -118,6 +169,33 @@ void parse_sections(const std::string& content, std::string* preamble, std::vect
             collected += line;
             collected += '\n';
         }
+    };
+
+    for (size_t i = 0; i < lines.size(); ++i) {
+        const std::string& line = lines[i];
+        if (line.rfind("## ", 0) == 0) {
+            flush();
+            in_section = true;
+            current.title = trim(line.substr(3));
+            continue;
+        }
+
+        std::string marker;
+        if (fence_open(line, &marker)) {
+            size_t close_index = lines.size();
+            for (size_t j = i + 1; j < lines.size(); ++j) {
+                if (fence_close(lines[j], marker)) {
+                    close_index = j;
+                    break;
+                }
+            }
+            if (close_index < lines.size()) {
+                for (size_t j = i; j <= close_index; ++j) append(lines[j]);
+                i = close_index;
+                continue;
+            }
+        }
+        append(line);
     }
     flush();
     *preamble = collected;
@@ -225,7 +303,9 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             for (const auto& section : spec_sections) spec_titles.push_back(section.title);
 
             // Plan the fold: matched sections revise the spec in place, the rest
-            // are appended as new sections, empty sections are skipped.
+            // are appended as new sections, empty sections are skipped. Matching
+            // runs against `folded`, not the original spec, so a title repeated
+            // inside one design.md merges instead of duplicating a section.
             std::vector<Section> folded = spec_sections;
             std::vector<std::string> plan_section;
             std::vector<std::string> plan_action;
@@ -233,8 +313,8 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             nlohmann::json suggested_mapping = nlohmann::json::object();
             for (const auto& section : design_sections) {
                 long match = -1;
-                for (size_t i = 0; i < spec_sections.size(); ++i) {
-                    if (titles_match(section.title, spec_sections[i].title)) {
+                for (size_t i = 0; i < folded.size(); ++i) {
+                    if (titles_match(section.title, folded[i].title)) {
                         match = static_cast<long>(i);
                         break;
                     }
@@ -244,7 +324,7 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 std::string target;
                 if (!has_content(section.body)) {
                     action = "skipped";
-                    target = match >= 0 ? spec_sections[static_cast<size_t>(match)].title : "";
+                    target = match >= 0 ? folded[static_cast<size_t>(match)].title : "";
                 } else if (match >= 0) {
                     action = "replaced";
                     folded[static_cast<size_t>(match)].body = section.body;
@@ -262,12 +342,18 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             }
 
             if (args->dry_run) {
+                nlohmann::json plan = nlohmann::json::array();
+                for (size_t i = 0; i < plan_section.size(); ++i) {
+                    plan.push_back({{"section", plan_section[i]}, {"action", plan_action[i]}});
+                }
+
                 nlohmann::json result;
                 result["dry_run"] = true;
                 result["id"] = args->id;
                 result["design_sections"] = design_titles;
                 result["spec_sections"] = spec_titles;
                 result["suggested_mapping"] = suggested_mapping;
+                result["plan"] = plan;
 
                 std::ostringstream text;
                 text << "Close preview for " << args->id << " (dry run, nothing written)\n"
@@ -275,10 +361,8 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                      << "  spec sections: " << join(spec_titles, ", ", "(none)") << '\n'
                      << "  planned fold:";
                 for (size_t i = 0; i < plan_section.size(); ++i) {
-                    text << "\n    " << plan_section[i] << " -> ";
-                    if (plan_action[i] == "replaced") text << "replace section: " << plan_target[i];
-                    else if (plan_action[i] == "appended") text << "append as new section";
-                    else text << "skipped (empty)";
+                    text << "\n    " << plan_section[i] << " -> " << plan_action[i];
+                    if (plan_action[i] == "replaced") text << " (spec section: " << plan_target[i] << ")";
                 }
                 if (plan_section.empty()) text << "\n    (design.md has no ## sections)";
 
@@ -287,7 +371,15 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 return;
             }
 
-            write_file(spec_md, render_document(spec_preamble, folded));
+            // Only touch SPEC.md when the fold actually changes the rendered
+            // document, so re-closing an already folded change does not rewrite
+            // the file (and normalize its line endings).
+            std::string spec_before = render_document(spec_preamble, spec_sections);
+            std::string spec_after = render_document(spec_preamble, folded);
+            bool spec_updated = spec_after != spec_before;
+            if (spec_updated) {
+                write_file(spec_md, spec_after);
+            }
 
             fs::path state_md = agent_root / ".agent" / "STATE.md";
             std::string state_value;
@@ -310,12 +402,13 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             result["dry_run"] = false;
             result["id"] = args->id;
             result["spec_path"] = spec_md.string();
+            result["spec_updated"] = spec_updated;
             result["folded"] = fold_result;
             result["state_updated"] = state_updated;
 
             std::ostringstream text;
             text << "Closed " << args->id << " (spec folded, directories kept)\n"
-                 << "  spec: " << spec_md.string() << '\n'
+                 << "  spec: " << spec_md.string() << (spec_updated ? "" : " (unchanged)") << '\n'
                  << "  folded:";
             for (size_t i = 0; i < plan_section.size(); ++i) {
                 text << "\n    " << plan_section[i] << " -> " << plan_action[i];

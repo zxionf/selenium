@@ -32,16 +32,14 @@ std::string render_state_template() {
     return "# Agent State\n\nActive Change: 无\n";
 }
 
+// A design doc is folded into SPEC.md by matching "## " titles, so its
+// sections are named after the SPEC concept they revise. Change-scoped
+// narrative (why, migration) belongs in the preamble or DECISIONS.log.
 std::string render_design_template(const std::string& id) {
     return "# " + id + "\n\n"
-           "## Context\n"
-           "<!-- 为什么发起这次变更 -->\n\n"
-           "## 变更内容\n"
-           "<!-- 改什么，只写设计决策，不写实现步骤 -->\n\n"
-           "## 影响面\n"
-           "<!-- 影响哪些模块、接口、数据 -->\n\n"
-           "## 兼容性与迁移\n"
-           "<!-- 是否需要迁移、是否破坏兼容 -->\n";
+           "<!-- 为什么改、边界与不属于本次的范围 -->\n\n"
+           "## <概念>\n"
+           "<!-- 折叠进 SPEC.md 同名小节后的现状 -->\n";
 }
 
 std::string render_tasks_template(const std::string& id) {

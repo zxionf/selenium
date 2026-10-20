@@ -133,6 +133,8 @@ test_close_dry_run() {
     local out=$("$DESIGN_BIN" --root "$proj" close "$id" --dry-run --output json)
     echo "$out" | jq -e '.dry_run == true' >/dev/null
     echo "$out" | jq -e --arg id "$id" '.id == $id' >/dev/null
+    echo "$out" | jq -e '.plan | length == 1' >/dev/null
+    echo "$out" | jq -e '.plan[0].action == "skipped"' >/dev/null
     # Verify no files modified
     local mtime1=$(stat -c %Y "$proj/.design/changes/$id/design.md")
     local mtime2=$(stat -c %Y "$proj/.agent/work/$id/tasks.md")
@@ -182,6 +184,74 @@ EOF
     grep -q 'Active Change: 无' "$proj/.agent/STATE.md"
     [[ -f "$proj/.design/changes/$id/design.md" ]]
     [[ -f "$proj/.agent/work/$id/tasks.md" ]]
+
+    # Re-closing an already folded change must not rewrite SPEC.md again
+    local mtime=$(stat -c %Y "$proj/.design/SPEC.md")
+    sleep 1
+    local again=$("$DESIGN_BIN" --root "$proj" close "$id" --output json)
+    echo "$again" | jq -e '.spec_updated == false' >/dev/null
+    [[ $(stat -c %Y "$proj/.design/SPEC.md") -eq $mtime ]]
+    rm -rf "$proj"
+}
+
+# Test 16: duplicate section titles inside one design.md merge into one section
+test_close_duplicate_titles() {
+    local proj=$(setup_project)
+    local id=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json | jq -r '.id')
+    cat > "$proj/.design/changes/$id/design.md" <<EOF
+# $id
+
+## 新概念
+
+甲。
+
+## 新概念
+
+乙。
+EOF
+    "$DESIGN_BIN" --root "$proj" close "$id" --output json >/dev/null
+    [[ $(grep -c '^## 新概念$' "$proj/.design/SPEC.md") -eq 1 ]]
+    grep -q '^乙。$' "$proj/.design/SPEC.md"
+    ! grep -q '甲。' "$proj/.design/SPEC.md"
+    rm -rf "$proj"
+}
+
+# Test 17: an HTML comment followed by real text is content, not a placeholder
+test_close_inline_comment() {
+    local proj=$(setup_project)
+    printf '\n## 目标\n\n旧目标。\n' >> "$proj/.design/SPEC.md"
+    local id=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json | jq -r '.id')
+    cat > "$proj/.design/changes/$id/design.md" <<EOF
+# $id
+
+## 目标
+
+<!-- 说明 --> 真实内容。
+EOF
+    local out=$("$DESIGN_BIN" --root "$proj" close "$id" --output json)
+    echo "$out" | jq -e '.folded[] | select(.section == "目标") | .action == "replaced"' >/dev/null
+    grep -q '真实内容' "$proj/.design/SPEC.md"
+    ! grep -q '旧目标' "$proj/.design/SPEC.md"
+    rm -rf "$proj"
+}
+
+# Test 18: "## " inside a fenced code block is not a section boundary
+test_close_fenced_code() {
+    local proj=$(setup_project)
+    printf '\n## 输出\n\n说明：\n\n```text\n## 内层标题\nActive change: none\n```\n\n## 约束\n\n旧约束。\n' >> "$proj/.design/SPEC.md"
+    local id=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json | jq -r '.id')
+    cat > "$proj/.design/changes/$id/design.md" <<EOF
+# $id
+
+## 约束
+
+新约束。
+EOF
+    "$DESIGN_BIN" --root "$proj" close "$id" --output json >/dev/null
+    [[ $(grep -c '^```' "$proj/.design/SPEC.md") -eq 2 ]]
+    grep -q '^## 内层标题$' "$proj/.design/SPEC.md"
+    grep -q '新约束' "$proj/.design/SPEC.md"
+    ! grep -q '旧约束' "$proj/.design/SPEC.md"
     rm -rf "$proj"
 }
 
@@ -269,6 +339,9 @@ run_test "status text output" test_status_text
 run_test "text output for all commands" test_text_for_all_commands
 run_test "dry-run does not invent mapping" test_close_dry_run_no_invented_mapping
 run_test "close leaves foreign active pointer" test_close_foreign_pointer
+run_test "duplicate design titles merge" test_close_duplicate_titles
+run_test "inline comment body is folded" test_close_inline_comment
+run_test "fenced code survives the fold" test_close_fenced_code
 run_test "version command" test_version_command
 
 echo "=== All tests passed! ==="

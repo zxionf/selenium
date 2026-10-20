@@ -1,48 +1,88 @@
 # Spec
 
+<!-- 当前设计真相源：一个概念一节，只写现状。历史见 git，取舍理由见 DECISIONS.log。 -->
+
 ## 目标
-<!-- 只写稳定的规格，不写过程性内容 -->
+
+`sele` 是面向 agent 的 CLI，管理两个目录：`.design/`（设计真相）与 `.agent/`（执行工作区）。它覆盖「创建变更 → 追加决策 → 查询状态 → 规则检查 → 折叠回 SPEC」的闭环，默认输出人可读的 text，同时提供 JSON 供程序消费。
 
 ## 约束
 
-## Context
-`sele` 面向 agent 调用，默认输出格式是 `text`。历史上三处缺陷现已修复，本节起描述修复后的当前事实：六个子命令只渲染 JSON 导致默认调用静默退出 0（`sele status` 看起来"没有输出"）；`sele close` 只有 `--dry-run` 预览，无法完成 `design-self.md` 定义的"变更合并"，且预览把 design.md 读入后未使用、小节标题写死、未匹配时用 SPEC 第一个小节兜底；版本号硬编码在 `src/main.cpp`，与 `CMakeLists.txt` 无关联，也没有任何 `install()` 规则，装到系统只能手工复制 exe。
+- C++20，CMake ≥ 3.20；依赖 CLI11 2.4.2 与 nlohmann/json 3.11.2，由 FetchContent 拉取，均为 header-only。
+- 对外契约稳定：JSON 字段名、退出码、参数、目录布局。新增字段不算破坏；改取值算破坏。
+- 成功信息走 stdout，错误走 stderr；text 与 json 由同一份数据渲染，内容一致。
+- 警告即错误：GCC/Clang 用 `-Wall -Wextra -Wpedantic -Werror`，MSVC 用 `/W4 /WX`。当前可用构建链是 MinGW Makefiles + g++；MSVC 因 `gmtime` 的 C4996 报错尚不可用。
+- `.design/SPEC.md` 不写过程性词汇，词表见 `src/cli/lint.cpp`。
+- 不设系统默认安装点，安装前缀始终由 `--prefix` 指定。
 
-## 变更内容
-1. **输出**：六个子命令各构造一份 JSON，再由同一份数据渲染 text，用 `Output::print_both(text, json)` 择一输出。text 一律走 stdout，错误仍走 stderr。
-2. **各命令 text 形态**：
-   - `status`：四行摘要，无活跃变更时首行为 `Active change: none`。
-   - `new` / `init`：首行摘要加缩进明细（design / work / agent 路径）。
-   - `append-decision`：`Appended decision #<n> -> <path>` 单行。
-   - `lint`：首行 `Lint passed` / `Lint failed`，随后每项 `[ok]` / `[fail]` / `[skip]`。
-   - `close`：预览输出 `Close preview for <id> ...` 加折叠计划；实际关闭输出 `Closed <id> (spec folded, directories kept)`。
-   - `version`：`sele <版本>` 加两行依赖版本。
+## 命令表面
 
-   ```
-   Active change: 20261020-my-feature
-   Tasks: 2/5 done
-   Decisions: 3
-   Consistent: yes
-   ```
+全局选项：`--root <path>`（默认当前目录，向上查找 `.design/`）、`--output text|json`（默认 text）、`--version`（单行摘要）。
 
-3. **`close` 折叠语义**：解析 `design.md` 的 `##` 小节，与 `SPEC.md` 小节按"标题互为子串"匹配；命中则替换该小节正文（修订式，不追加补丁段），未命中则在 `SPEC.md` 末尾追加同名小节；正文为空或只含 `<!-- -->` 占位的小节跳过，不用模板占位覆盖既有规格。
-4. **目录与指针**：`.design/changes/<id>/` 与 `.agent/work/<id>/` 原地保留，历史交给 git；`STATE.md` 仅当 `Active Change:` 正是被关闭 id 时才复位为 `无`，指向其他变更时保持不变。
-5. **`--dry-run`**：只输出预览，不写任何文件；列出真实解析出的 design 小节与折叠计划（`replace` / `append` / `skipped`），未匹配的 `suggested_mapping` 值为空字符串。
-6. **版本单一来源**：`CMakeLists.txt` 的 `project(sele VERSION 0.2.0)` 是唯一来源，`configure_file` 生成 `sele_version.hpp`（`SELE_VERSION_MAJOR/MINOR/PATCH`、`SELE_VERSION_STRING`）。源码中没有版本字面量。
-7. **`version` 子命令**：text 为 `sele 0.2.0` 加 `cli11` / `nlohmann_json` 两行；json 为 `{"name","version","cli11","nlohmann_json"}`；不挂 `--root`，任意目录可运行。`--version` 保留单行格式并与其共用 `core::version_display()`。
-8. **安装**：`install(TARGETS sele RUNTIME DESTINATION bin)`；`SELE_SHARED_DEPS=ON` 时 `cli11_shared`、`nlohmann_json_shared` 的 `RUNTIME`/`LIBRARY` 都装进同一个 `bin/`，使 `$ORIGIN` rpath 与 Windows 同目录 DLL 查找都生效。前缀由 `--prefix` 指定，不设系统默认安装点。
+| 子命令 | 参数 | 作用 |
+|---|---|---|
+| `init` | `[directory]` / `--root` | 建 `.design/` 与 `.agent/` 及模板文件；已存在则退出 2 |
+| `new` | `--slug`（必填） | 生成 id，建双侧目录与 design.md / tasks.md，把 STATE 指向新 id |
+| `append-decision` | `--context` `--decision` `--consequences`（必填）、`--change-id` | 向 DECISIONS.log 追加 `## [n]` 记录 |
+| `status` | — | 读 STATE 指针、tasks.md 勾选数、该 id 的决策条数 |
+| `lint` | `--fix` | 四项机械检查 |
+| `close` | `<id>`（必填）、`--dry-run` | 把 design.md 折叠进 SPEC.md |
+| `version` | — | 版本与依赖版本；不挂 `--root` |
 
-## 影响面
-- 代码：`src/cli/*.cpp` 的渲染分支；`src/cli/version.cpp`、`src/core/version.hpp/.cpp`、`src/version.hpp.in` 为新增；`close.cpp` 内含分节解析、渲染、指针读写辅助函数；`CMakeLists.txt` 增加 `project(VERSION)`、`configure_file`、`install()`。
-- 对外契约：JSON 字段名、退出码、参数、文件布局不变。三处取值变化：`suggested_mapping` 的未匹配值由"SPEC 第一个小节"变为空串；`sele close <id>` 由"报错退出"变为"执行折叠"；版本号 0.1.0 → 0.2.0。
-- 写入面：`close` 会写 `SPEC.md`，并在指针命中时写 `STATE.md`；`--dry-run` 与 `version` 不写任何文件。
-- 构建：生成的 `sele_version.hpp` 位于 `${CMAKE_BINARY_DIR}/generated`，已加入 `target_include_directories`。
-- 测试：15 个用例覆盖 JSON 契约、text 非空、折叠写入、指针保护、未匹配不捏造映射、嵌套缩进存活、版本一致性。
-- `SPEC.md` 的分节沿用模板四维（`Context/变更内容/影响面/兼容性与迁移`），由 close 自动折叠维护。
+`init` 可在空目录运行；其余命令要求 `.design/` 与 `.agent/` 存在，缺失即报错退出（`new` 另做显式检查并提示 `sele init`）。`version` 与 `--version` 不依赖目录，任意位置可运行。
 
-## 兼容性与迁移
-- 不破坏既有 JSON 消费路径；依赖"`close` 报错"的调用方改为显式传 `--dry-run`；`--version` 的单行格式保持不变。
-- 安装是可选的：不执行 `cmake --install` 时产物仍在 `build/build/sele`，行为与之前一致。
-- 无需数据迁移；`changes/<id>` 与 `work/<id>` 原地保留，git 保留历史。
-- 折叠按标题匹配，因此不同变更若使用同名小节（模板四维即是）会互相覆盖；跨变更的结论需要先合并成一份终稿再关闭。若将来改为按"概念"分节，需要一次显式的 SPEC 重构变更。
-- 已知构建限制：MSVC 下 `/W4 /WX` 会把 `gmtime` 的 C4996 弃用警告当错误（`src/core/id.cpp`、`src/core/template.cpp`），当前可用构建链是 MinGW Makefiles + g++；MSVC 支持需单独变更处理。
+## 输出
+
+每个子命令先构造一份 JSON，再由同一份数据渲染 text，经 `Output::print_both(text, json)` 按格式择一输出。text 形态：
+
+- `status`：四行摘要；无活跃变更时首行为 `Active change: none`。
+- `init` / `new`：首行摘要加缩进明细（design / work / agent 路径）。
+- `append-decision`：`Appended decision #<n> -> <path>` 单行。
+- `lint`：首行 `Lint passed` / `Lint failed`，随后每项 `[ok]` / `[fail]` / `[skip]`。
+- `close`：预览为 `Close preview for <id> ...` 加折叠计划，实际关闭为 `Closed <id> (spec folded, directories kept)`。
+- `version`：`sele <版本>` 加 `cli11` / `nlohmann_json` 两行。
+
+```text
+Active change: 20261020-my-feature
+Tasks: 2/5 done
+Decisions: 3
+Consistent: yes
+```
+
+退出码：0 成功，1 用法错误，2 状态冲突，3 lint 未通过，4 环境错误。
+
+## 变更模型
+
+- id 为 `<YYYYMMDD>-<slug>`，日期取 UTC，slug 限 `[a-z0-9-]`。
+- 一次变更同时拥有 `.design/changes/<id>/design.md` 与 `.agent/work/<id>/tasks.md`；两侧必须同时存在，由 `lint` 与 `close` 校验。
+- `.agent/STATE.md` 的 `Active Change:` 是唯一指针，`无` 表示无活跃变更。
+- 关闭后两侧目录原地保留，历史交给 git；工具不删除、不移动、不归档。
+
+## close 折叠
+
+- 解析 design.md 的 `##` 小节，与 SPEC.md 小节按「标题互为子串」匹配；fenced code 块内的 `## ` 不算小节。
+- 命中则替换该小节正文，未命中则在 SPEC.md 末尾追加同名小节；修订式，不追加补丁段。
+- 同一份 design.md 内重复的标题合并到同一小节，不会在 SPEC.md 里留下重名节。
+- 正文为空或只含 HTML 注释的小节跳过；注释之后还有正文的算内容。
+- 每行只右剪空白，保留行首缩进，使嵌套列表与 fenced code 存活。
+- 渲染结果与折叠前一致时不重写 SPEC.md（`spec_updated: false`）；需要写入时先写临时文件再改名，避免留下半截文件。
+- 写入 SPEC.md 后，仅当 STATE 指针正是该 id 时复位为 `无`；指向其他变更时保持不变。
+- `--dry-run` 不写任何文件，按 `replaced` / `appended` / `skipped` 给出计划（text 与 JSON 字段 `plan` 用同一套动作词）；未匹配小节的 `suggested_mapping` 值为空字符串。
+
+## lint 检查
+
+四项：`id_consistency`（changes 与 work 两侧一一对应）、`decisions_append_only`（对比 HEAD 的 `git diff`，出现删除行即失败）、`spec_process_words`、`dir_integrity`（design.md / tasks.md 缺失即失败，`--fix` 按模板补齐）。非 git 仓库或无 HEAD 时 `decisions_append_only` 记 `skip`。
+
+## 版本与安装
+
+`CMakeLists.txt` 的 `project(sele VERSION 0.2.0)` 是版本唯一来源，`configure_file` 生成 `${CMAKE_BINARY_DIR}/generated/sele_version.hpp`；源码中没有版本字面量，改版本只需改这一处并重新配置。
+
+`sele version` 的 json 为 `{"name","version","cli11","nlohmann_json"}`；`--version` 为单行 `sele 0.2.0 (CLI11 2.4.2, nlohmann/json 3.11.2)`，与 `version` 共用 `core::version_display()`。
+
+`install(TARGETS sele RUNTIME DESTINATION bin)`；`SELE_SHARED_DEPS=ON` 时 `cli11_shared`、`nlohmann_json_shared` 的 `RUNTIME` / `LIBRARY` 也装进同一个 `bin/`，使 `$ORIGIN` rpath 与 Windows 同目录 DLL 查找都生效。
+
+## 构建与测试
+
+`cmake -B build -S .`（首次经 FetchContent 拉取依赖，需联网）、`cmake --build build`；产物在嵌套目录 `build/build/sele`。`cmake --install build --prefix <dir>` 装到 `<dir>/bin`。
+
+`ctest --output-on-failure` 运行 18 个用例，工作目录为仓库根；Windows 脚本参数为 `-SeleBin`，Linux 脚本需要 `jq`。用例从 `new` 的 JSON 读取 id，不硬编码日期。

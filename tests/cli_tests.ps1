@@ -137,6 +137,9 @@ Run-Test "close dry-run" {
     $out = & $SeleBin --root $proj close $id --dry-run --output json | ConvertFrom-Json
     if (-not $out.dry_run) { throw "dry_run should be true" }
     if ($out.id -ne $id) { throw "ID mismatch" }
+    if (-not $out.plan) { throw "plan missing from dry-run JSON" }
+    $actions = @($out.plan | ForEach-Object { $_.action })
+    if ($actions -notcontains "skipped") { throw "template placeholder should be planned as skipped: $($actions -join ',')" }
     # Verify no files modified
     $mtime1 = (Get-Item "$proj/.design/changes/$id/design.md").LastWriteTime
     $mtime2 = (Get-Item "$proj/.agent/work/$id/tasks.md").LastWriteTime
@@ -188,6 +191,93 @@ Run-Test "close folds design into SPEC" {
     if ($state -notmatch 'Active Change: 无') { throw "STATE.md should be reset to 无" }
     if (-not (Test-Path "$proj/.design/changes/$id/design.md")) { throw "design.md should stay in place" }
     if (-not (Test-Path "$proj/.agent/work/$id/tasks.md")) { throw "tasks.md should stay in place" }
+
+    # Re-closing an already folded change must not rewrite SPEC.md again
+    $mtime = (Get-Item "$proj/.design/SPEC.md").LastWriteTime
+    Start-Sleep -Seconds 1
+    $again = & $SeleBin --root $proj close $id --output json | ConvertFrom-Json
+    if ($again.spec_updated) { throw "re-closing an unchanged fold should report spec_updated=false" }
+    if ((Get-Item "$proj/.design/SPEC.md").LastWriteTime -ne $mtime) { throw "SPEC.md was rewritten without changes" }
+    Remove-Item -Recurse -Force $proj
+}
+
+# Test 16: duplicate section titles inside one design.md merge into one section
+Run-Test "duplicate design titles merge" {
+    $proj = Setup-Project
+    $id = (& $SeleBin --root $proj new --slug demo-change --output json | ConvertFrom-Json).id
+    @"
+# $id
+
+## 新概念
+
+甲。
+
+## 新概念
+
+乙。
+"@ | Set-Content "$proj/.design/changes/$id/design.md"
+    & $SeleBin --root $proj close $id --output json | Out-Null
+    $spec = Get-Content "$proj/.design/SPEC.md" -Raw
+    $count = ([regex]::Matches($spec, '(?m)^## 新概念')).Count
+    if ($count -ne 1) { throw "expected one 新概念 section, got $count" }
+    if ($spec -notmatch '乙。') { throw "the last body should win" }
+    if ($spec -match '甲。') { throw "the earlier duplicate body should not survive" }
+    Remove-Item -Recurse -Force $proj
+}
+
+# Test 17: an HTML comment followed by real text is content, not a placeholder
+Run-Test "inline comment body is folded" {
+    $proj = Setup-Project
+    Add-Content "$proj/.design/SPEC.md" "`n## 目标`n`n旧目标。"
+    $id = (& $SeleBin --root $proj new --slug demo-change --output json | ConvertFrom-Json).id
+    @"
+# $id
+
+## 目标
+
+<!-- 说明 --> 真实内容。
+"@ | Set-Content "$proj/.design/changes/$id/design.md"
+    $out = & $SeleBin --root $proj close $id --output json | ConvertFrom-Json
+    $action = ($out.folded | Where-Object { $_.section -eq "目标" }).action
+    if ($action -ne "replaced") { throw "expected 目标 to be replaced, got '$action'" }
+    $spec = Get-Content "$proj/.design/SPEC.md" -Raw
+    if ($spec -notmatch '真实内容') { throw "text after an inline comment must reach SPEC.md" }
+    if ($spec -match '旧目标') { throw "the old body should be replaced" }
+    Remove-Item -Recurse -Force $proj
+}
+
+# Test 18: "## " inside a fenced code block is not a section boundary
+Run-Test "fenced code survives the fold" {
+    $proj = Setup-Project
+    @'
+## 输出
+
+说明：
+
+```text
+## 内层标题
+Active change: none
+```
+
+## 约束
+
+旧约束。
+'@ | Set-Content "$proj/.design/SPEC.md"
+    $id = (& $SeleBin --root $proj new --slug demo-change --output json | ConvertFrom-Json).id
+    @"
+# $id
+
+## 约束
+
+新约束。
+"@ | Set-Content "$proj/.design/changes/$id/design.md"
+    & $SeleBin --root $proj close $id --output json | Out-Null
+    $spec = Get-Content "$proj/.design/SPEC.md" -Raw
+    $fences = ([regex]::Matches($spec, '(?m)^```')).Count
+    if ($fences -ne 2) { throw "the fenced block should keep both fence lines, got $fences" }
+    if ($spec -notmatch '(?m)^## 内层标题\r?$') { throw "fenced content should stay verbatim" }
+    if ($spec -notmatch '新约束') { throw "the 约束 section should be folded" }
+    if ($spec -match '旧约束') { throw "the old 约束 body should be replaced" }
     Remove-Item -Recurse -Force $proj
 }
 

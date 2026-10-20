@@ -44,3 +44,13 @@ Change: 20261020-version-and-install
 Context: 需要一条不依赖 .design/ 的版本查询入口，供装到系统后自检
 Decision: 新增 version 子命令，只挂 --output（不挂 --root），text 为 sele <版本> 加两行依赖版本，json 字段为 name/version/cli11/nlohmann_json
 Consequences: 任意目录可运行；--version 保持单行格式与既有脚本兼容
+## [10] 2026-10-20 03:03:53 UTC
+Change: none
+Context: SPEC.md 由 close 按 design.md 模板的四维折叠，文件里堆的是「变更内容/影响面」这类一次变更的维度，并残留「历史上三处缺陷现已修复」「0.1.0 到 0.2.0」的补丁叙事，不符合 design-self.md 的修订式
+Decision: SPEC.md 改为概念分节（目标/约束/命令表面/输出/变更模型/close 折叠/lint 检查/版本与安装/构建与测试），只写现状；design.md 模板同步改为按 SPEC 概念小节命名，过程信息放在前言或 DECISIONS.log
+Consequences: close 的标题匹配重新有意义，后续变更折叠进概念章节而不是追加补丁段；此次只改文档与模板文本，JSON 字段、退出码、目录布局不变；sele new 生成的 design.md 需作者把小节标题写成目标概念名
+## [11] 2026-10-20 03:34:34 UTC
+Change: none
+Context: 折叠逻辑有三处会损坏 SPEC：design.md 内重复标题各追加一节、正文首行是注释时整段被当占位丢弃、fenced code 里的 ## 行被当小节边界拆断
+Decision: 匹配改为在已折叠结果上查找，重复标题合并；内容判定改为剥掉 HTML 注释后看是否仍有非空白字符；分节解析先找围栏闭合，成对围栏整体原样拷贝（找不到闭合则按普通行处理，避免未闭合围栏吞掉后续小节）
+Consequences: 三处均有回归用例（15 到 18 个）；另补 dry-run 的 plan 字段统一动作词、写入改为临时文件加改名、折叠结果不变时不重写 SPEC

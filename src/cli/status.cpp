@@ -5,6 +5,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <sstream>
 #include <string>
 
 #include "core/root.hpp"
@@ -86,7 +87,14 @@ void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code) 
                 result["consistent"] = (changes_exist == work_exist);
             }
 
-            output.print_json(result);
+            std::ostringstream text;
+            text << "Active change: " << (active_id.empty() ? "none" : active_id) << '\n'
+                 << "Tasks: " << result["tasks"]["done"].get<int>() << '/'
+                 << result["tasks"]["total"].get<int>() << " done\n"
+                 << "Decisions: " << result["decisions"].get<int>() << '\n'
+                 << "Consistent: " << (result["consistent"].get<bool>() ? "yes" : "no");
+
+            output.print_both(text.str(), result);
             exit_code = exit_codes::SUCCESS;
         } catch (const std::exception& e) {
             output.error(e.what(), "");

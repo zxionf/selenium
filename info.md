@@ -39,6 +39,29 @@ cmake --build build
 - `--root <path>` — 项目根目录（默认：当前目录，并向上查找 `.design/`）
 - `--output text|json` — 输出格式（默认：text）
 
+### 输出格式
+
+`--output text`（默认）面向人，打印一段摘要；`--output json` 面向程序，字段固定。两者由同一份数据渲染，内容一致。
+
+```text
+$ sele status
+Active change: 20261020-my-feature
+Tasks: 2/5 done
+Decisions: 3
+Consistent: yes
+```
+
+```text
+$ sele lint
+Lint failed
+  [ok] id_consistency
+  [skip] decisions_append_only
+  [fail] spec_process_words
+  [ok] dir_integrity
+```
+
+其余命令的 text 形态：`init` 输出 `Initialized ...` 加 design/agent 路径，`new` 输出 `Created <id>` 加两侧路径，`append-decision` 输出 `Appended decision #<n> -> <path>`；`close --dry-run` 输出 `Close preview for <id> ...` 加折叠计划，实际关闭输出 `Closed <id> (spec folded, directories kept)` 加每个小节的 action 与指针是否复位。
+
 ### `sele init [directory]`
 
 初始化项目，创建 `.design/`、`.agent/` 目录及其模板文件（INDEX.md、SPEC.md、DECISIONS.log、CONTRACT.md、STATE.md 等）。
@@ -100,15 +123,24 @@ sele lint --fix  # 自动补齐缺失的模板文件
 
 退出码：0=全部通过，3=存在检查失败，4=环境错误
 
-### `sele close <id> --dry-run`
+### `sele close <id> [--dry-run]`
 
-预览关闭一次变更（MVP 仅实现 `--dry-run`）。
+关闭一次变更：把 `.design/changes/<id>/design.md` 的各 `##` 小节折叠进 `.design/SPEC.md`。
+
+- 命中 SPEC.md 已有同名（互为子串）小节 → **替换该小节正文**（修订式折叠，不追加补丁段）。
+- 未命中 → 在 SPEC.md 末尾**追加新小节**。
+- 正文为空或只含 `<!-- -->` 占位的小节跳过，不写入 SPEC.md。
+- `.design/changes/<id>/` 与 `.agent/work/<id>/` **原地保留**，历史交给 git。
+- 仅当 `STATE.md` 的 `Active Change:` 正是该 id 时复位为 `无`；指向其他变更时保持不变。
 
 ```bash
-sele close 20261018-my-feature --dry-run
+sele close 20261018-my-feature --dry-run   # 只预览折叠计划，不写任何文件
+sele close 20261018-my-feature             # 执行折叠并复位指针
 ```
 
-退出码：0=成功，1=缺少 --dry-run，2=ID 不存在，4=环境错误
+`--dry-run` 输出真实解析出的小节（不再用写死的标题），匹配不到时映射值为空字符串，并在文本中提示将追加为新小节。
+
+退出码：0=成功，1=缺少参数，2=两侧目录或 design.md 缺失，4=环境错误
 
 ## 退出码
 
@@ -180,7 +212,7 @@ ID 格式：`<YYYYMMDD>-<slug>`（例如 `20261018-my-feature`）。
 ctest --output-on-failure
 ```
 
-覆盖 10 个测试用例，涉及正常路径与错误场景。
+覆盖 14 个测试用例，涉及正常路径、错误场景、text 输出与 close 折叠。
 
 > 说明：测试用例中的 ID 在运行时从 `new` 的 JSON 输出读取（不再硬编码日期），因此跨日期运行不会失败。Windows 下手动运行：
 >

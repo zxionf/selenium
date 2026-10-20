@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "core/template.hpp"
@@ -73,7 +74,12 @@ void register_init(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             result["design_path"] = design_dir.string();
             result["agent_path"] = agent_dir.string();
 
-            output.print_json(result);
+            std::ostringstream text;
+            text << "Initialized .design/ and .agent/ in " << target.string() << '\n'
+                 << "  design: " << design_dir.string() << '\n'
+                 << "  agent:  " << agent_dir.string();
+
+            output.print_both(text.str(), result);
             exit_code = exit_codes::SUCCESS;
         } catch (const std::exception& e) {
             output.error(e.what(), "");

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "core/root.hpp"
@@ -65,7 +66,10 @@ void register_append_decision(CLI::App& app, GlobalOptions& global_opts, int& ex
             result["index"] = index;
             result["path"] = decisions_log.string();
 
-            output.print_json(result);
+            std::ostringstream text;
+            text << "Appended decision #" << index << " -> " << decisions_log.string();
+
+            output.print_both(text.str(), result);
             exit_code = exit_codes::SUCCESS;
         } catch (const std::exception& e) {
             output.error(e.what(), "");

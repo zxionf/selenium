@@ -155,7 +155,25 @@ void register_lint(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             result["passed"] = all_passed;
             result["checks"] = checks;
 
-            output.print_json(result);
+            std::ostringstream text;
+            text << (all_passed ? "Lint passed" : "Lint failed");
+            for (const auto& check : checks) {
+                std::string tag = "ok";
+                const auto& name = check["name"].get<std::string>();
+                if (!check["passed"].get<bool>()) {
+                    tag = "fail";
+                } else if (check.contains("detail") && check["detail"].is_object() &&
+                           check["detail"].value("skipped", false)) {
+                    tag = "skip";
+                }
+                text << "\n  [" << tag << "] " << name;
+                if (tag == "fail" && check.contains("detail") && check["detail"].is_object() &&
+                    check["detail"].contains("deleted_lines")) {
+                    text << " (deleted_lines: " << check["detail"]["deleted_lines"].get<int>() << ")";
+                }
+            }
+
+            output.print_both(text.str(), result);
             exit_code = all_passed ? exit_codes::SUCCESS : exit_codes::LINT_FAILED;
         } catch (const std::exception& e) {
             output.error(e.what(), "");

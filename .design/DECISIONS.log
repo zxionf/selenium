@@ -1,1 +1,31 @@
 # Decisions
+## [1] 2026-10-20 01:17:09 UTC
+Change: 20261020-status-text-output
+Context: 六个子命令在默认 text 模式下均无输出（只调用了 print_json）
+Decision: 统一用 Output::print_both(text, json)：同一份 JSON 数据渲染两种形态，JSON 字段名与退出码不变
+Consequences: text 输出为纯增量，机器消费路径不受影响；无需改 output.hpp，也无需迁移数据
+## [2] 2026-10-20 01:17:09 UTC
+Change: 20261020-status-text-output
+Context: 原测试只断言 --output json，静默缺陷因此长期未被发现
+Decision: ps1/sh 各新增两个用例：status 的 text 必须非空且含 Tasks/Consistent，且六个命令的默认输出都要有首行摘要
+Consequences: 用例数 10 -> 12；默认格式回归会在 ctest 中立刻暴露
+## [3] 2026-10-20 01:38:13 UTC
+Change: 20261020-close-fold-into-spec
+Context: MVP 只实现 close --dry-run，design-self.md 定义的「变更合并」在工具里无路可走
+Decision: close <id> 执行真正折叠：design.md 的 ## 小节按标题互为子串匹配，命中则替换 SPEC.md 该小节正文，未命中在末尾追加，正文为空或仅含 HTML 注释的小节跳过
+Consequences: SPEC.md 保持修订式（不追加补丁段）；模板占位不会覆盖既有规格；changes/work 两侧目录原地保留，历史交给 git
+## [4] 2026-10-20 01:38:13 UTC
+Change: 20261020-close-fold-into-spec
+Context: STATE.md 只有一个 Active Change 指针，关闭旧变更时若无条件复位会踩掉正在进行的新变更
+Decision: 仅当 STATE.md 的 Active Change 正是被关闭 id 时才复位为 无，否则保持原样并在输出中说明指向谁
+Consequences: 可安全地关闭历史变更；JSON 用 state_updated 暴露是否复位
+## [5] 2026-10-20 01:38:13 UTC
+Change: 20261020-close-fold-into-spec
+Context: dry-run 预览把 design.md 读进设计变量却未使用，小节标题写死；未匹配时用 SPEC 第一个小节兜底，输出四个小节全指向目标的假映射
+Decision: 预览改为解析 design.md 真实小节；未匹配的 suggested_mapping 值为空字符串，文本输出明确标注 append as new section
+Consequences: 预览不再捏造结论；suggested_mapping 的未匹配值由第一个小节变为空串，属字段取值变化
+## [6] 2026-10-20 01:38:13 UTC
+Change: 20261020-close-fold-into-spec
+Context: 首次折叠把 SPEC.md 的缩进压平，嵌套列表与代码块内容被顶到行首
+Decision: 分节渲染每行只右剪空白，保留行首缩进，仅去掉块首尾的空行
+Consequences: 嵌套列表与 fenced code 在折叠后保持原样；测试补一条缩进必须存活的断言

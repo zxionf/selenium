@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "core/id.hpp"
@@ -103,7 +104,13 @@ void register_new(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             result["work_path"] = tasks_md.string();
             result["state_updated"] = true;
 
-            output.print_json(result);
+            std::ostringstream text;
+            text << "Created " << id << '\n'
+                 << "  design: " << design_md.string() << '\n'
+                 << "  work:   " << tasks_md.string() << '\n'
+                 << "  state:  Active Change -> " << id;
+
+            output.print_both(text.str(), result);
             exit_code = exit_codes::SUCCESS;
         } catch (const std::exception& e) {
             output.error(e.what(), "");

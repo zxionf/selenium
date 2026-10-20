@@ -251,4 +251,19 @@ Run-Test "text output for all commands" {
     Remove-Item -Recurse -Force $proj
 }
 
+# Test 15: version subcommand matches the build version
+Run-Test "version command" {
+    $json = & $SeleBin version --output json | ConvertFrom-Json
+    if ($json.name -ne "sele") { throw "name mismatch: $($json.name)" }
+    if ($json.version -notmatch '^\d+\.\d+\.\d+$') { throw "version should be semver, got '$($json.version)'" }
+    if (-not $json.cli11) { throw "cli11 version missing" }
+    if (-not $json.nlohmann_json) { throw "nlohmann_json version missing" }
+
+    $text = (& $SeleBin version) -join "`n"
+    if ($text -notmatch [regex]::Escape("sele $($json.version)")) { throw "text output should mention the version: $text" }
+
+    $flag = (& $SeleBin --version) -join "`n"
+    if (-not ($flag -match [regex]::Escape($json.version))) { throw "--version should report the same version: $flag" }
+}
+
 Write-Host "=== All tests passed! ===" -ForegroundColor Green

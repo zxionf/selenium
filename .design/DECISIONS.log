@@ -29,3 +29,18 @@ Change: 20261020-close-fold-into-spec
 Context: 首次折叠把 SPEC.md 的缩进压平，嵌套列表与代码块内容被顶到行首
 Decision: 分节渲染每行只右剪空白，保留行首缩进，仅去掉块首尾的空行
 Consequences: 嵌套列表与 fenced code 在折叠后保持原样；测试补一条缩进必须存活的断言
+## [7] 2026-10-20 02:11:52 UTC
+Change: 20261020-version-and-install
+Context: 版本号原本硬编码在 main.cpp 的 version_string()，而 project() 没有 VERSION，两处会漂移
+Decision: 版本单一来源改为 CMake 的 project(sele VERSION 0.2.0)，configure_file 生成 sele_version.hpp；--version 与 version 子命令共用 core::version_display()，源码不再出现版本字面量
+Consequences: 改版本只需改 project(VERSION) 并重新配置；生成头位于 build/generated，已加入 target_include_directories
+## [8] 2026-10-20 02:11:52 UTC
+Change: 20261020-version-and-install
+Context: CMakeLists 原本没有 install() 规则，cmake --install 装不出任何文件
+Decision: install(TARGETS sele RUNTIME DESTINATION bin)；SELE_SHARED_DEPS=ON 时 cli11_shared/nlohmann_json_shared 的 RUNTIME 与 LIBRARY 都装到 bin
+Consequences: 共享库与可执行同目录，$ORIGIN rpath 与 Windows DLL 查找都不需要额外配置；前缀由用户 --prefix 指定，不设系统默认安装点
+## [9] 2026-10-20 02:11:52 UTC
+Change: 20261020-version-and-install
+Context: 需要一条不依赖 .design/ 的版本查询入口，供装到系统后自检
+Decision: 新增 version 子命令，只挂 --output（不挂 --root），text 为 sele <版本> 加两行依赖版本，json 字段为 name/version/cli11/nlohmann_json
+Consequences: 任意目录可运行；--version 保持单行格式与既有脚本兼容

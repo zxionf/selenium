@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(sele LANGUAGES CXX)
+project(sele VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
@@ -59,15 +59,26 @@ add_executable(sele
     src/cli/status.cpp
     src/cli/lint.cpp
     src/cli/close.cpp
+    src/cli/version.cpp
     src/core/root.cpp
     src/core/id.cpp
     src/core/template.cpp
     src/core/git.cpp
+    src/core/version.cpp
     src/util/output.cpp
+)
+
+# Single source of truth for the version: project(VERSION) above. The generated
+# header is included as <sele_version.hpp>.
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/version.hpp.in
+    ${CMAKE_BINARY_DIR}/generated/sele_version.hpp
+    @ONLY
 )
 
 target_include_directories(sele PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_BINARY_DIR}/generated
 )
 
 if(SELE_SHARED_DEPS)
@@ -91,6 +102,17 @@ else()
 
     set_target_properties(sele PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build
+    )
+endif()
+
+# Installation: `cmake --install build --prefix <dir>` puts sele in <dir>/bin.
+# With SELE_SHARED_DEPS=ON the wrapper libraries go to bin as well, so $ORIGIN
+# (Linux) and same-directory DLL lookup (Windows) keep working.
+install(TARGETS sele RUNTIME DESTINATION bin)
+if(SELE_SHARED_DEPS)
+    install(TARGETS cli11_shared nlohmann_json_shared
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION bin
     )
 endif()
 

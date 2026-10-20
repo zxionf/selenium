@@ -21,5 +21,6 @@ void register_append_decision(CLI::App& app, GlobalOptions& global_opts, int& ex
 void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_lint(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_version(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 
 } // namespace cli

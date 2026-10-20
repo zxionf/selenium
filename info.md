@@ -32,6 +32,54 @@ cmake --build build
 
 > 说明：这两个库是 header-only，其模板代码无论如何都会随头文件编译进 `sele.exe`；共享库仅承载版本符号，用于建立并验证运行时的动态依赖关系。
 
+## 安装
+
+版本号由 `CMakeLists.txt` 的 `project(sele VERSION 0.2.0)` 单一决定，`configure_file` 生成 `sele_version.hpp` 后编进二进制；源码里没有版本字面量，改版本只改这一处，然后重新配置构建。
+
+CMake 提供了 `install()` 规则：`sele` 会被安装到前缀下的 `bin/`。前缀随意指定，不需要管理员权限：
+
+```bash
+# 装到你自己的目录（推荐，永不污染系统）
+cmake --install build --prefix "$HOME/.local"
+
+# 或者装到系统目录（Linux/macOS 通常需要 sudo）
+sudo cmake --install build --prefix /usr/local
+```
+
+```powershell
+# Windows：装到用户级目录，无需管理员
+cmake --install build --prefix "$env:LOCALAPPDATA\Programs\sele"
+```
+
+装完后二进制位于 `<prefix>/bin/sele`（Windows 为 `<prefix>\bin\sele.exe`）。`SELE_SHARED_DEPS=ON` 模式下，`cli11_shared` / `nlohmann_json_shared` 也会一并装进同一个 `bin/`，保证 `$ORIGIN`（Linux）与同目录 DLL 查找（Windows）都能命中。
+
+让命令进入 `PATH`：
+
+```powershell
+# Windows：用户级 PATH 追加（重启终端后生效）
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:LOCALAPPDATA\Programs\sele\bin", "User")
+```
+
+```bash
+# Linux/macOS：bash/zsh 下写入 shell 配置
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc   # 或 ~/.zshrc
+```
+
+验证安装：
+
+```bash
+sele version
+# sele 0.2.0
+#   cli11: 2.4.2
+#   nlohmann_json: 3.11.2
+```
+
+不想用 `cmake --install` 也可以直接复制单文件（默认模式只产出一个 exe，无运行时依赖）：
+
+```powershell
+Copy-Item build\build\sele.exe "$env:LOCALAPPDATA\Programs\sele\bin\sele.exe"
+```
+
 ## 命令
 
 所有命令均支持以下全局选项：
@@ -60,7 +108,23 @@ Lint failed
   [ok] dir_integrity
 ```
 
-其余命令的 text 形态：`init` 输出 `Initialized ...` 加 design/agent 路径，`new` 输出 `Created <id>` 加两侧路径，`append-decision` 输出 `Appended decision #<n> -> <path>`；`close --dry-run` 输出 `Close preview for <id> ...` 加折叠计划，实际关闭输出 `Closed <id> (spec folded, directories kept)` 加每个小节的 action 与指针是否复位。
+其余命令的 text 形态：`init` 输出 `Initialized ...` 加 design/agent 路径，`new` 输出 `Created <id>` 加两侧路径，`append-decision` 输出 `Appended decision #<n> -> <path>`，`version` 输出 `sele <版本>` 加两行依赖版本；`close --dry-run` 输出 `Close preview for <id> ...` 加折叠计划，实际关闭输出 `Closed <id> (spec folded, directories kept)` 加每个小节的 action 与指针是否复位。
+
+### `sele version [--output json]`
+
+查看版本。不需要 `.design/`，任意目录可运行；`--version` 与它同源。
+
+```bash
+sele version
+sele version --output json
+sele --version                 # 单行：sele 0.2.0 (CLI11 2.4.2, nlohmann/json 3.11.2)
+```
+
+```json
+{"name":"sele","version":"0.2.0","cli11":"2.4.2","nlohmann_json":"3.11.2"}
+```
+
+退出码：0=成功
 
 ### `sele init [directory]`
 
@@ -167,6 +231,7 @@ sele close 20261018-my-feature             # 执行折叠并复位指针
 ```
 src/
 ├── main.cpp              # 入口：解析全局选项、注册子命令、统一错误处理
+├── version.hpp.in        # 版本头模板，configure_file 生成 sele_version.hpp
 ├── cli/                  # 各子命令实现
 │   ├── commands.hpp/.cpp # 共享的 GlobalOptions 与子命令注册声明
 │   ├── init.cpp
@@ -174,12 +239,14 @@ src/
 │   ├── append_decision.cpp
 │   ├── status.cpp
 │   ├── lint.cpp
-│   └── close.cpp
+│   ├── close.cpp
+│   └── version.cpp
 ├── core/                 # 核心逻辑
 │   ├── root.hpp/.cpp     # 查找 .design/ 与 .agent/ 根目录
 │   ├── id.hpp/.cpp       # slug 校验、ID 生成与解析
 │   ├── template.hpp/.cpp # design.md / tasks.md / DECISIONS.log 模板渲染
-│   └── git.hpp/.cpp      # git 调用与仓库状态探测
+│   ├── git.hpp/.cpp      # git 调用与仓库状态探测
+│   └── version.hpp/.cpp  # 版本串与含依赖版本的展示串
 └── util/                 # 通用工具
     ├── output.hpp/.cpp   # text/json 输出与错误输出
     └── exit_codes.hpp    # 退出码常量
@@ -212,7 +279,7 @@ ID 格式：`<YYYYMMDD>-<slug>`（例如 `20261018-my-feature`）。
 ctest --output-on-failure
 ```
 
-覆盖 14 个测试用例，涉及正常路径、错误场景、text 输出与 close 折叠。
+覆盖 15 个测试用例，涉及正常路径、错误场景、text 输出、close 折叠与版本查询。
 
 > 说明：测试用例中的 ID 在运行时从 `new` 的 JSON 输出读取（不再硬编码日期），因此跨日期运行不会失败。Windows 下手动运行：
 >

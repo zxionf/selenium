@@ -243,6 +243,17 @@ test_text_for_all_commands() {
     rm -rf "$proj"
 }
 
+# Test 15: version subcommand matches the build version
+test_version_command() {
+    local json=$("$DESIGN_BIN" version --output json)
+    echo "$json" | jq -e '.name == "sele"' >/dev/null
+    echo "$json" | jq -e '.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' >/dev/null
+    echo "$json" | jq -e '.cli11 and .nlohmann_json' >/dev/null
+    local version=$(echo "$json" | jq -r '.version')
+    "$DESIGN_BIN" version | grep -q "sele $version"
+    "$DESIGN_BIN" --version | grep -q "$version"
+}
+
 # Run all tests
 run_test "new success" test_new_success
 run_test "new duplicate ID" test_new_duplicate
@@ -258,5 +269,6 @@ run_test "status text output" test_status_text
 run_test "text output for all commands" test_text_for_all_commands
 run_test "dry-run does not invent mapping" test_close_dry_run_no_invented_mapping
 run_test "close leaves foreign active pointer" test_close_foreign_pointer
+run_test "version command" test_version_command
 
 echo "=== All tests passed! ==="

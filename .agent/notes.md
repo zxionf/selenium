@@ -4,9 +4,11 @@
 - 产物在**嵌套目录**：`build/build/sele.exe`（Windows）/ `build/build/sele`（Linux），不是 `build/`。
 - 依赖为 header-only，默认直接编入可执行文件。`-DSELE_SHARED_DEPS=ON` 才把它们封装成共享库（`.dll`/`.so`）动态链接，相关代码在 `src/thirdparty/`。
 - 默认未设置 `CMAKE_BUILD_TYPE`，CMake 会加 `-g`，exe 约 1.4 MB；需要更小可加 `-DCMAKE_BUILD_TYPE=Release`。
+- 版本号单一来源：`CMakeLists.txt` 的 `project(sele VERSION x.y.z)`，`configure_file` 生成 `build/generated/sele_version.hpp`。改版本只改这一处并重新 configure，源码里没有版本字面量。
+- 安装：`cmake --install build --prefix <dir>` 装到 `<dir>/bin`；`SELE_SHARED_DEPS=ON` 时包装库也装进同一个 `bin/`，靠 `$ORIGIN` / 同目录 DLL 查找生效。
 
 ## 测试
-- `ctest --output-on-failure` 可用（14 个用例，工作目录为仓库根）。
+- `ctest --output-on-failure` 可用（15 个用例，工作目录为仓库根）。
 - 用例 ID 不再硬编码：从 `new` 的 JSON 输出读取 `.id` 再用于路径与断言，跨 UTC 日期运行稳定。
 - 默认（text）输出非空由两个用例守护：六个子命令若只剩 `print_json`，会立刻失败。新命令的 text 形态用 `Output::print_both(text, json)` 渲染同一份数据。
 - close 用例覆盖真实折叠：命中 SPEC 小节时替换正文、未命中时追加、关闭非活跃变更不得改动 `STATE.md`，另有一条断言嵌套列表缩进必须存活。
@@ -25,5 +27,6 @@
 - **不要把共享头文件命名为 `src/cli/cli.hpp`**：在大小写不敏感的文件系统上会让 `#include <CLI/CLI.hpp>` 解析到它并导致构建失败。因此该头文件叫 `commands.hpp`。
 - `close` 折叠 SPEC.md 时每行只做右剪空白：若用 `trim`，嵌套列表与 fenced code 的缩进会被压平（已踩过一次）。
 - 在 PowerShell 5.1 里给 `sele` 传含中文的参数时别用全角引号 `“ ”`：PowerShell 会把它们当引号，参数被截断，CLI11 报 `argument was not expected`。改用单引号或 `「 」`。
+- **MSVC 构建当前不可用**：`/W4 /WX` 把 `gmtime` 的 C4996 弃用警告当错误（`src/core/id.cpp:17`、`src/core/template.cpp:63`），`src/main.cpp:38` 也有告警被升级为错误。可用的构建链是 MinGW Makefiles + g++（`build/` 就是这样配置的）。
 - `GlobalOptions` / `add_global_opts` 声明在 `src/cli/commands.hpp`、定义在 `src/cli/commands.cpp`。
 - lint 会拒绝 `.design/SPEC.md` 中出现 `TODO`、`WIP`、`待办`、`下一步`、`进行中`（忽略大小写）；写 `src/core/template.cpp` 的模板文本时别带上这些词。

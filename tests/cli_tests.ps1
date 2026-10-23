@@ -305,6 +305,42 @@ Run-Test "close leaves foreign active pointer" {
     Remove-Item -Recurse -Force $proj
 }
 
+# Test 19: status surfaces the whole STATE.md, not just the active pointer
+Run-Test "status reads STATE.md fields" {
+    $proj = Setup-Project
+    @"
+# Agent State
+
+Active Change: 无
+Phase: 需求确认
+Blocked: 等用户确认
+Next: 创建首个变更
+"@ | Set-Content "$proj/.agent/STATE.md"
+    $json = & $SeleBin --root $proj status --output json | ConvertFrom-Json
+    if ($json.phase -ne "需求确认") { throw "phase missing from JSON: '$($json.phase)'" }
+    if ($json.blocked -ne "等用户确认") { throw "blocked missing from JSON: '$($json.blocked)'" }
+    if ($json.next -ne "创建首个变更") { throw "next missing from JSON: '$($json.next)'" }
+    $text = (& $SeleBin --root $proj status) -join "`n"
+    if ($text -notmatch 'Phase: 需求确认') { throw "text should show Phase: $text" }
+    if ($text -notmatch 'Blocked: 等用户确认') { throw "text should show Blocked: $text" }
+    if ($text -notmatch 'Next: 创建首个变更') { throw "text should show Next: $text" }
+    Remove-Item -Recurse -Force $proj
+}
+
+# Test 20: close only moves the active pointer and says so
+Run-Test "close keeps other state fields" {
+    $proj = Setup-Project
+    $id = (& $SeleBin --root $proj new --slug demo-change --output json | ConvertFrom-Json).id
+    Add-Content "$proj/.agent/STATE.md" "`nPhase: 需求确认`nBlocked: 无`nNext: 创建首个变更"
+    $text = (& $SeleBin --root $proj close $id) -join "`n"
+    if ($text -notmatch 'Phase/Blocked/Next left as-is') { throw "close should mention untouched state fields: $text" }
+    $state = Get-Content "$proj/.agent/STATE.md" -Raw
+    if ($state -notmatch 'Active Change: 无') { throw "pointer should be reset" }
+    if ($state -notmatch 'Phase: 需求确认') { throw "Phase must survive close" }
+    if ($state -notmatch 'Next: 创建首个变更') { throw "Next must survive close" }
+    Remove-Item -Recurse -Force $proj
+}
+
 # Test 11: status text output (default format must not be silent)
 Run-Test "status text output" {
     $proj = Setup-Project

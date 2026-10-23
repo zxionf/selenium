@@ -2,8 +2,8 @@
 
 ## sele CLI
 
-- 版本 0.2.1，已在 PATH（`D:\Program Files\sele\bin\sele.exe`）。
-- 命令文档见 `sele0.2.1.md`；常用：
+- 版本 0.2.2，已在 PATH（`D:\Program Files\sele\bin\sele.exe`）。
+- 命令文档见 `sele0.2.2.md`；常用：
   - `sele status` 查询活跃变更与决策数
   - `sele lint` 检查 ID 一致性、决策只追加、SPEC 禁过程词、目录完整性
   - `sele new --slug <name>` 创建变更（同时生成 `.design/changes/<id>/design.md` 与 `.agent/work/<id>/tasks.md`）

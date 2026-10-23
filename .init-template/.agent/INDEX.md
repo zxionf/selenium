@@ -14,6 +14,6 @@
 - `CONTRACT.md` 操作契约与硬约束（必读）
 - `STATE.md` 当前状态指针（极短）
 - `notes.md` 工具、环境、踩坑（只追加）
-- `sele0.2.1.md` sele CLI 文档
+- `sele0.2.2.md` sele CLI 文档
 - `work/<id>/tasks.md` 变更任务与进度
 - `work/<id>/handover.md` 会话交接（每次结束覆写）

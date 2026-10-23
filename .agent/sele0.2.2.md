@@ -1,4 +1,4 @@
-# sele CLI 0.2.1
+# sele CLI 0.2.2
 
 一个用于管理 `.design/` 与 `.agent/` 目录的 C++20 命令行工具，支撑「创建变更 → 追加决策 → 查询状态 → 规则检查 → 归档预览」这一最小闭环。
 
@@ -19,7 +19,12 @@ Active change: 20261020-my-feature
 Tasks: 2/5 done
 Decisions: 3
 Consistent: yes
+Phase: 需求确认
+Blocked: 无
+Next: 创建首个变更
 ```
+
+`STATE.md` 若带有 `Phase:` / `Blocked:` / `Next:` 行，`status` 会在摘要末尾各追加一行（没有就不显示）；JSON 中对应 `phase` / `blocked` / `next` 三个字段，缺失时为空字符串。
 
 ```text
 $ sele lint
@@ -39,11 +44,11 @@ Lint failed
 ```bash
 sele version
 sele version --output json
-sele --version                 # 单行：sele 0.2.0 (CLI11 2.4.2, nlohmann/json 3.11.2)
+sele --version                 # 单行：sele 0.2.2 (CLI11 2.4.2, nlohmann/json 3.11.2)
 ```
 
 ```json
-{"name":"sele","version":"0.2.0","cli11":"2.4.2","nlohmann_json":"3.11.2"}
+{"name":"sele","version":"0.2.2","cli11":"2.4.2","nlohmann_json":"3.11.2"}
 ```
 
 退出码：0=成功
@@ -85,7 +90,7 @@ sele append-decision --context "选用 C++20" --decision "使用 modules" --cons
 
 ### `sele status [--output json]`
 
-查看当前活动变更的状态（只读、快速）。
+查看当前活动变更的状态（只读、快速）：活跃 id、任务勾选数、该 id 的决策条数、两侧目录一致性，以及 `STATE.md` 中的 `Phase:` / `Blocked:` / `Next:`（缺失时 JSON 为空串、text 不显示该行）。
 
 ```bash
 sele status --output json
@@ -119,6 +124,7 @@ sele lint --fix  # 自动补齐缺失的模板文件
 - fenced code 块里的 `## ` 行不算小节，代码块整体原样保留。
 - `.design/changes/<id>/` 与 `.agent/work/<id>/` **原地保留**，历史交给 git。
 - 仅当 `STATE.md` 的 `Active Change:` 正是该 id 时复位为 `无`；指向其他变更时保持不变。
+- `Phase:` / `Blocked:` / `Next:` 行不修改，原样保留；存在这些行时文本输出以 `Phase/Blocked/Next left as-is` 提示。
 - 折叠结果与折叠前一致时不重写 SPEC.md（JSON `spec_updated` 为 `false`），重复关闭不会产生无意义的 diff。
 
 ```bash

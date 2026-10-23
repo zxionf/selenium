@@ -34,7 +34,7 @@ cmake --build build
 
 ## 安装
 
-版本号由 `CMakeLists.txt` 的 `project(sele VERSION 0.2.0)` 单一决定，`configure_file` 生成 `sele_version.hpp` 后编进二进制；源码里没有版本字面量，改版本只改这一处，然后重新配置构建。
+版本号由 `CMakeLists.txt` 的 `project(sele VERSION 0.2.2)` 单一决定，`configure_file` 生成 `sele_version.hpp` 后编进二进制；源码里没有版本字面量，改版本只改这一处，然后重新配置构建。
 
 CMake 提供了 `install()` 规则：`sele` 会被安装到前缀下的 `bin/`。前缀随意指定，不需要管理员权限：
 
@@ -69,7 +69,7 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc   # 或 ~/.zshrc
 
 ```bash
 sele version
-# sele 0.2.0
+# sele 0.2.2
 #   cli11: 2.4.2
 #   nlohmann_json: 3.11.2
 ```
@@ -99,6 +99,8 @@ Decisions: 3
 Consistent: yes
 ```
 
+`STATE.md` 若带有 `Phase:` / `Blocked:` / `Next:` 行，`status` 会在摘要末尾各追加一行（没有就不显示）；JSON 中对应 `phase` / `blocked` / `next` 三个字段，缺失时为空字符串。
+
 ```text
 $ sele lint
 Lint failed
@@ -117,11 +119,11 @@ Lint failed
 ```bash
 sele version
 sele version --output json
-sele --version                 # 单行：sele 0.2.0 (CLI11 2.4.2, nlohmann/json 3.11.2)
+sele --version                 # 单行：sele 0.2.2 (CLI11 2.4.2, nlohmann/json 3.11.2)
 ```
 
 ```json
-{"name":"sele","version":"0.2.0","cli11":"2.4.2","nlohmann_json":"3.11.2"}
+{"name":"sele","version":"0.2.2","cli11":"2.4.2","nlohmann_json":"3.11.2"}
 ```
 
 退出码：0=成功
@@ -197,6 +199,7 @@ sele lint --fix  # 自动补齐缺失的模板文件
 - fenced code 块里的 `## ` 行不算小节，代码块整体原样保留。
 - `.design/changes/<id>/` 与 `.agent/work/<id>/` **原地保留**，历史交给 git。
 - 仅当 `STATE.md` 的 `Active Change:` 正是该 id 时复位为 `无`；指向其他变更时保持不变。
+- `Phase:` / `Blocked:` / `Next:` 行不修改，原样保留；存在这些行时文本输出以 `Phase/Blocked/Next left as-is` 提示。
 - 折叠结果与折叠前一致时不重写 SPEC.md（JSON `spec_updated` 为 `false`），重复关闭不会产生无意义的 diff。
 
 ```bash
@@ -281,7 +284,7 @@ ID 格式：`<YYYYMMDD>-<slug>`（例如 `20261018-my-feature`）。
 ctest --output-on-failure
 ```
 
-覆盖 18 个测试用例，涉及正常路径、错误场景、text 输出、close 折叠（重复标题、注释正文、代码块）、版本查询。
+覆盖 20 个测试用例，涉及正常路径、错误场景、text 输出、close 折叠（重复标题、注释正文、代码块）、STATE 字段透传、版本查询。
 
 > 说明：测试用例中的 ID 在运行时从 `new` 的 JSON 输出读取（不再硬编码日期），因此跨日期运行不会失败。Windows 下手动运行：
 >

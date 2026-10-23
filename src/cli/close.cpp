@@ -227,6 +227,17 @@ std::string active_change_value(const std::string& state_content) {
     return trim(state_content.substr(value_begin, line_end - value_begin));
 }
 
+bool has_state_field(const std::string& content, const std::string& key) {
+    size_t pos = 0;
+    while (pos < content.size()) {
+        size_t line_end = content.find('\n', pos);
+        if (line_end == std::string::npos) line_end = content.size();
+        if (content.compare(pos, key.size(), key) == 0) return true;
+        pos = line_end + 1;
+    }
+    return false;
+}
+
 std::string set_active_change(const std::string& state_content, const std::string& value) {
     size_t pos = state_content.find(kActiveChange);
     if (pos == std::string::npos) {
@@ -383,10 +394,14 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
 
             fs::path state_md = agent_root / ".agent" / "STATE.md";
             std::string state_value;
+            bool state_fields_present = false;
             bool state_updated = false;
             if (fs::exists(state_md)) {
                 std::string state_content = read_file(state_md);
                 state_value = active_change_value(state_content);
+                state_fields_present = has_state_field(state_content, "Phase:") ||
+                                       has_state_field(state_content, "Blocked:") ||
+                                       has_state_field(state_content, "Next:");
                 if (state_value == args->id) {
                     write_file(state_md, set_active_change(state_content, "无"));
                     state_updated = true;
@@ -421,6 +436,9 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 text << "Active Change untouched (no active pointer)";
             } else {
                 text << "Active Change untouched (points to " << state_value << ")";
+            }
+            if (state_fields_present) {
+                text << " (Phase/Blocked/Next left as-is)";
             }
 
             output.print_both(text.str(), result);

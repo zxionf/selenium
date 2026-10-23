@@ -5,6 +5,7 @@
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 #include <string>
 
@@ -15,6 +16,31 @@
 namespace fs = std::filesystem;
 
 namespace cli {
+
+namespace {
+
+// Read "Key: value" from STATE.md, matching the key only at the start of a
+// line. Returns the trimmed value, or "" when the key is absent.
+std::string state_field(const std::string& content, const std::string& key) {
+    size_t pos = 0;
+    while (pos < content.size()) {
+        size_t line_end = content.find('\n', pos);
+        if (line_end == std::string::npos) line_end = content.size();
+        std::string line = content.substr(pos, line_end - pos);
+        if (line.rfind(key, 0) == 0) {
+            std::string value = line.substr(key.size());
+            size_t begin = 0;
+            while (begin < value.size() && std::isspace(static_cast<unsigned char>(value[begin])) != 0) ++begin;
+            size_t end = value.size();
+            while (end > begin && std::isspace(static_cast<unsigned char>(value[end - 1])) != 0) --end;
+            return value.substr(begin, end - begin);
+        }
+        pos = line_end + 1;
+    }
+    return "";
+}
+
+} // namespace
 
 void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     auto* cmd_status = app.add_subcommand("status", "Show current active change status");
@@ -29,23 +55,24 @@ void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code) 
 
             fs::path state_md = agent_root / ".agent" / "STATE.md";
             std::string active_id;
+            std::string phase;
+            std::string blocked;
+            std::string next;
             if (fs::exists(state_md)) {
                 std::ifstream in(state_md);
-                std::string line;
-                while (std::getline(in, line)) {
-                    if (line.rfind("Active Change:", 0) == 0) {
-                        active_id = line.substr(14);
-                        // trim
-                        while (!active_id.empty() && isspace(active_id.front())) active_id.erase(active_id.begin());
-                        while (!active_id.empty() && isspace(active_id.back())) active_id.pop_back();
-                        if (active_id == "无") active_id.clear();
-                        break;
-                    }
-                }
+                std::string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+                active_id = state_field(content, "Active Change:");
+                phase = state_field(content, "Phase:");
+                blocked = state_field(content, "Blocked:");
+                next = state_field(content, "Next:");
+                if (active_id == "无") active_id.clear();
             }
 
             nlohmann::json result;
             result["active_id"] = active_id;
+            result["phase"] = phase;
+            result["blocked"] = blocked;
+            result["next"] = next;
             result["tasks"] = nlohmann::json{{"total", 0}, {"done", 0}};
             result["decisions"] = 0;
             result["consistent"] = true;
@@ -93,6 +120,9 @@ void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code) 
                  << result["tasks"]["total"].get<int>() << " done\n"
                  << "Decisions: " << result["decisions"].get<int>() << '\n'
                  << "Consistent: " << (result["consistent"].get<bool>() ? "yes" : "no");
+            if (!phase.empty()) text << "\nPhase: " << phase;
+            if (!blocked.empty()) text << "\nBlocked: " << blocked;
+            if (!next.empty()) text << "\nNext: " << next;
 
             output.print_both(text.str(), result);
             exit_code = exit_codes::SUCCESS;

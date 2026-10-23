@@ -54,3 +54,8 @@ Change: none
 Context: 折叠逻辑有三处会损坏 SPEC：design.md 内重复标题各追加一节、正文首行是注释时整段被当占位丢弃、fenced code 里的 ## 行被当小节边界拆断
 Decision: 匹配改为在已折叠结果上查找，重复标题合并；内容判定改为剥掉 HTML 注释后看是否仍有非空白字符；分节解析先找围栏闭合，成对围栏整体原样拷贝（找不到闭合则按普通行处理，避免未闭合围栏吞掉后续小节）
 Consequences: 三处均有回归用例（15 到 18 个）；另补 dry-run 的 plan 字段统一动作词、写入改为临时文件加改名、折叠结果不变时不重写 SPEC
+## [12] 2026-10-22 11:41:56 UTC
+Change: none
+Context: 项目模板把 STATE.md 扩成指针加 Phase/Blocked/Next 四行，sele status 只读 Active Change 一行，其余三行对调用方不可见；close 后这三行还停在关闭前的描述
+Decision: status 解析 Phase/Blocked/Next 并透传：text 在摘要后按存在的字段追加行，JSON 恒有 phase/blocked/next（缺失为空串）；new 与 close 仍只改写 Active Change 行，close 在存在这些行时文本提示 left as-is，不去猜内容
+Consequences: JSON 新增三字段属增量，旧调用方不受影响；sele init 生成的两行式 STATE.md 仍兼容（字段缺失时输出不变）；Phase/Next 在 close 后可能过时，由人或 agent 更新，工具只负责提示

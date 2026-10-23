@@ -276,6 +276,34 @@ test_close_foreign_pointer() {
     rm -rf "$proj"
 }
 
+# Test 19: status surfaces the whole STATE.md, not just the active pointer
+test_status_state_fields() {
+    local proj=$(setup_project)
+    printf '# Agent State\n\nActive Change: 无\nPhase: 需求确认\nBlocked: 等用户确认\nNext: 创建首个变更\n' > "$proj/.agent/STATE.md"
+    local out=$("$DESIGN_BIN" --root "$proj" status --output json)
+    echo "$out" | jq -e '.phase == "需求确认"' >/dev/null
+    echo "$out" | jq -e '.blocked == "等用户确认"' >/dev/null
+    echo "$out" | jq -e '.next == "创建首个变更"' >/dev/null
+    local text=$("$DESIGN_BIN" --root "$proj" status)
+    echo "$text" | grep -q 'Phase: 需求确认'
+    echo "$text" | grep -q 'Blocked: 等用户确认'
+    echo "$text" | grep -q 'Next: 创建首个变更'
+    rm -rf "$proj"
+}
+
+# Test 20: close only moves the active pointer and says so
+test_close_keeps_state_fields() {
+    local proj=$(setup_project)
+    local id=$("$DESIGN_BIN" --root "$proj" new --slug demo-change --output json | jq -r '.id')
+    printf '\nPhase: 需求确认\nBlocked: 无\nNext: 创建首个变更\n' >> "$proj/.agent/STATE.md"
+    local text=$("$DESIGN_BIN" --root "$proj" close "$id")
+    echo "$text" | grep -q 'Phase/Blocked/Next left as-is'
+    grep -q 'Active Change: 无' "$proj/.agent/STATE.md"
+    grep -q 'Phase: 需求确认' "$proj/.agent/STATE.md"
+    grep -q 'Next: 创建首个变更' "$proj/.agent/STATE.md"
+    rm -rf "$proj"
+}
+
 # Test 11: status text output (default format must not be silent)
 test_status_text() {
     local proj=$(setup_project)
@@ -342,6 +370,8 @@ run_test "close leaves foreign active pointer" test_close_foreign_pointer
 run_test "duplicate design titles merge" test_close_duplicate_titles
 run_test "inline comment body is folded" test_close_inline_comment
 run_test "fenced code survives the fold" test_close_fenced_code
+run_test "status reads STATE.md fields" test_status_state_fields
+run_test "close keeps other state fields" test_close_keeps_state_fields
 run_test "version command" test_version_command
 
 echo "=== All tests passed! ==="

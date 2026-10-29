@@ -286,6 +286,7 @@ revert 会 `git reset --hard`，只用于未合并的线；merged/abandoned 只�
 - `.sele/` 项目可用：`line` / `task` / `acceptance` / `overview` / `log` / `fsck` / `worktree` / `version`。
 - `.design/` 项目可用旧命令：`new` / `append-decision` / `status` / `lint` / `close` / `version`。
 - 两者同时存在时旧命令仍可用（迁移期）。
+- `sele init` 允许在已有 `.design/.agent` 的目录创建 `.sele/`（旧目录保留），不会覆盖已有的 `AGENTS.md`。
 - 在新项目里跑旧命令或用 `status` 会退 4 并提示替代命令；旧体系用 `sele status`，新体系用 `sele overview`。
 
 ---

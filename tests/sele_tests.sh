@@ -962,6 +962,22 @@ test_init_creates_agents() {
     rm -rf "$proj" "$other"
 }
 
+test_init_next_to_legacy() {
+    local proj
+    proj=$(mktemp -d)
+    mkdir -p "$proj/.design/changes" "$proj/.agent/work"
+    printf '# Design Index\n' > "$proj/.design/INDEX.md"
+    printf '# Spec\n' > "$proj/.design/SPEC.md"
+    printf '# State\n\nActive Change: 无\n' > "$proj/.agent/STATE.md"
+    "$BIN" --root "$proj" init --output json | \
+        jq -e '.initialized == true and .legacy_present == true' >/dev/null
+    [[ -d "$proj/.sele" ]]
+    [[ -d "$proj/.design" && -d "$proj/.agent" ]]
+    [[ -f "$proj/AGENTS.md" ]]
+    "$BIN" --root "$proj" status >/dev/null
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -1020,5 +1036,6 @@ run_test "archive accepts an abandoned line" test_archive_abandoned
 run_test "archive requires merged/abandoned" test_archive_requires_finished
 run_test "archive refuses a line with a worktree" test_archive_rejects_worktree
 run_test "init writes AGENTS.md without overwriting" test_init_creates_agents
+run_test "init adds .sele next to legacy directories" test_init_next_to_legacy
 
 echo "=== All sele tests passed! ==="

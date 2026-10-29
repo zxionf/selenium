@@ -71,6 +71,10 @@ void init_next(const fs::path& target, util::Output& output, int& exit_code) {
         return;
     }
 
+    // Coexistence is allowed: keep legacy .design/.agent untouched while adding .sele/.
+    const bool legacy_present = core::fsys::exists(target / ".design") ||
+                                core::fsys::exists(target / ".agent");
+
     core::sele::json config = core::sele::json::object();
     config["schema_version"] = 1;
     config["actor"] = "git";
@@ -103,13 +107,17 @@ void init_next(const fs::path& target, util::Output& output, int& exit_code) {
     result["sele_path"] = layout.sele.string();
     result["agents_path"] = agents.string();
     result["agents_written"] = agents_written;
+    result["legacy_present"] = legacy_present;
 
     std::ostringstream text;
     text << "Initialized .sele/ in " << target.string() << '\n'
          << "  sele: " << layout.sele.string() << '\n'
          << "  agents: " << agents.string()
-         << (agents_written ? "" : " (existing, untouched)") << '\n'
-         << "  next: sele line new <slug> --goal \"...\" --acceptance \"desc::check\" --modules a,b";
+         << (agents_written ? "" : " (existing, untouched)") << '\n';
+    if (legacy_present) {
+        text << "  legacy: .design/.agent present (kept untouched)\n";
+    }
+    text << "  next: sele line new <slug> --goal \"...\" --acceptance \"desc::check\" --modules a,b";
     output.print_both(text.str(), result);
     exit_code = exit_codes::SUCCESS;
 }
@@ -145,13 +153,6 @@ void register_init(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             if (args->legacy) {
                 init_legacy(target, output, exit_code);
             } else {
-                if (fs::exists(target / ".design") || fs::exists(target / ".agent")) {
-                    output.error(
-                        "Already initialized: .design/ or .agent/ already exists in " + target.string(),
-                        "Use --legacy to keep using the old layout");
-                    exit_code = exit_codes::STATE_CONFLICT;
-                    return;
-                }
                 init_next(target, output, exit_code);
             }
         } catch (const std::exception& e) {

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "actor": "git",
+  "modules": {
+    "allow": []
+  },
+  "checkpoint": {
+    "strategy": "git-commit",
+    "allow_empty": false
+  }
+}

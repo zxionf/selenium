@@ -21,6 +21,8 @@ sele task revert T2                                                # 撤销 T2 �
 sele line rebase <id>                                              # 变基到最新 main；冲突时用 --continue / --abort
 sele worktree add <id> --path ../wt-<id>                           # 为线创建独立工作树
 sele log --events                                                 # 合并 task 过程事件查看
+sele task add "unit" --modules auth --group G1 --depends T1        # 并行组成员
+sele task add "join" --modules core --depends T2 --depends T3      # join 点
 sele overview
 ```
 

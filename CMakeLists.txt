@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(sele VERSION 0.8.0 LANGUAGES CXX)
+project(sele VERSION 0.9.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)

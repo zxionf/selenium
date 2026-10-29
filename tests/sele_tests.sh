@@ -166,7 +166,7 @@ test_task_chain() {
     "$BIN" --root "$proj" task add "second" --modules auth >/dev/null
     jq -e '.depends == []' "$proj/.sele/lines/$id/tasks/T1.json" >/dev/null
     jq -e '.depends == ["T1"]' "$proj/.sele/lines/$id/tasks/T2.json" >/dev/null
-    expect_code 1 "$BIN" --root "$proj" task add "third" --modules auth --depends T1
+    expect_code 1 "$BIN" --root "$proj" task add "third" --modules auth --depends T9
     rm -rf "$proj"
 }
 
@@ -806,6 +806,97 @@ test_log_events() {
     rm -rf "$proj"
 }
 
+test_fork_join() {
+    local proj id
+    proj=$(setup_next)
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" task add "base" --modules core >/dev/null
+    "$BIN" --root "$proj" line open "$id" >/dev/null
+    "$BIN" --root "$proj" task start T1 >/dev/null
+    echo base >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T1 >/dev/null
+    "$BIN" --root "$proj" task done T1 >/dev/null
+
+    "$BIN" --root "$proj" task add "unit" --modules auth --group G1 --depends T1 >/dev/null
+    "$BIN" --root "$proj" task add "docs" --modules docs --group G1 --depends T1 >/dev/null
+    "$BIN" --root "$proj" task add "join" --modules core --depends T2 --depends T3 >/dev/null
+
+    "$BIN" --root "$proj" line check "$id" >/dev/null
+    jq -e '.group == "G1"' "$proj/.sele/lines/$id/tasks/T2.json" >/dev/null
+    jq -e '.depends == ["T1"]' "$proj/.sele/lines/$id/tasks/T3.json" >/dev/null
+    jq -e '.depends == ["T2", "T3"]' "$proj/.sele/lines/$id/tasks/T4.json" >/dev/null
+
+    "$BIN" --root "$proj" task start T2 >/dev/null
+    "$BIN" --root "$proj" task start T3 >/dev/null
+    jq -e '.tasks.T2.status == "running" and .tasks.T3.status == "running"' \
+        "$proj/.sele/runtime/state/$id.json" >/dev/null
+
+    expect_code 2 "$BIN" --root "$proj" task start T4
+
+    echo unit >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T2 >/dev/null
+    "$BIN" --root "$proj" task done T2 >/dev/null
+    echo docs >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T3 >/dev/null
+    "$BIN" --root "$proj" task done T3 >/dev/null
+
+    "$BIN" --root "$proj" task start T4 >/dev/null
+    echo join >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T4 >/dev/null
+    "$BIN" --root "$proj" task done T4 >/dev/null
+    "$BIN" --root "$proj" acceptance pass A1 --evidence ok >/dev/null
+    "$BIN" --root "$proj" line done >/dev/null
+    jq -e '.status == "done"' "$proj/.sele/lines/$id/line.json" >/dev/null
+    rm -rf "$proj"
+}
+
+test_parallel_group_isolation() {
+    local proj id
+    proj=$(setup_next)
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" task add "base" --modules core >/dev/null
+    "$BIN" --root "$proj" line open "$id" >/dev/null
+    "$BIN" --root "$proj" task start T1 >/dev/null
+    echo base >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T1 >/dev/null
+    "$BIN" --root "$proj" task done T1 >/dev/null
+    "$BIN" --root "$proj" task add "a" --modules auth --group G1 --depends T1 >/dev/null
+    "$BIN" --root "$proj" task add "b" --modules docs --depends T1 >/dev/null
+    "$BIN" --root "$proj" task start T2 >/dev/null
+    expect_code 2 "$BIN" --root "$proj" task start T3
+    rm -rf "$proj"
+}
+
+test_parallel_group_overlap_warn() {
+    local proj id
+    proj=$(setup_next)
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" task add "base" --modules core >/dev/null
+    "$BIN" --root "$proj" line open "$id" >/dev/null
+    "$BIN" --root "$proj" task add "a" --modules auth --group G1 --depends T1 >/dev/null
+    "$BIN" --root "$proj" task add "b" --modules auth --group G1 --depends T1 >/dev/null
+    "$BIN" --root "$proj" line check "$id" >/dev/null
+    "$BIN" --root "$proj" line check "$id" --output json | \
+        jq -e '[.checks[] | select(.name == "parallel_groups")][0].detail | contains("overlapping")' >/dev/null
+    rm -rf "$proj"
+}
+
+test_parallel_group_mismatch() {
+    local proj id
+    proj=$(setup_next)
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" task add "base" --modules core >/dev/null
+    "$BIN" --root "$proj" line open "$id" >/dev/null
+    "$BIN" --root "$proj" task add "a" --modules auth --group G1 --depends T1 >/dev/null
+    "$BIN" --root "$proj" task add "b" --modules docs --group G1 --depends T2 >/dev/null
+    expect_code 3 "$BIN" --root "$proj" line check "$id"
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -855,5 +946,9 @@ run_test "worktree add/list/remove" test_worktree_add_list_remove
 run_test "worktree add refuses the checked-out branch" test_worktree_requires_other_branch
 run_test "worktree add requires a line branch" test_worktree_requires_branch
 run_test "log --events merges process events" test_log_events
+run_test "fork/join runs a group in parallel" test_fork_join
+run_test "a non-group task cannot run beside a group" test_parallel_group_isolation
+run_test "overlapping group modules warn but pass" test_parallel_group_overlap_warn
+run_test "group members must share depends" test_parallel_group_mismatch
 
 echo "=== All sele tests passed! ==="

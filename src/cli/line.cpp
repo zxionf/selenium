@@ -398,9 +398,13 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 if (!ok) passed = false;
             };
 
-            std::vector<std::string> errors;
-            ng::check_linear(ctx.tasks, errors);
-            add("linear_chain", errors.empty(), ng::join(errors, "; "));
+            std::vector<std::string> graph_errors;
+            std::vector<std::string> graph_warnings;
+            ng::check_graph(ctx.tasks, graph_errors, graph_warnings);
+            add("task_graph", graph_errors.empty(), ng::join(graph_errors, "; "));
+            add("parallel_groups", true,
+                graph_warnings.empty() ? "no warnings"
+                                       : "warning: " + ng::join(graph_warnings, "; "));
 
             bool frozen_ok = true;
             if (ctx.line.has_frozen &&
@@ -515,7 +519,8 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             }
 
             std::vector<std::string> errors;
-            ng::check_linear(ctx.tasks, errors);
+            std::vector<std::string> warnings;
+            ng::check_graph(ctx.tasks, errors, warnings);
             if (!errors.empty()) {
                 fail(exit_codes::STATE_CONFLICT, "Line has no valid task chain: " + errors.front(),
                      "Add tasks first", {"sele task add " + ctx.line_id + " \"...\" --modules " +

@@ -54,6 +54,7 @@ struct TaskSpec {
     std::string title;
     std::vector<std::string> depends;
     std::vector<std::string> modules;
+    std::string group;
     std::string created_at;
     std::string created_by;
 };

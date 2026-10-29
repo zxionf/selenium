@@ -81,7 +81,8 @@ std::vector<std::string> split_csv(const std::string& text);
 std::string join(const std::vector<std::string>& values, const std::string& separator);
 
 void require_active(const Ctx& ctx, const std::string& action);
-void check_linear(const std::vector<core::TaskSpec>& tasks, std::vector<std::string>& errors);
+void check_graph(const std::vector<core::TaskSpec>& tasks, std::vector<std::string>& errors,
+                 std::vector<std::string>& warnings);
 
 // Old commands keep working in .design projects; when a .sele project exists
 // without .design they must refuse with a pointer to the new commands.

@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <map>
+#include <set>
 #include <stdexcept>
 #include <utility>
 
@@ -285,22 +287,87 @@ void require_active(const Ctx& ctx, const std::string& action) {
          action + " requires an active line", next);
 }
 
-void check_linear(const std::vector<core::TaskSpec>& tasks, std::vector<std::string>& errors) {
+void check_graph(const std::vector<core::TaskSpec>& tasks, std::vector<std::string>& errors,
+                 std::vector<std::string>& warnings) {
     if (tasks.empty()) {
         errors.push_back("line has no tasks");
         return;
     }
-    for (std::size_t i = 0; i < tasks.size(); ++i) {
-        const auto& task = tasks[i];
-        if (i == 0) {
-            if (!task.depends.empty()) {
-                errors.push_back("root task " + task.id + " must have empty depends");
+
+    std::map<std::string, const core::TaskSpec*> by_id;
+    for (const auto& task : tasks) by_id[task.id] = &task;
+
+    std::size_t roots = 0;
+    for (const auto& task : tasks) {
+        if (task.depends.empty()) ++roots;
+        for (const auto& dep : task.depends) {
+            if (by_id.find(dep) == by_id.end()) {
+                errors.push_back("task " + task.id + " depends on missing " + dep);
             }
-            continue;
         }
-        if (task.depends.size() != 1 || task.depends.front() != tasks[i - 1].id) {
-            errors.push_back("task " + task.id + " must depend on " + tasks[i - 1].id);
+    }
+    if (roots == 0) errors.push_back("task graph has no root");
+    if (roots > 1) errors.push_back("task graph has multiple roots");
+
+    // Group members must share the same predecessors; overlapping modules inside a
+    // group are only a warning because worktrees isolate the actual writes.
+    std::map<std::string, std::set<std::string>> group_deps;
+    std::map<std::string, std::set<std::string>> group_modules;
+    for (const auto& task : tasks) {
+        if (task.group.empty()) continue;
+        const std::set<std::string> deps(task.depends.begin(), task.depends.end());
+        const auto found = group_deps.find(task.group);
+        if (found == group_deps.end()) {
+            group_deps[task.group] = deps;
+        } else if (found->second != deps) {
+            errors.push_back("group " + task.group + " members must share the same depends");
         }
+        for (const auto& module : task.modules) {
+            if (!group_modules[task.group].insert(module).second) {
+                warnings.push_back("group " + task.group + " has overlapping module: " + module);
+            }
+        }
+    }
+
+    std::map<std::string, int> indegree;
+    std::map<std::string, std::vector<std::string>> children;
+    for (const auto& task : tasks) {
+        indegree[task.id] += 0;
+        for (const auto& dep : task.depends) {
+            if (by_id.find(dep) == by_id.end()) continue;
+            ++indegree[task.id];
+            children[dep].push_back(task.id);
+        }
+    }
+
+    std::vector<std::string> ready;
+    for (const auto& entry : indegree) {
+        if (entry.second == 0) ready.push_back(entry.first);
+    }
+    std::size_t visited = 0;
+    while (!ready.empty()) {
+        const std::string id = ready.back();
+        ready.pop_back();
+        ++visited;
+        for (const auto& child : children[id]) {
+            if (--indegree[child] == 0) ready.push_back(child);
+        }
+    }
+    if (visited != tasks.size()) errors.push_back("task graph has a cycle");
+
+    std::set<std::string> reachable;
+    std::vector<std::string> stack;
+    for (const auto& task : tasks) {
+        if (task.depends.empty()) stack.push_back(task.id);
+    }
+    while (!stack.empty()) {
+        const std::string id = stack.back();
+        stack.pop_back();
+        if (!reachable.insert(id).second) continue;
+        for (const auto& child : children[id]) stack.push_back(child);
+    }
+    if (reachable.size() != tasks.size()) {
+        errors.push_back("some tasks are unreachable from the root");
     }
 }
 

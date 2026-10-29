@@ -270,10 +270,13 @@ void register_fsck(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                               });
                 }
                 std::vector<std::string> errors;
-                ng::check_linear(tasks, errors);
+                std::vector<std::string> warnings;
+                ng::check_graph(tasks, errors, warnings);
                 if (!errors.empty()) {
                     chain_ok = false;
                     chain_detail = line.id + ": " + errors.front();
+                } else if (!warnings.empty()) {
+                    chain_detail = line.id + ": warning: " + warnings.front();
                 }
 
                 if (line.has_frozen &&
@@ -307,7 +310,7 @@ void register_fsck(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                     }
                 }
             }
-            add("linear_chain", chain_ok, chain_detail);
+            add("task_graph", chain_ok, chain_detail);
             add("frozen_acceptance", frozen_ok, frozen_detail);
             add("done_consistency", done_ok, done_detail);
 

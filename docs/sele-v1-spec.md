@@ -1,7 +1,7 @@
-# sele v0.8 规格（.sele 体系）
+# sele v0.9 规格（.sele 体系）
 
-> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase + v0.7 worktree + v0.8 log --events）  
-> 版本：0.8.0  
+> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase + v0.7 worktree + v0.8 log --events + v0.9 fork/join）  
+> 版本：0.9.0  
 > 定位：以 `.sele/` 作为工具私有状态目录（类比 `.git/`），用「线（line）→ 任务（task）→ 验收（acceptance）」的显式状态机替代 `.design/.agent` 的自由文本状态。
 > 与 `docs/sele-e.md` 的差异见 §13。本文是**实现依据**，与 `sele-e.md` 冲突处以本文为准。
 
@@ -20,11 +20,11 @@
 | D5 | 元数据用 **JSON**（复用 nlohmann/json），不引入 YAML |
 | D6 | `.sele/` 分 tracked 与 runtime 两区：规格与里程碑入库，运行态本机忽略 |
 | D7 | `line.json` 为权威状态、`log.jsonl` 为审计；`fsck` 对账，v0.3 不做事件重放重建 |
-| D8 | v0.3 = 多线共存 + 单线单写者；v0.4 补 `line merge`/`line revert`，v0.5 补 `task revert`，v0.6 补 `line rebase`，v0.7 补 `worktree`；不做 fork/join |
+| D8 | v0.3 = 多线共存 + 单线单写者；v0.4 补 `line merge`/`line revert`，v0.5 补 `task revert`，v0.6 补 `line rebase`，v0.7 补 `worktree`，v0.9 补 fork/join；不做 archive/跨仓库 |
 
 ### 1.2 v0.4 仍不做
 
-fork/join、并行组、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
+archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
 
 ### 1.3 单仓库边界
 
@@ -290,13 +290,15 @@ pending ──start──> running ──done──> done
 - 其他非法迁移退出 2，错误带 `next` 提示合法命令。
 - 同一 line 同时最多一个 task 为 `running`（单写者），第二个 `task start` 退 2。
 
-### 5.3 线性链约束（v0.3）
+### 5.3 任务图约束（v0.9）
 
-- 恰好一个 task 的 `depends` 为空（根）。
-- 其余每个 task 恰好一个前驱，且前驱存在于同一 line。
-- 全链无环、无孤儿（每个 task 可从根沿 `depends` 到达，且链覆盖全部 task）。
-- `task add` 自动把链尾写为 `depends`；指定 `--depends` 时只允许指向当前链尾，否则 `line check` 报错。
-- 违反任一条 → `line check` 退出 3，`line open` 拒绝。
+- 任务图是单根、无环的有向图；每个 task 的 `depends` 必须指向同一 line 内已存在的 task。
+- 线性推进时每个 task 恰好一个前驱；`task add` 默认把链尾写为 `depends`。
+- 并行组：`task add --group <g>` 的成员必须共享同一组 `depends`（fork 点）；组内 modules 重叠只告警（worktree 隔离，合并期才可能冲突）。
+- join 点：一个 task 可不带 `--group`，用多个 `--depends` 指向组内全部成员；`task start` 要求所有前驱 `done`。
+- 组内可同时多个 `running`；组外不得与组内同时运行（`task start` 拒绝）。
+- `line check` 的 `task_graph` 校验：前驱存在、单根、无环、全部可达、组内 depends 一致；`parallel_groups` 报告模块重叠警告。
+- 违反 `task_graph` → `line check` 退出 3，`line open` 拒绝。
 
 ---
 
@@ -322,7 +324,7 @@ sele line rebase <id> [--onto <branch>] [--continue] [--abort]
 sele line reopen <id> --reason <s>
 sele line abandon <id> --reason <s>
 
-sele task add "<title>" --modules a,b [--line <id>] [--depends <task>]
+sele task add "<title>" --modules a,b [--line <id>] [--group <g>] [--depends <task>]...
 sele task list [--line <id>]
 sele task start <task> [--line <id>]
 sele task checkpoint <task> [--line <id>] [--msg <s>]
@@ -430,11 +432,12 @@ sele line new fix-login \
 - `--abort`：`git rebase --abort`，清空 `rebase_onto`，不改元数据。
 - `--continue` / `--abort` 互斥，且要求 rebase 正在进行。
 
-#### `sele task add "<title>" --modules a,b [--line <id>] [--depends <task>]`
+#### `sele task add "<title>" --modules a,b [--line <id>] [--group <g>] [--depends <task>]...`
 
-- 自动分配 `T<n>`，`depends` 默认为当前链尾（无 task 时为空）。
-- 只允许 `draft` / `active` / `blocked` 的 line；`done` / `abandoned` 退 2。
-- `--modules` 必填（≥1），用于跨线冲突告警。
+- 自动分配 `T<n>`；`depends` 默认链尾；组内新成员默认继承组内已有的 `depends`。
+- `--depends` 可重复，用于 join 点（多个前驱）；每个前驱必须已存在，否则退 1。
+- `--group` 的 id 为 `[A-Za-z][A-Za-z0-9-]*`；组内成员必须共享同一组 `depends`，否则 `line check` 退 3。
+- 只允许 `draft` / `active` / `blocked` 的 line；`done` / `abandoned` / `merged` 退 2。
 
 #### `sele task start <task> [--line <id>]`
 
@@ -630,7 +633,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 49 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝、`log --events` 合并。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 53 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝、`log --events` 合并、fork/join 并行与组约束。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|

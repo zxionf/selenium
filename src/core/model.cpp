@@ -165,6 +165,7 @@ ojson to_json(const TaskSpec& task) {
     value["title"] = task.title;
     value["depends"] = string_array(task.depends);
     value["modules"] = string_array(task.modules);
+    value["group"] = nullable(task.group);
     value["created_at"] = task.created_at;
     value["created_by"] = task.created_by;
     return value;
@@ -177,6 +178,7 @@ TaskSpec task_from_json(const ojson& value) {
     task.title = str(value, "title");
     task.depends = strings(value, "depends");
     task.modules = strings(value, "modules");
+    task.group = str(value, "group");
     task.created_at = str(value, "created_at");
     task.created_by = str(value, "created_by");
     return task;

@@ -63,7 +63,8 @@ void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
         std::string title;
         std::string line;
         std::string modules;
-        std::string depends;
+        std::string group;
+        std::vector<std::string> depends;
     };
     auto add_args = std::make_shared<AddArgs>();
     auto* cmd_add = group->add_subcommand("add", "Append a task to the line chain");
@@ -71,9 +72,13 @@ void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     cmd_add->add_option("title", add_args->title, "Task title")->required();
     cmd_add->add_option("--line", add_args->line, "Line id (default: session pointer)");
     cmd_add->add_option("--modules", add_args->modules, "Comma-separated module tags")->required();
-    cmd_add->add_option("--depends", add_args->depends, "Explicit predecessor (default: chain tail)");
+    cmd_add->add_option("--group", add_args->group,
+                        "Parallel group id; members share the same depends");
+    cmd_add->add_option("--depends", add_args->depends,
+                        "Predecessor task id (repeatable; default: chain tail)");
     cmd_add->footer("Example:\n  sele task add \"Reproduce 401 branch\" --modules auth\n"
-                    "  sele task add \"Add docs\" --modules docs --line 20261029-fix-login");
+                    "  sele task add \"Unit tests\" --modules auth --group G1 --depends T1\n"
+                    "  sele task add \"Join\" --modules core --depends T2 --depends T3");
     cmd_add->callback([&global_opts, &exit_code, add_args]() {
         util::Output output(global_opts.output_format);
         exit_code = ng::handle(output, [&] {
@@ -105,15 +110,32 @@ void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             task.created_at = core::sele::utc_now();
             task.created_by = ctx.actor;
 
+            if (!add_args->group.empty()) {
+                static const std::regex group_pattern("^[A-Za-z][A-Za-z0-9-]*$");
+                if (!std::regex_match(add_args->group, group_pattern)) {
+                    fail(exit_codes::USAGE_ERROR, "Invalid group id: " + add_args->group,
+                         "Group ids use [A-Za-z][A-Za-z0-9-]*");
+                }
+                task.group = add_args->group;
+            }
+
             const std::string tail = ng::last_task_id(ctx);
             if (!add_args->depends.empty()) {
-                if (add_args->depends != tail) {
-                    fail(exit_codes::USAGE_ERROR,
-                         "--depends must point at the chain tail (" + (tail.empty() ? "none" : tail) +
-                             ")",
-                         "Omit --depends to append at the tail");
+                for (const auto& dep : add_args->depends) {
+                    if (!ctx.has_task(dep)) {
+                        fail(exit_codes::USAGE_ERROR, "Dependency not found: " + dep, "",
+                             {"sele task list --line " + ctx.line_id});
+                    }
                 }
-                task.depends = {add_args->depends};
+                task.depends = add_args->depends;
+            } else if (!task.group.empty()) {
+                for (const auto& other : ctx.tasks) {
+                    if (other.group == task.group) {
+                        task.depends = other.depends;
+                        break;
+                    }
+                }
+                if (task.depends.empty() && !tail.empty()) task.depends = {tail};
             } else if (!tail.empty()) {
                 task.depends = {tail};
             }
@@ -131,7 +153,8 @@ void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
 
             std::ostringstream text;
             text << "Added " << task.id << " to " << ctx.line_id << ": " << task.title;
-            if (!task.depends.empty()) text << " (depends: " << task.depends.front() << ')';
+            if (!task.group.empty()) text << " [group " << task.group << ']';
+            if (!task.depends.empty()) text << " (depends: " << ng::join(task.depends, ", ") << ')';
             output.print_both(text.str(), result);
         });
     });
@@ -208,11 +231,24 @@ void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                      "Task " + start_args->task + " is " + current + ", not pending",
                      "Only pending tasks can be started", {task_line("list")});
             }
+            const core::TaskSpec* spec = ctx.task(start_args->task);
+            for (const auto& dep : spec->depends) {
+                const std::string dep_status = ng::status_of(ctx, dep);
+                if (dep_status != "done") {
+                    fail(exit_codes::STATE_CONFLICT,
+                         "Dependency " + dep + " is " + dep_status + ", not done",
+                         "Finish dependencies before starting " + start_args->task,
+                         {"sele task list --line " + ctx.line_id});
+                }
+            }
             for (const auto& task : ctx.tasks) {
-                if (task.id != start_args->task && ng::status_of(ctx, task.id) == "running") {
+                if (task.id == start_args->task) continue;
+                if (ng::status_of(ctx, task.id) != "running") continue;
+                const bool same_group = !spec->group.empty() && task.group == spec->group;
+                if (!same_group) {
                     fail(exit_codes::STATE_CONFLICT,
                          "Another task is already running: " + task.id,
-                         "v0.3 allows one running task per line",
+                         "Only tasks in the same group may run in parallel",
                          {"sele task done " + ctx.line_id + " " + task.id});
                 }
             }

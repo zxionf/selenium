@@ -1,7 +1,7 @@
-# sele v0.7 规格（.sele 体系）
+# sele v0.8 规格（.sele 体系）
 
-> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase + v0.7 worktree）  
-> 版本：0.7.0  
+> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase + v0.7 worktree + v0.8 log --events）  
+> 版本：0.8.0  
 > 定位：以 `.sele/` 作为工具私有状态目录（类比 `.git/`），用「线（line）→ 任务（task）→ 验收（acceptance）」的显式状态机替代 `.design/.agent` 的自由文本状态。
 > 与 `docs/sele-e.md` 的差异见 §13。本文是**实现依据**，与 `sele-e.md` 冲突处以本文为准。
 
@@ -336,7 +336,7 @@ sele task revert <task> [--line <id>]
 sele acceptance pass|fail <acceptance> [--line <id>] --evidence <s> [--by <s>]
 
 sele overview
-sele log [--line <id>] [--limit <n>]
+sele log [--line <id>] [--limit <n>] [--events]
 sele fsck [--fix]
 sele worktree add <line> [--path <dir>]
 sele worktree list
@@ -479,9 +479,9 @@ sele line new fix-login \
 
 输出全局概览：每条 line 的 id/status/task 进度/验收通过数/阻塞原因；当前会话指针；`.sele` 元数据是否有未提交改动（`git status --porcelain .sele` 非空时提示）。
 
-#### `sele log [--line <id>] [--limit <n>]`
+#### `sele log [--line <id>] [--limit <n>] [--events]`
 
-读 `log.jsonl`（里程碑），默认最近 20 条；`--output json` 输出数组。v0.3 不合并 `events.jsonl`（可用 `--events` 扩展，暂不做）。
+读 `log.jsonl`（里程碑），默认最近 20 条；`--output json` 输出 `items` 数组。`--events` 时合并 `runtime/events.jsonl`（`task.start`/`checkpoint`/`fail` 等过程事件），按 `ts` 升序排序后统一过滤与截断，每条事件带 `source: "log"|"events"`；两个文件的坏行数合并为 `bad_lines`。
 
 #### `sele fsck [--fix]`
 
@@ -630,7 +630,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 48 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 49 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝、`log --events` 合并。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|

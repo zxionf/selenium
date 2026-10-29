@@ -41,6 +41,7 @@ std::vector<fs::path> line_directories(const core::sele::Layout& layout) {
 struct LogArgs {
     std::string line;
     int limit = 20;
+    bool events = false;
 };
 
 void register_log(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
@@ -49,15 +50,34 @@ void register_log(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     add_global_opts(cmd, global_opts);
     cmd->add_option("--line", args->line, "Filter by line id");
     cmd->add_option("--limit", args->limit, "Show the last N events (default 20)");
-    cmd->footer("Example:\n  sele log\n  sele log --line 20261029-fix-login --limit 5");
+    cmd->add_flag("--events", args->events,
+                  "Also include runtime/events.jsonl (task/acceptance process events)");
+    cmd->footer("Example:\n  sele log\n  sele log --events\n  sele log --line 20261029-fix-login --limit 5");
     cmd->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
         exit_code = ng::handle(output, [&] {
             auto ctx = ng::load_root(global_opts);
-            const auto result = core::journal::read(ctx.lay.log);
+            const auto log_result = core::journal::read(ctx.lay.log);
+            std::vector<nlohmann::ordered_json> all;
+            for (auto event : log_result.events) {
+                event["source"] = "log";
+                all.push_back(event);
+            }
+            std::size_t bad_lines = log_result.bad_lines;
+            if (args->events) {
+                const auto event_result = core::journal::read(ctx.lay.events);
+                for (auto event : event_result.events) {
+                    event["source"] = "events";
+                    all.push_back(event);
+                }
+                bad_lines += event_result.bad_lines;
+            }
+            std::stable_sort(all.begin(), all.end(), [](const auto& left, const auto& right) {
+                return left.value("ts", std::string()) < right.value("ts", std::string());
+            });
 
             std::vector<nlohmann::ordered_json> selected;
-            for (const auto& event : result.events) {
+            for (const auto& event : all) {
                 if (!args->line.empty()) {
                     const std::string line = event.value("line", std::string());
                     if (line != args->line) continue;
@@ -85,7 +105,7 @@ void register_log(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             nlohmann::json result_json;
             result_json["command"] = "log";
             result_json["items"] = items;
-            if (result.bad_lines > 0) result_json["bad_lines"] = result.bad_lines;
+            if (bad_lines > 0) result_json["bad_lines"] = bad_lines;
             output.print_both(text.str(), result_json);
         });
     });

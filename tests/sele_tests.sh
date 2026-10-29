@@ -791,6 +791,21 @@ test_worktree_requires_branch() {
     rm -rf "$proj" "$wt"
 }
 
+test_log_events() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" log --output json | \
+        jq -e '[.items[].op] | index("task.start") == null' >/dev/null
+    "$BIN" --root "$proj" log --events --output json | \
+        jq -e '[.items[] | select(.op == "task.start") | .source] == ["events"]' >/dev/null
+    "$BIN" --root "$proj" log --events --output json | \
+        jq -e '[.items[].op] | index("line.open") != null' >/dev/null
+    "$BIN" --root "$proj" log --events --line "$id" --limit 2 --output json | \
+        jq -e '.items | length <= 2' >/dev/null
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -839,5 +854,6 @@ run_test "rebase conflict can be continued" test_line_rebase_conflict_continue
 run_test "worktree add/list/remove" test_worktree_add_list_remove
 run_test "worktree add refuses the checked-out branch" test_worktree_requires_other_branch
 run_test "worktree add requires a line branch" test_worktree_requires_branch
+run_test "log --events merges process events" test_log_events
 
 echo "=== All sele tests passed! ==="

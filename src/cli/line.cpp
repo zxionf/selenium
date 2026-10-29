@@ -1101,6 +1101,125 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             output.print_both(text.str(), result);
         });
     });
+
+    // line revert
+    struct RevertArgs {
+        std::string id;
+        std::string to;
+    };
+    auto revert_args = std::make_shared<RevertArgs>();
+    auto* cmd_revert = group->add_subcommand("revert", "Reset a line back to a task checkpoint");
+    add_line_options(cmd_revert, global_opts);
+    cmd_revert->add_option("id", revert_args->id, "Line id (default: session pointer)");
+    cmd_revert->add_option("--to", revert_args->to, "Task id whose checkpoint becomes HEAD")
+        ->required();
+    cmd_revert->footer("Example:\n  sele line revert 20261029-fix-login --to T1");
+    cmd_revert->callback([&global_opts, &exit_code, revert_args]() {
+        util::Output output(global_opts.output_format);
+        exit_code = ng::handle(output, [&] {
+            auto root = ng::load_root(global_opts);
+            std::string line_id = revert_args->id;
+            if (line_id.empty()) {
+                line_id = core::session::read(root.lay, root.session).line;
+            }
+            if (line_id.empty()) {
+                fail(exit_codes::STATE_CONFLICT,
+                     "No active line for session '" + root.session + "'",
+                     "Switch to a line first", {"sele line list"});
+            }
+            if (!core::sele::valid_line_id(line_id)) {
+                fail(exit_codes::USAGE_ERROR, "Invalid line id: " + line_id, "",
+                     {"sele line list"});
+            }
+            if (!core::gitrt::is_repo(root.lay.root)) {
+                fail(exit_codes::ENV_ERROR, "Not a git repository: " + root.lay.root.string(), "");
+            }
+            if (core::gitrt::is_dirty(root.lay.root)) {
+                fail(exit_codes::STATE_CONFLICT, "Working tree has uncommitted code changes",
+                     "Commit or stash them before reverting", {"git status"});
+            }
+            const std::string branch = branch_for(line_id);
+            if (core::gitrt::branch_exists(root.lay.root, branch) &&
+                core::gitrt::current_branch(root.lay.root) != branch) {
+                core::gitrt::switch_branch(root.lay.root, branch);
+            }
+
+            auto ctx = ng::load(global_opts, line_id);
+            if (ctx.line.status == "merged" || ctx.line.status == "abandoned") {
+                fail(exit_codes::STATE_CONFLICT,
+                     "Line " + ctx.line_id + " is " + ctx.line.status + " and cannot be reverted",
+                     "Merged or abandoned lines are read-only", {"sele line show " + ctx.line_id});
+            }
+            const auto* spec = ctx.task(revert_args->to);
+            if (spec == nullptr) {
+                fail(exit_codes::STATE_CONFLICT, "Task not found: " + revert_args->to,
+                     "List tasks for this line", {"sele task list --line " + ctx.line_id});
+            }
+            const std::string target = ctx.task_state(revert_args->to).checkpoint;
+            if (target.empty()) {
+                fail(exit_codes::STATE_CONFLICT,
+                     "Task " + revert_args->to + " has no checkpoint",
+                     "Only tasks that were checkpointed can be revert targets",
+                     {"sele task list --line " + ctx.line_id});
+            }
+
+            const auto reset = core::gitrt::run(ctx.lay.root, {"reset", "--hard", target});
+            if (reset.code != 0) {
+                fail(exit_codes::ENV_ERROR, "git reset failed: " + trim_text(reset.out), "");
+            }
+
+            // Re-read after reset: line.json/tasks come from the checkpoint; runtime is
+            // ignored by git, so it still holds the latest task states and must be fixed up.
+            auto after = ng::load(global_opts, line_id);
+            std::size_t index = after.tasks.size();
+            for (std::size_t i = 0; i < after.tasks.size(); ++i) {
+                if (after.tasks[i].id == revert_args->to) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index == after.tasks.size()) {
+                fail(exit_codes::STATE_CONFLICT,
+                     "Task " + revert_args->to + " is not part of line " + line_id,
+                     "The checkpoint predates the task", {"sele task list --line " + line_id});
+            }
+
+            std::vector<std::string> reset_tasks;
+            for (std::size_t i = index + 1; i < after.tasks.size(); ++i) {
+                core::TaskState fresh;
+                after.rt.tasks[after.tasks[i].id] = fresh;
+                reset_tasks.push_back(after.tasks[i].id);
+            }
+            after.rt.acceptance.clear();
+            for (auto it = after.rt.tasks.begin(); it != after.rt.tasks.end();) {
+                if (!after.has_task(it->first)) {
+                    it = after.rt.tasks.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+            ng::save_runtime(after);
+            ng::append_log(after, "line.revert",
+                           {{"to", revert_args->to}, {"commit", target}});
+
+            nlohmann::json result;
+            result["command"] = "line.revert";
+            result["changed"] = true;
+            result["line"] = line_id;
+            result["to"] = revert_args->to;
+            result["commit"] = target;
+            result["reset_tasks"] = reset_tasks;
+            result["acceptance_reset"] = true;
+
+            std::ostringstream text;
+            text << "Reverted " << line_id << " to " << revert_args->to << " (" << target << ")";
+            if (!reset_tasks.empty()) {
+                text << "\n  reset to pending: " << ng::join(reset_tasks, ", ");
+            }
+            text << "\n  acceptance: all pending";
+            output.print_both(text.str(), result);
+        });
+    });
 }
 
 } // namespace cli

@@ -1,7 +1,7 @@
-# sele v0.3 规格（架构重设计）
+# sele v0.4 规格（.sele 体系）
 
-> 状态：草案，待实现  
-> 版本：0.3.0  
+> 状态：已实现（v0.3 基础 + v0.4 merge/revert）  
+> 版本：0.4.0  
 > 定位：以 `.sele/` 作为工具私有状态目录（类比 `.git/`），用「线（line）→ 任务（task）→ 验收（acceptance）」的显式状态机替代 `.design/.agent` 的自由文本状态。
 > 与 `docs/sele-e.md` 的差异见 §13。本文是**实现依据**，与 `sele-e.md` 冲突处以本文为准。
 
@@ -14,17 +14,17 @@
 | 编号 | 结论 |
 |---|---|
 | D1 | 双模式共存：有 `.sele/` 走新体系，只有 `.design/` 走旧体系；**不做迁移**，不提供 `import` |
-| D2 | agent 可创建 git 提交，但只在 `sele/<line-id>` 分支；main 只由 merge 更新（v0.4） |
-| D3 | `main` 是 git 分支，merge 是真实合并；**v0.3 不实现 merge**，只定义基线与分支命名 |
+| D2 | agent 可创建 git 提交，但只在 `sele/<line-id>` 分支；main 只由 merge 更新（v0.4 已实现） |
+| D3 | `main` 是 git 分支，merge 是真实合并；v0.4 已实现 `line merge` |
 | D4 | 验收由工具**记账**，不执行命令：`sele acceptance pass/fail --evidence` |
 | D5 | 元数据用 **JSON**（复用 nlohmann/json），不引入 YAML |
 | D6 | `.sele/` 分 tracked 与 runtime 两区：规格与里程碑入库，运行态本机忽略 |
 | D7 | `line.json` 为权威状态、`log.jsonl` 为审计；`fsck` 对账，v0.3 不做事件重放重建 |
-| D8 | v0.3 = 多线共存 + 单线单写者；`line merge` 在 v0.4 补上；不做 fork/join、worktree、rebase/revert |
+| D8 | v0.3 = 多线共存 + 单线单写者；v0.4 补 `line merge` 与 `line revert`；不做 fork/join、worktree、rebase、`task revert` |
 
-### 1.2 v0.3 明确不做
+### 1.2 v0.4 仍不做
 
-fork/join、并行组、worktree 检出、`line rebase`、`task revert`、`line revert`、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
+fork/join、并行组、worktree 检出、`line rebase`、`task revert`、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
 
 ### 1.3 单仓库边界
 
@@ -264,6 +264,7 @@ draft ──open──> active ──block──> blocked ──unblock──> a
 
 - `done` 状态不可 `amend`，必须 `reopen` 后改。
 - `merged` 为终态：不可 `reopen`/`amend`/`abandon`/`switch`/`task add`。
+- `line revert` 不改迁移表，而是把 line 恢复到某个 task checkpoint 时的状态（通常为 `active`）；仅未合并/未放弃的线可用。
 - task 的 blocked **不改变** line 状态；`line status` 显示阻塞点，`line done` 因 task 未 done 而拒绝。
 
 ### 5.2 Task
@@ -316,6 +317,7 @@ sele line unblock <id>
 sele line amend <id> --reason <s> [--goal <s>] [--acceptance …] [--modules a,b]
 sele line done <id> [--no-commit]
 sele line merge <id> [--confirm] [--onto <branch>] [--delete-branch]
+sele line revert <id> --to <task>
 sele line reopen <id> --reason <s>
 sele line abandon <id> --reason <s>
 
@@ -405,6 +407,14 @@ sele line new fix-login \
 - 切到 base，执行 `git merge --no-ff -m "sele: merge <id>" sele/<id>`。
 - 冲突：立即 `git merge --abort`，切回 line 分支，把状态回滚为 `done` 并提交（`unmark`），退 2 并列出冲突文件；人工在 line 分支解决后重试。
 - 成功：在 base 上记录 `merged.{at,commit}` 并提交（`record merge`），写 `log.jsonl` 的 `line.merge`；`--delete-branch` 时删除 `sele/<id>`。
+
+#### `sele line revert <id> --to <task>`
+
+- 前置：git 仓库、工作树干净（§8.5）、line 不是 `merged`/`abandoned`、`<task>` 存在且有 checkpoint。
+- `git reset --hard <task.checkpoint>`（只动 line 分支；未合并前的私有历史）。
+- 重置状态：该 task 保留 `done`；其后的 task 回到 `pending`、清空 checkpoint/reason/finished_at；所有 acceptance 回到 `pending`；line 回到 checkpoint 时的 `active`（`closed` 随之消失）。
+- runtime 中不再属于 task 列表的条目被删除；写 `log.jsonl` 的 `line.revert`（含 `to` 与 `commit`）。
+- 不自动提交：revert 后的元数据靠后续 checkpoint 或手动提交。
 
 #### `sele task add "<title>" --modules a,b [--line <id>] [--depends <task>]`
 
@@ -590,7 +600,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 36 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功与冲突回滚。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 39 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|

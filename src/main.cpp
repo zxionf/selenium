@@ -10,6 +10,22 @@
 #include "util/output.hpp"
 #include "util/exit_codes.hpp"
 
+namespace {
+
+// CLI11 may reject arguments before `--output` is parsed (for example when a
+// required option is missing). Scan argv so error output still honours the
+// requested format in that case.
+bool wants_json(int argc, char** argv) {
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+        if (arg == "--output" && i + 1 < argc) return std::string(argv[i + 1]) == "json";
+        if (arg.rfind("--output=", 0) == 0) return arg.substr(9) == "json";
+    }
+    return false;
+}
+
+} // namespace
+
 int main(int argc, char** argv) {
     CLI::App app{"sele - line/task orchestration for agents (.sele) and legacy .design/.agent projects"};
     app.require_subcommand(1);
@@ -52,8 +68,10 @@ int main(int argc, char** argv) {
         std::cout << e.what() << '\n';
         std::exit(exit_codes::SUCCESS);
     } catch (const CLI::ParseError& e) {
-        util::Output output(global_opts.output_format);
-        if (global_opts.output_format == util::Output::Format::JSON) {
+        const bool json = global_opts.output_format == util::Output::Format::JSON ||
+                          wants_json(argc, argv);
+        util::Output output(json ? util::Output::Format::JSON : util::Output::Format::TEXT);
+        if (json) {
             nlohmann::json err;
             err["error"] = e.what();
             err["suggestion"] = "Run with --help for usage";
@@ -64,7 +82,9 @@ int main(int argc, char** argv) {
         }
         std::exit(exit_codes::USAGE_ERROR);
     } catch (const std::exception& e) {
-        util::Output output(global_opts.output_format);
+        const bool json = global_opts.output_format == util::Output::Format::JSON ||
+                          wants_json(argc, argv);
+        util::Output output(json ? util::Output::Format::JSON : util::Output::Format::TEXT);
         output.error(e.what(), "Run with --help for usage");
         std::exit(exit_codes::ENV_ERROR);
     }

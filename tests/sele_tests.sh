@@ -565,6 +565,59 @@ test_merged_is_read_only() {
     rm -rf "$proj"
 }
 
+test_merge_delete_branch() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    "$BIN" --root "$proj" line merge "$id" --confirm --delete-branch >/dev/null
+    jq -e '.status == "merged"' "$proj/.sele/lines/$id/line.json" >/dev/null
+    set +e
+    git -C "$proj" rev-parse --verify "refs/heads/sele/$id" >/dev/null 2>&1
+    local code=$?
+    set -e
+    [[ $code -ne 0 ]]
+    rm -rf "$proj"
+}
+
+test_line_revert() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" task add "second" --modules auth >/dev/null
+    echo one >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T1 >/dev/null
+    "$BIN" --root "$proj" task done T1 >/dev/null
+    "$BIN" --root "$proj" task start T2 >/dev/null
+    echo two >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T2 >/dev/null
+    "$BIN" --root "$proj" task done T2 >/dev/null
+    "$BIN" --root "$proj" acceptance pass A1 --evidence ok >/dev/null
+    "$BIN" --root "$proj" line done >/dev/null
+
+    "$BIN" --root "$proj" line revert "$id" --to T1 >/dev/null
+    jq -e '.status == "active"' "$proj/.sele/lines/$id/line.json" >/dev/null
+    jq -e '.tasks.T1.status == "done"' "$proj/.sele/runtime/state/$id.json" >/dev/null
+    jq -e '.tasks.T2.status == "pending" and .tasks.T2.checkpoint == null' \
+        "$proj/.sele/runtime/state/$id.json" >/dev/null
+    jq -e '.acceptance == {}' "$proj/.sele/runtime/state/$id.json" >/dev/null
+    grep -q '^one$' "$proj/seed.txt"
+    ! grep -q '^two$' "$proj/seed.txt"
+    grep -q '"op":"line.revert"' "$proj/.sele/log.jsonl"
+
+    expect_code 2 "$BIN" --root "$proj" line revert "$id" --to T2
+    expect_code 2 "$BIN" --root "$proj" line revert "$id" --to T9
+    rm -rf "$proj"
+}
+
+test_revert_rejects_merged() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    "$BIN" --root "$proj" line merge "$id" --confirm >/dev/null
+    expect_code 2 "$BIN" --root "$proj" line revert "$id" --to T1
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -601,5 +654,8 @@ run_test "merge conflict aborts and keeps the line done" test_merge_conflict
 run_test "merge requires a done line" test_merge_requires_done
 run_test "merge requires --confirm" test_merge_requires_confirm
 run_test "merged line is read-only" test_merged_is_read_only
+run_test "merge --delete-branch removes the line branch" test_merge_delete_branch
+run_test "line revert resets to a task checkpoint" test_line_revert
+run_test "revert rejects merged lines" test_revert_rejects_merged
 
 echo "=== All sele tests passed! ==="

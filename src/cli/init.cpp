@@ -88,15 +88,27 @@ void init_next(const fs::path& target, util::Output& output, int& exit_code) {
     core::fsys::write_atomic(layout.sele / ".gitignore", "runtime/\n");
     core::fsys::write_atomic(layout.sele / ".gitattributes", "log.jsonl merge=union\n");
 
+    // AGENTS.md is the agent entry point; never overwrite a user-provided one.
+    const auto agents = target / "AGENTS.md";
+    bool agents_written = false;
+    if (!core::fsys::exists(agents)) {
+        core::fsys::write_atomic(agents, core::render_agents_template());
+        agents_written = true;
+    }
+
     nlohmann::json result;
     result["initialized"] = true;
     result["mode"] = "next";
     result["root"] = target.string();
     result["sele_path"] = layout.sele.string();
+    result["agents_path"] = agents.string();
+    result["agents_written"] = agents_written;
 
     std::ostringstream text;
     text << "Initialized .sele/ in " << target.string() << '\n'
          << "  sele: " << layout.sele.string() << '\n'
+         << "  agents: " << agents.string()
+         << (agents_written ? "" : " (existing, untouched)") << '\n'
          << "  next: sele line new <slug> --goal \"...\" --acceptance \"desc::check\" --modules a,b";
     output.print_both(text.str(), result);
     exit_code = exit_codes::SUCCESS;

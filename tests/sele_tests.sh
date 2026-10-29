@@ -949,6 +949,19 @@ test_archive_rejects_worktree() {
     rm -rf "$proj" "$wt"
 }
 
+test_init_creates_agents() {
+    local proj other
+    proj=$(mktemp -d)
+    "$BIN" --root "$proj" init >/dev/null
+    [[ -f "$proj/AGENTS.md" ]]
+    grep -q "sele overview" "$proj/AGENTS.md"
+    other=$(mktemp -d)
+    echo "custom" > "$other/AGENTS.md"
+    "$BIN" --root "$other" init >/dev/null
+    [[ "$(cat "$other/AGENTS.md")" == "custom" ]]
+    rm -rf "$proj" "$other"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -1006,5 +1019,6 @@ run_test "archive moves a merged line out of lines/" test_line_archive
 run_test "archive accepts an abandoned line" test_archive_abandoned
 run_test "archive requires merged/abandoned" test_archive_requires_finished
 run_test "archive refuses a line with a worktree" test_archive_rejects_worktree
+run_test "init writes AGENTS.md without overwriting" test_init_creates_agents
 
 echo "=== All sele tests passed! ==="

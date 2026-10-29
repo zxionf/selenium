@@ -32,6 +32,36 @@ std::string render_state_template() {
     return "# Agent State\n\nActive Change: 无\n";
 }
 
+std::string render_agents_template() {
+    return R"(# AGENTS.md
+
+project-name
+
+本文档不允许 ai 修改；确需修改必须由用户发起。
+
+## 入口
+
+- 首次使用：`sele init`（创建 `.sele/`；若本文件缺失会一并生成）。
+- 当前状态：`sele overview --output json`。
+- `.sele/` 是工具私有目录，只通过 `sele` 命令读写；不要用编辑器直接修改。
+- 命令细节：`sele --help`、`sele line --help`、`sele task --help`。
+
+## 最小闭环
+
+```bash
+sele line new <slug> --goal "..." --acceptance "desc::check" --modules a,b
+sele task add "..." --modules a,b
+sele line open <id>
+sele task start T1 && sele task checkpoint T1 --msg "..." && sele task done T1
+sele acceptance pass A1 --evidence "..."
+sele line done <id>
+sele line merge <id> --confirm
+```
+
+规则：`task done` 前必须有 `checkpoint`；`line done` 前所有 task 与 acceptance 必须完成；`.sele/` 的结构只由命令写。
+)";
+}
+
 // A design doc is folded into SPEC.md by matching "## " titles, so its
 // sections are named after the SPEC concept they revise. Change-scoped
 // narrative (why, migration) belongs in the preamble or DECISIONS.log.

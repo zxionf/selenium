@@ -79,6 +79,7 @@ struct RuntimeState {
     std::string line;
     std::map<std::string, TaskState> tasks;
     std::map<std::string, AcceptanceState> acceptance;
+    std::string rebase_onto;
 };
 
 namespace model {

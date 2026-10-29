@@ -71,6 +71,30 @@ std::string trim_text(const std::string& value) {
     return value.substr(begin, end - begin);
 }
 
+bool rebase_in_progress(const fs::path& root) {
+    for (const char* name : {"rebase-merge", "rebase-apply"}) {
+        const auto result = core::gitrt::run(root, {"rev-parse", "--git-path", name});
+        if (result.code != 0) continue;
+        const std::string path = trim_text(result.out);
+        if (path.empty()) continue;
+        const fs::path candidate(path);
+        if (core::fsys::exists(candidate.is_absolute() ? candidate : root / candidate)) return true;
+    }
+    return false;
+}
+
+std::vector<std::string> conflict_files(const fs::path& root) {
+    std::vector<std::string> out;
+    const auto result = core::gitrt::run(root, {"diff", "--name-only", "--diff-filter=U"});
+    std::istringstream stream(result.out);
+    std::string line;
+    while (std::getline(stream, line)) {
+        line = trim_text(line);
+        if (!line.empty()) out.push_back(line);
+    }
+    return out;
+}
+
 } // namespace
 
 void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
@@ -1218,6 +1242,178 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             }
             text << "\n  acceptance: all pending";
             output.print_both(text.str(), result);
+        });
+    });
+
+    // line rebase
+    struct RebaseArgs {
+        std::string id;
+        std::string onto = "main";
+        bool cont = false;
+        bool abort = false;
+    };
+    auto rebase_args = std::make_shared<RebaseArgs>();
+    auto* cmd_rebase = group->add_subcommand("rebase", "Rebase a line onto its base branch");
+    add_line_options(cmd_rebase, global_opts);
+    cmd_rebase->add_option("id", rebase_args->id, "Line id (default: session pointer)");
+    cmd_rebase->add_option("--onto", rebase_args->onto, "Base branch (default: main)");
+    cmd_rebase->add_flag("--continue", rebase_args->cont, "Continue after resolving conflicts");
+    cmd_rebase->add_flag("--abort", rebase_args->abort, "Abort the rebase in progress");
+    cmd_rebase->footer("Example:\n  sele line rebase 20261029-fix-login\n"
+                       "  sele line rebase --continue\n  sele line rebase --abort");
+    cmd_rebase->callback([&global_opts, &exit_code, rebase_args]() {
+        util::Output output(global_opts.output_format);
+        exit_code = ng::handle(output, [&] {
+            if (rebase_args->cont && rebase_args->abort) {
+                fail(exit_codes::USAGE_ERROR, "--continue and --abort are mutually exclusive", "");
+            }
+            auto root = ng::load_root(global_opts);
+            std::string line_id = rebase_args->id;
+            if (line_id.empty()) {
+                line_id = core::session::read(root.lay, root.session).line;
+            }
+            if (line_id.empty()) {
+                fail(exit_codes::STATE_CONFLICT,
+                     "No active line for session '" + root.session + "'",
+                     "Switch to a line first", {"sele line list"});
+            }
+            if (!core::sele::valid_line_id(line_id)) {
+                fail(exit_codes::USAGE_ERROR, "Invalid line id: " + line_id, "",
+                     {"sele line list"});
+            }
+            if (!core::gitrt::is_repo(root.lay.root)) {
+                fail(exit_codes::ENV_ERROR, "Not a git repository: " + root.lay.root.string(), "");
+            }
+            const std::string branch = branch_for(line_id);
+
+            if (rebase_args->cont || rebase_args->abort) {
+                if (!rebase_in_progress(root.lay.root)) {
+                    fail(exit_codes::STATE_CONFLICT,
+                         "No rebase in progress in " + root.lay.root.string(), "",
+                         {"sele line rebase " + line_id});
+                }
+                if (rebase_args->abort) {
+                    const auto result = core::gitrt::run(root.lay.root, {"rebase", "--abort"});
+                    if (result.code != 0) {
+                        fail(exit_codes::ENV_ERROR,
+                             "git rebase --abort failed: " + trim_text(result.out), "");
+                    }
+                    auto ctx = ng::load(global_opts, line_id);
+                    ctx.rt.rebase_onto.clear();
+                    ng::save_runtime(ctx);
+
+                    nlohmann::json result_json;
+                    result_json["command"] = "line.rebase";
+                    result_json["changed"] = true;
+                    result_json["line"] = line_id;
+                    result_json["aborted"] = true;
+                    output.print_both("Aborted rebase for " + line_id, result_json);
+                    return;
+                }
+
+                const auto result = core::gitrt::run(
+                    root.lay.root, {"-c", "core.editor=true", "rebase", "--continue"});
+                if (result.code != 0) {
+                    const auto files = conflict_files(root.lay.root);
+                    fail(exit_codes::STATE_CONFLICT,
+                         "Rebase still has conflicts" +
+                             (files.empty() ? "" : ": " + ng::join(files, ", ")),
+                         "Resolve, git add, then continue",
+                         {"git status", "git add <file>",
+                          "sele line rebase " + line_id + " --continue",
+                          "sele line rebase " + line_id + " --abort"});
+                }
+
+                auto ctx = ng::load(global_opts, line_id);
+                const std::string onto =
+                    ctx.rt.rebase_onto.empty() ? rebase_args->onto : ctx.rt.rebase_onto;
+                const auto base_head =
+                    core::gitrt::run(root.lay.root, {"rev-parse", "--short", onto});
+                if (base_head.code == 0) ctx.line.base_commit = trim_text(base_head.out);
+                ctx.rt.rebase_onto.clear();
+                ng::save_runtime(ctx);
+                ng::save_line(ctx);
+                ng::append_log(ctx, "line.rebase",
+                               {{"base", onto}, {"commit", ctx.line.base_commit}});
+                core::gitrt::commit_all(root.lay.root, "chore(sele): rebase " + line_id);
+
+                nlohmann::json result_json;
+                result_json["command"] = "line.rebase";
+                result_json["changed"] = true;
+                result_json["line"] = line_id;
+                result_json["base"] = onto;
+                result_json["commit"] = ctx.line.base_commit;
+                result_json["continued"] = true;
+                output.print_both("Rebased " + line_id + " onto " + onto + " at " +
+                                      ctx.line.base_commit,
+                                  result_json);
+                return;
+            }
+
+            if (core::gitrt::is_dirty(root.lay.root)) {
+                fail(exit_codes::STATE_CONFLICT, "Working tree has uncommitted code changes",
+                     "Commit or stash them before rebasing", {"git status"});
+            }
+            if (rebase_in_progress(root.lay.root)) {
+                fail(exit_codes::STATE_CONFLICT, "A rebase is already in progress",
+                     "Resolve it or abort first",
+                     {"sele line rebase " + line_id + " --continue",
+                      "sele line rebase " + line_id + " --abort"});
+            }
+            if (!core::gitrt::branch_exists(root.lay.root, branch)) {
+                fail(exit_codes::STATE_CONFLICT, "Line branch not found: " + branch,
+                     "Open the line to create its branch", {"sele line open " + line_id});
+            }
+            if (!core::gitrt::branch_exists(root.lay.root, rebase_args->onto)) {
+                fail(exit_codes::ENV_ERROR, "Base branch not found: " + rebase_args->onto,
+                     "Pass --onto <branch>", {"git branch --all"});
+            }
+            if (core::gitrt::current_branch(root.lay.root) != branch) {
+                core::gitrt::switch_branch(root.lay.root, branch);
+            }
+
+            auto ctx = ng::load(global_opts, line_id);
+            if (ctx.line.status == "merged" || ctx.line.status == "abandoned") {
+                fail(exit_codes::STATE_CONFLICT,
+                     "Line " + ctx.line_id + " is " + ctx.line.status + " and cannot be rebased",
+                     "Merged or abandoned lines are read-only", {"sele line show " + ctx.line_id});
+            }
+
+            ctx.rt.rebase_onto = rebase_args->onto;
+            ng::save_runtime(ctx);
+
+            const auto result = core::gitrt::run(root.lay.root, {"rebase", rebase_args->onto});
+            if (result.code != 0) {
+                const auto files = conflict_files(root.lay.root);
+                fail(exit_codes::STATE_CONFLICT,
+                     "Rebase stopped on conflicts" +
+                         (files.empty() ? "" : ": " + ng::join(files, ", ")),
+                     "Resolve, git add, then continue",
+                     {"git status", "git add <file>",
+                      "sele line rebase " + line_id + " --continue",
+                      "sele line rebase " + line_id + " --abort"});
+            }
+
+            const auto base_head =
+                core::gitrt::run(root.lay.root, {"rev-parse", "--short", rebase_args->onto});
+            auto after = ng::load(global_opts, line_id);
+            if (base_head.code == 0) after.line.base_commit = trim_text(base_head.out);
+            after.rt.rebase_onto.clear();
+            ng::save_runtime(after);
+            ng::save_line(after);
+            ng::append_log(after, "line.rebase",
+                           {{"base", rebase_args->onto}, {"commit", after.line.base_commit}});
+            core::gitrt::commit_all(root.lay.root, "chore(sele): rebase " + line_id);
+
+            nlohmann::json result_json;
+            result_json["command"] = "line.rebase";
+            result_json["changed"] = true;
+            result_json["line"] = line_id;
+            result_json["base"] = rebase_args->onto;
+            result_json["commit"] = after.line.base_commit;
+            output.print_both("Rebased " + line_id + " onto " + rebase_args->onto + " at " +
+                                  after.line.base_commit,
+                              result_json);
         });
     });
 }

@@ -210,6 +210,7 @@ ojson to_json(const RuntimeState& runtime) {
         acceptance[id] = entry;
     }
     value["acceptance"] = acceptance;
+    value["rebase_onto"] = nullable(runtime.rebase_onto);
     return value;
 }
 
@@ -218,6 +219,7 @@ RuntimeState runtime_from_json(const ojson& value) {
     runtime.schema_version = value.value("schema_version", 1);
     runtime.version = value.value("version", 1);
     runtime.line = str(value, "line");
+    runtime.rebase_onto = str(value, "rebase_onto");
 
     if (value.contains("tasks") && value["tasks"].is_object()) {
         for (auto it = value["tasks"].begin(); it != value["tasks"].end(); ++it) {

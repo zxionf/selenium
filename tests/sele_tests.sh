@@ -54,6 +54,19 @@ expect_code() {
     fi
 }
 
+rebase_active() {
+    local proj="$1" path
+    for name in rebase-merge rebase-apply; do
+        path=$(git -C "$proj" rev-parse --git-path "$name")
+        if [[ "$path" = /* ]]; then
+            [[ -e "$path" ]] && return 0
+        else
+            [[ -e "$proj/$path" ]] && return 0
+        fi
+    done
+    return 1
+}
+
 # Draft line with one task, opened and running.
 setup_running_line() {
     local proj id
@@ -673,6 +686,68 @@ test_task_revert_requires_checkpoint() {
     rm -rf "$proj"
 }
 
+test_line_rebase_success() {
+    local proj id main_head
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    git -C "$proj" switch main >/dev/null 2>&1
+    echo extra > "$proj/extra.txt"
+    git -C "$proj" add -A
+    git -C "$proj" commit -qm "main extra"
+    main_head=$(git -C "$proj" rev-parse --short HEAD)
+
+    "$BIN" --root "$proj" line rebase "$id" >/dev/null
+    git -C "$proj" merge-base --is-ancestor main "sele/$id"
+    jq -e --arg c "$main_head" '.base_commit == $c' "$proj/.sele/lines/$id/line.json" >/dev/null
+    [[ "$(git -C "$proj" branch --show-current)" == "sele/$id" ]]
+    [[ -z "$(git -C "$proj" status --porcelain)" ]]
+    grep -q '"op":"line.rebase"' "$proj/.sele/log.jsonl"
+    rm -rf "$proj"
+}
+
+test_line_rebase_conflict_abort() {
+    local proj id before
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    before=$(jq -r '.base_commit' "$proj/.sele/lines/$id/line.json")
+    git -C "$proj" switch main >/dev/null 2>&1
+    echo main-side >> "$proj/seed.txt"
+    git -C "$proj" add -A
+    git -C "$proj" commit -qm "main side"
+
+    expect_code 2 "$BIN" --root "$proj" line rebase "$id"
+    if ! rebase_active "$proj"; then echo "rebase not in progress" >&2; exit 1; fi
+
+    "$BIN" --root "$proj" line rebase "$id" --abort >/dev/null
+    if rebase_active "$proj"; then echo "rebase still in progress" >&2; exit 1; fi
+    jq -e --arg c "$before" '.base_commit == $c' "$proj/.sele/lines/$id/line.json" >/dev/null
+    [[ "$(git -C "$proj" branch --show-current)" == "sele/$id" ]]
+    [[ -z "$(git -C "$proj" status --porcelain)" ]]
+    rm -rf "$proj"
+}
+
+test_line_rebase_conflict_continue() {
+    local proj id main_head
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    git -C "$proj" switch main >/dev/null 2>&1
+    echo main-side >> "$proj/seed.txt"
+    git -C "$proj" add -A
+    git -C "$proj" commit -qm "main side"
+    main_head=$(git -C "$proj" rev-parse --short HEAD)
+
+    expect_code 2 "$BIN" --root "$proj" line rebase "$id"
+    echo resolved > "$proj/seed.txt"
+    git -C "$proj" add seed.txt
+    "$BIN" --root "$proj" line rebase "$id" --continue >/dev/null
+
+    if rebase_active "$proj"; then echo "rebase still in progress" >&2; exit 1; fi
+    [[ -z "$(git -C "$proj" status --porcelain)" ]]
+    jq -e --arg c "$main_head" '.base_commit == $c' "$proj/.sele/lines/$id/line.json" >/dev/null
+    grep -q '"op":"line.rebase"' "$proj/.sele/log.jsonl"
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -715,5 +790,8 @@ run_test "revert rejects merged lines" test_revert_rejects_merged
 run_test "task revert undoes a middle task" test_task_revert_middle
 run_test "task revert of the root task returns the line to draft" test_task_revert_root
 run_test "task revert requires a predecessor checkpoint" test_task_revert_requires_checkpoint
+run_test "line rebase moves the line onto main" test_line_rebase_success
+run_test "rebase conflict can be aborted" test_line_rebase_conflict_abort
+run_test "rebase conflict can be continued" test_line_rebase_conflict_continue
 
 echo "=== All sele tests passed! ==="

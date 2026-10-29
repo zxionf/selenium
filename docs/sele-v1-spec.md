@@ -1,7 +1,7 @@
-# sele v0.5 规格（.sele 体系）
+# sele v0.6 规格（.sele 体系）
 
-> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert）  
-> 版本：0.5.0  
+> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase）  
+> 版本：0.6.0  
 > 定位：以 `.sele/` 作为工具私有状态目录（类比 `.git/`），用「线（line）→ 任务（task）→ 验收（acceptance）」的显式状态机替代 `.design/.agent` 的自由文本状态。
 > 与 `docs/sele-e.md` 的差异见 §13。本文是**实现依据**，与 `sele-e.md` 冲突处以本文为准。
 
@@ -20,11 +20,11 @@
 | D5 | 元数据用 **JSON**（复用 nlohmann/json），不引入 YAML |
 | D6 | `.sele/` 分 tracked 与 runtime 两区：规格与里程碑入库，运行态本机忽略 |
 | D7 | `line.json` 为权威状态、`log.jsonl` 为审计；`fsck` 对账，v0.3 不做事件重放重建 |
-| D8 | v0.3 = 多线共存 + 单线单写者；v0.4 补 `line merge`/`line revert`，v0.5 补 `task revert`；不做 fork/join、worktree、rebase |
+| D8 | v0.3 = 多线共存 + 单线单写者；v0.4 补 `line merge`/`line revert`，v0.5 补 `task revert`，v0.6 补 `line rebase`；不做 fork/join、worktree |
 
 ### 1.2 v0.4 仍不做
 
-fork/join、并行组、worktree 检出、`line rebase`、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
+fork/join、并行组、worktree 检出、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
 
 ### 1.3 单仓库边界
 
@@ -318,6 +318,7 @@ sele line amend <id> --reason <s> [--goal <s>] [--acceptance …] [--modules a,b
 sele line done <id> [--no-commit]
 sele line merge <id> [--confirm] [--onto <branch>] [--delete-branch]
 sele line revert <id> --to <task>
+sele line rebase <id> [--onto <branch>] [--continue] [--abort]
 sele line reopen <id> --reason <s>
 sele line abandon <id> --reason <s>
 
@@ -416,6 +417,15 @@ sele line new fix-login \
 - 重置状态：该 task 保留 `done`；其后的 task 回到 `pending`、清空 checkpoint/reason/finished_at；所有 acceptance 回到 `pending`；line 回到 checkpoint 时的 `active`（`closed` 随之消失）。
 - runtime 中不再属于 task 列表的条目被删除；写 `log.jsonl` 的 `line.revert`（含 `to` 与 `commit`）。
 - 不自动提交：revert 后的元数据靠后续 checkpoint 或手动提交。
+
+#### `sele line rebase <id> [--onto <branch>] [--continue] [--abort]`
+
+- 前置（普通 rebase）：git 仓库、工作树干净（§8.5）、line 非 merged/abandoned、base 分支存在、没有正在进行的 rebase。
+- `git rebase <onto>`（默认 `main`）；成功后更新 `base_commit` 为 base 的 HEAD，提交元数据（`chore(sele): rebase <id>`），写 `line.rebase` 日志。
+- 冲突：不自动 abort，rebase 停在冲突状态，退 2 并列出冲突文件；`onto` 记入 `runtime/state/<id>.json` 的 `rebase_onto`，供 `--continue` 使用。
+- `--continue`：`git rebase --continue`（禁用编辑器）后更新 `base_commit`、清空 `rebase_onto`、提交元数据。
+- `--abort`：`git rebase --abort`，清空 `rebase_onto`，不改元数据。
+- `--continue` / `--abort` 互斥，且要求 rebase 正在进行。
 
 #### `sele task add "<title>" --modules a,b [--line <id>] [--depends <task>]`
 
@@ -609,7 +619,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 42 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 45 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|

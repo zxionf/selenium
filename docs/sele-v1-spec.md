@@ -1,7 +1,7 @@
-# sele v0.6 规格（.sele 体系）
+# sele v0.7 规格（.sele 体系）
 
-> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase）  
-> 版本：0.6.0  
+> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase + v0.7 worktree）  
+> 版本：0.7.0  
 > 定位：以 `.sele/` 作为工具私有状态目录（类比 `.git/`），用「线（line）→ 任务（task）→ 验收（acceptance）」的显式状态机替代 `.design/.agent` 的自由文本状态。
 > 与 `docs/sele-e.md` 的差异见 §13。本文是**实现依据**，与 `sele-e.md` 冲突处以本文为准。
 
@@ -20,11 +20,11 @@
 | D5 | 元数据用 **JSON**（复用 nlohmann/json），不引入 YAML |
 | D6 | `.sele/` 分 tracked 与 runtime 两区：规格与里程碑入库，运行态本机忽略 |
 | D7 | `line.json` 为权威状态、`log.jsonl` 为审计；`fsck` 对账，v0.3 不做事件重放重建 |
-| D8 | v0.3 = 多线共存 + 单线单写者；v0.4 补 `line merge`/`line revert`，v0.5 补 `task revert`，v0.6 补 `line rebase`；不做 fork/join、worktree |
+| D8 | v0.3 = 多线共存 + 单线单写者；v0.4 补 `line merge`/`line revert`，v0.5 补 `task revert`，v0.6 补 `line rebase`，v0.7 补 `worktree`；不做 fork/join |
 
 ### 1.2 v0.4 仍不做
 
-fork/join、并行组、worktree 检出、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
+fork/join、并行组、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
 
 ### 1.3 单仓库边界
 
@@ -62,7 +62,7 @@ fork/join、并行组、worktree 检出、archive 目录移动、跨仓库线、
     ├── state/<line-id>.json   # 任务状态、checkpoint、验收结果、version
     ├── sessions/<sid>.json    # 会话指针
     ├── events.jsonl           # 细粒度事件，append-only
-    └── worktrees/             # v0.3 预留，空
+    └── worktrees/             # 每个 line 的 worktree 指针（ignored）
 ```
 
 ### 3.1 为什么状态要拆成两份
@@ -338,6 +338,9 @@ sele acceptance pass|fail <acceptance> [--line <id>] --evidence <s> [--by <s>]
 sele overview
 sele log [--line <id>] [--limit <n>]
 sele fsck [--fix]
+sele worktree add <line> [--path <dir>]
+sele worktree list
+sele worktree remove <line> [--force]
 sele version
 ```
 
@@ -460,6 +463,13 @@ sele line new fix-login \
 - 重置集合：该 task 及其之后所有 task → `pending`，清空 checkpoint/reason/finished_at/started_at；acceptance 全部 `pending`；非根时 line 若为 `done` 则回到 `active`。
 - 与 `line revert --to <task>` 的区别：`line revert` 保留目标 task 的完成状态；`task revert` 撤销目标 task 本身。
 
+#### `sele worktree add|list|remove`
+
+- `add <line> [--path <dir>]`：要求 `sele/<line>` 分支存在且未被当前工作树检出；`git worktree add <dir> sele/<line>`；目标默认 `<repo 父目录>/<repo>-wt-<line>`；指针写到 `.sele/runtime/worktrees/<line>.json`（ignored）。
+- `list`：读取指针，`present=false` 表示目录已不存在；JSON `items[{line,branch,path,present}]`。
+- `remove <line> [--force]`：`git worktree remove <path>`，删除指针；有未提交改动时需 `--force`。
+- worktree 内的 `.sele/runtime/` 是本机新建的，会话指针与 task 运行态按工作树独立；`.sele/lines/` 随分支内容。
+
 #### `sele acceptance pass|fail <acceptance> [--line <id>] --evidence <s>`
 
 - 前置：line 为 `active`（`done` 后不再接受记账，避免推翻已关闭结论）；acceptance id 存在。
@@ -548,6 +558,7 @@ v0.3 假定同一 line 同时只有一个写入者（一个 agent 会话）。�
 ### 8.4 工作树与分支
 
 - line ↔ 分支 `sele/<line-id>` 1:1。
+- 每个 line 可额外检出到 `sele worktree add` 创建的独立工作树；指针在 `.sele/runtime/worktrees/<id>.json`，不计入主工作树的状态。
 - v0.3 不创建 worktree；`line switch` 用 `git switch`。
 - `line open` 在切到 line 分支前把 `.sele` 计划提交到 base，保证 base 也有 `.sele`；`line done` 默认提交元数据；`line merge` 依次在 line 分支标记、在 base 合并、在 base 记录 merge commit。
 - 所有 git 调用使用参数数组（`fork`/`execvp` 或 `posix_spawn`），**不用 `popen` 拼接命令**（旧 `core/git` 保留给 legacy 命令，新代码用 `core/gitrt`）。
@@ -619,7 +630,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 45 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 48 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|

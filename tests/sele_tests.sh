@@ -748,6 +748,49 @@ test_line_rebase_conflict_continue() {
     rm -rf "$proj"
 }
 
+test_worktree_add_list_remove() {
+    local proj id wt
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    git -C "$proj" switch main >/dev/null 2>&1
+    wt="$(dirname "$proj")/wt-$id"
+
+    "$BIN" --root "$proj" worktree add "$id" --path "$wt" >/dev/null
+    [[ -d "$wt" ]]
+    [[ "$(git -C "$wt" branch --show-current)" == "sele/$id" ]]
+    [[ -f "$proj/.sele/runtime/worktrees/$id.json" ]]
+    "$BIN" --root "$wt" line show "$id" >/dev/null
+    "$BIN" --root "$proj" worktree list --output json | \
+        jq -e --arg id "$id" '.items[0].line == $id and .items[0].present' >/dev/null
+
+    expect_code 2 "$BIN" --root "$proj" worktree add "$id" --path "$wt"
+
+    "$BIN" --root "$proj" worktree remove "$id" >/dev/null
+    [[ ! -d "$wt" ]]
+    [[ ! -f "$proj/.sele/runtime/worktrees/$id.json" ]]
+    rm -rf "$proj" "$wt"
+}
+
+test_worktree_requires_other_branch() {
+    local proj id wt
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    wt="$(dirname "$proj")/wt2-$id"
+    expect_code 2 "$BIN" --root "$proj" worktree add "$id" --path "$wt"
+    [[ ! -d "$wt" ]]
+    rm -rf "$proj" "$wt"
+}
+
+test_worktree_requires_branch() {
+    local proj id wt
+    proj=$(setup_next)
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    wt="$(dirname "$proj")/wt3-$id"
+    expect_code 2 "$BIN" --root "$proj" worktree add "$id" --path "$wt"
+    rm -rf "$proj" "$wt"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -793,5 +836,8 @@ run_test "task revert requires a predecessor checkpoint" test_task_revert_requir
 run_test "line rebase moves the line onto main" test_line_rebase_success
 run_test "rebase conflict can be aborted" test_line_rebase_conflict_abort
 run_test "rebase conflict can be continued" test_line_rebase_conflict_continue
+run_test "worktree add/list/remove" test_worktree_add_list_remove
+run_test "worktree add refuses the checked-out branch" test_worktree_requires_other_branch
+run_test "worktree add requires a line branch" test_worktree_requires_branch
 
 echo "=== All sele tests passed! ==="

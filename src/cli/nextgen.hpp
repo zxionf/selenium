@@ -49,6 +49,7 @@ struct Ctx {
     core::Line line;
     core::RuntimeState rt;
     std::vector<core::TaskSpec> tasks;
+    bool archived = false;
 
     core::TaskSpec* task(const std::string& id);
     bool has_task(const std::string& id) const;

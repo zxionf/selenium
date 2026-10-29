@@ -23,6 +23,7 @@ sele worktree add <id> --path ../wt-<id>                           # 为线创�
 sele log --events                                                 # 合并 task 过程事件查看
 sele task add "unit" --modules auth --group G1 --depends T1        # 并行组成员
 sele task add "join" --modules core --depends T2 --depends T3      # join 点
+sele line archive <id>                                             # 把 merged/abandoned 线归档到 .sele/archive/
 sele overview
 ```
 

@@ -228,12 +228,14 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     // line list
     struct ListArgs {
         std::string status;
+        bool all = false;
     };
     auto list_args = std::make_shared<ListArgs>();
     auto* cmd_list = group->add_subcommand("list", "List lines");
     add_line_options(cmd_list, global_opts);
     cmd_list->add_option("--status", list_args->status, "Filter by status");
-    cmd_list->footer("Example:\n  sele line list\n  sele line list --status active");
+    cmd_list->add_flag("--all", list_args->all, "Include archived lines");
+    cmd_list->footer("Example:\n  sele line list\n  sele line list --status active\n  sele line list --all");
     cmd_list->callback([&global_opts, &exit_code, list_args]() {
         util::Output output(global_opts.output_format);
         exit_code = ng::handle(output, [&] {
@@ -242,9 +244,10 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             std::ostringstream text;
             int shown = 0;
 
-            if (core::fsys::exists(ctx.lay.lines)) {
+            auto emit = [&](const fs::path& base, bool archived) {
+                if (!core::fsys::exists(base)) return;
                 std::vector<fs::path> directories;
-                for (const auto& entry : fs::directory_iterator(ctx.lay.lines)) {
+                for (const auto& entry : fs::directory_iterator(base)) {
                     if (entry.is_directory()) directories.push_back(entry.path());
                 }
                 std::sort(directories.begin(), directories.end());
@@ -261,7 +264,7 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                     }
                     int done = 0;
                     int total = 0;
-                    const auto task_dir = core::sele::tasks_dir(ctx.lay, line.id);
+                    const auto task_dir = directory / "tasks";
                     if (core::fsys::exists(task_dir)) {
                         for (const auto& entry : fs::directory_iterator(task_dir)) {
                             if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
@@ -277,6 +280,7 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                     item["id"] = line.id;
                     item["status"] = line.status;
                     item["goal"] = line.goal;
+                    item["archived"] = archived;
                     item["tasks"] = nlohmann::json::object({{"done", done}, {"total", total}});
                     item["acceptance"] = nlohmann::json::object({
                         {"pass", summary.passed},
@@ -287,10 +291,12 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                     text << line.status << "  " << line.id << "  " << done << '/' << total
                          << " tasks  " << summary.passed << '/'
                          << static_cast<int>(line.acceptance.size()) << " acceptance  " << line.goal
-                         << '\n';
+                         << (archived ? "  (archived)" : "") << '\n';
                     ++shown;
                 }
-            }
+            };
+            emit(ctx.lay.lines, false);
+            if (list_args->all) emit(ctx.lay.sele / "archive", true);
             if (shown == 0) text << "(no lines)";
 
             nlohmann::json result;
@@ -1419,6 +1425,73 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             output.print_both("Rebased " + line_id + " onto " + rebase_args->onto + " at " +
                                   after.line.base_commit,
                               result_json);
+        });
+    });
+
+    // line archive
+    struct ArchiveArgs {
+        std::string id;
+    };
+    auto archive_args = std::make_shared<ArchiveArgs>();
+    auto* cmd_archive =
+        group->add_subcommand("archive", "Move a merged/abandoned line to .sele/archive");
+    add_line_options(cmd_archive, global_opts);
+    cmd_archive->add_option("id", archive_args->id, "Line id (default: session pointer)");
+    cmd_archive->footer("Example:\n  sele line archive 20261029-fix-login");
+    cmd_archive->callback([&global_opts, &exit_code, archive_args]() {
+        util::Output output(global_opts.output_format);
+        exit_code = ng::handle(output, [&] {
+            auto ctx = ng::load(global_opts, archive_args->id);
+            if (ctx.archived) {
+                nlohmann::json result;
+                result["command"] = "line.archive";
+                result["changed"] = false;
+                result["line"] = ctx.line_id;
+                result["archived"] = true;
+                output.print_both("Line " + ctx.line_id + " is already archived (unchanged)",
+                                  result);
+                return;
+            }
+            if (ctx.line.status != "merged" && ctx.line.status != "abandoned") {
+                fail(exit_codes::STATE_CONFLICT,
+                     "Line " + ctx.line_id + " is " + ctx.line.status + ", not merged/abandoned",
+                     "Archive only finished lines",
+                     {"sele line merge " + ctx.line_id + " --confirm",
+                      "sele line abandon " + ctx.line_id + " --reason \"...\""});
+            }
+            const auto worktree_pointer =
+                ctx.lay.runtime / "worktrees" / (ctx.line_id + ".json");
+            if (core::fsys::exists(worktree_pointer)) {
+                fail(exit_codes::STATE_CONFLICT,
+                     "Line has a worktree pointer: " + worktree_pointer.string(),
+                     "Remove the worktree before archiving",
+                     {"sele worktree remove " + ctx.line_id});
+            }
+
+            const auto source = core::sele::line_dir(ctx.lay, ctx.line_id);
+            const auto target = ctx.lay.sele / "archive" / ctx.line_id;
+            core::fsys::ensure_dir(ctx.lay.sele / "archive");
+            std::error_code ec;
+            fs::rename(source, target, ec);
+            if (ec) {
+                fail(exit_codes::ENV_ERROR,
+                     "Cannot archive " + ctx.line_id + ": " + ec.message(), "");
+            }
+            ng::append_log(ctx, "line.archive");
+
+            const auto pointer = core::session::read(ctx.lay, ctx.session);
+            if (pointer.line == ctx.line_id) {
+                core::session::Pointer cleared;
+                core::session::write(ctx.lay, ctx.session, cleared);
+            }
+
+            nlohmann::json result;
+            result["command"] = "line.archive";
+            result["changed"] = true;
+            result["line"] = ctx.line_id;
+            result["archived"] = true;
+            result["path"] = target.string();
+            output.print_both("Archived " + ctx.line_id + " to " + target.string(), result);
         });
     });
 }

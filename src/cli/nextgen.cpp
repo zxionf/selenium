@@ -120,7 +120,16 @@ Ctx load(const GlobalOptions& opts, const std::string& explicit_line) {
              "Line ids look like <YYYYMMDD>-<slug>", {"sele line list"});
     }
 
-    const auto line_path = core::sele::line_file(ctx.lay, ctx.line_id);
+    const auto active_dir = core::sele::line_dir(ctx.lay, ctx.line_id);
+    fs::path base_dir = active_dir;
+    if (!core::fsys::exists(active_dir / "line.json")) {
+        const auto archived_dir = ctx.lay.sele / "archive" / ctx.line_id;
+        if (core::fsys::exists(archived_dir / "line.json")) {
+            base_dir = archived_dir;
+            ctx.archived = true;
+        }
+    }
+    const auto line_path = base_dir / "line.json";
     if (!core::fsys::exists(line_path)) {
         fail(exit_codes::STATE_CONFLICT, "Line not found: " + ctx.line_id, "List available lines",
              {"sele line list"});
@@ -135,7 +144,7 @@ Ctx load(const GlobalOptions& opts, const std::string& explicit_line) {
         ctx.rt.line = ctx.line_id;
     }
 
-    const auto directory = core::sele::tasks_dir(ctx.lay, ctx.line_id);
+    const auto directory = base_dir / "tasks";
     if (is_dir(directory)) {
         for (const auto& entry : fs::directory_iterator(directory)) {
             if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
@@ -149,6 +158,11 @@ Ctx load(const GlobalOptions& opts, const std::string& explicit_line) {
 }
 
 void save_line(Ctx& ctx) {
+    if (ctx.archived) {
+        fail(exit_codes::STATE_CONFLICT,
+             "Line " + ctx.line_id + " is archived and read-only", "",
+             {"sele line show " + ctx.line_id});
+    }
     const auto path = core::sele::line_file(ctx.lay, ctx.line_id);
     if (core::fsys::exists(path)) {
         const auto current = core::model::line_from_json(core::sele::read_json(path));
@@ -165,6 +179,11 @@ void save_line(Ctx& ctx) {
 }
 
 void save_runtime(Ctx& ctx) {
+    if (ctx.archived) {
+        fail(exit_codes::STATE_CONFLICT,
+             "Line " + ctx.line_id + " is archived and read-only", "",
+             {"sele line show " + ctx.line_id});
+    }
     core::fsys::ensure_dir(ctx.lay.state);
     const auto path = core::sele::state_file(ctx.lay, ctx.line_id);
     if (core::fsys::exists(path)) {
@@ -183,6 +202,11 @@ void save_runtime(Ctx& ctx) {
 }
 
 void save_task(Ctx& ctx, const core::TaskSpec& task) {
+    if (ctx.archived) {
+        fail(exit_codes::STATE_CONFLICT,
+             "Line " + ctx.line_id + " is archived and read-only", "",
+             {"sele line show " + ctx.line_id});
+    }
     core::fsys::ensure_dir(core::sele::tasks_dir(ctx.lay, ctx.line_id));
     const auto path = core::sele::tasks_dir(ctx.lay, ctx.line_id) / (task.id + ".json");
     core::sele::write_json(path, core::model::to_json(task));

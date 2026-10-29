@@ -897,6 +897,58 @@ test_parallel_group_mismatch() {
     rm -rf "$proj"
 }
 
+test_line_archive() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    "$BIN" --root "$proj" line merge "$id" --confirm >/dev/null
+    "$BIN" --root "$proj" line archive "$id" >/dev/null
+    [[ ! -d "$proj/.sele/lines/$id" ]]
+    [[ -d "$proj/.sele/archive/$id" ]]
+    "$BIN" --root "$proj" line list --output json | \
+        jq -e --arg id "$id" '[.items[].id] | index($id) == null' >/dev/null
+    "$BIN" --root "$proj" line list --all --output json | \
+        jq -e --arg id "$id" '[.items[] | select(.id == $id)][0].archived == true' >/dev/null
+    "$BIN" --root "$proj" line show "$id" | grep -q 'merged'
+    expect_code 2 "$BIN" --root "$proj" task add "late" --modules auth --line "$id"
+    "$BIN" --root "$proj" line archive "$id" --output json | jq -e '.changed == false' >/dev/null
+    rm -rf "$proj"
+}
+
+test_archive_abandoned() {
+    local proj id
+    proj=$(setup_next)
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" line abandon "$id" --reason "superseded" >/dev/null
+    "$BIN" --root "$proj" line archive "$id" >/dev/null
+    [[ -d "$proj/.sele/archive/$id" ]]
+    rm -rf "$proj"
+}
+
+test_archive_requires_finished() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    expect_code 2 "$BIN" --root "$proj" line archive "$id"
+    rm -rf "$proj"
+}
+
+test_archive_rejects_worktree() {
+    local proj id wt
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    git -C "$proj" switch main >/dev/null 2>&1
+    wt="$(dirname "$proj")/wt-arch-$id"
+    "$BIN" --root "$proj" worktree add "$id" --path "$wt" >/dev/null
+    "$BIN" --root "$proj" line abandon "$id" --reason "x" >/dev/null
+    expect_code 2 "$BIN" --root "$proj" line archive "$id"
+    "$BIN" --root "$proj" worktree remove "$id" >/dev/null
+    "$BIN" --root "$proj" line archive "$id" >/dev/null
+    [[ -d "$proj/.sele/archive/$id" ]]
+    rm -rf "$proj" "$wt"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -950,5 +1002,9 @@ run_test "fork/join runs a group in parallel" test_fork_join
 run_test "a non-group task cannot run beside a group" test_parallel_group_isolation
 run_test "overlapping group modules warn but pass" test_parallel_group_overlap_warn
 run_test "group members must share depends" test_parallel_group_mismatch
+run_test "archive moves a merged line out of lines/" test_line_archive
+run_test "archive accepts an abandoned line" test_archive_abandoned
+run_test "archive requires merged/abandoned" test_archive_requires_finished
+run_test "archive refuses a line with a worktree" test_archive_rejects_worktree
 
 echo "=== All sele tests passed! ==="

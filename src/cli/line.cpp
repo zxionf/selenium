@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <memory>
 #include <regex>
@@ -60,6 +61,14 @@ nlohmann::json line_view(const core::Line& line) {
         value["acceptance"].push_back({{"id", item.id}, {"desc", item.desc}, {"check", item.check}});
     }
     return value;
+}
+
+std::string trim_text(const std::string& value) {
+    std::size_t begin = 0;
+    std::size_t end = value.size();
+    while (begin < end && std::isspace(static_cast<unsigned char>(value[begin])) != 0) ++begin;
+    while (end > begin && std::isspace(static_cast<unsigned char>(value[end - 1])) != 0) --end;
+    return value.substr(begin, end - begin);
 }
 
 } // namespace
@@ -393,7 +402,7 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
 
             bool done_ok = true;
             std::string done_detail = "n/a";
-            if (ctx.line.status == "done") {
+            if (ctx.line.status == "done" || ctx.line.status == "merged") {
                 const int all_tasks = static_cast<int>(ctx.tasks.size());
                 const int done_tasks = ng::count_tasks(ctx, "done");
                 const int all_acc = static_cast<int>(ctx.line.acceptance.size());
@@ -504,8 +513,17 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                      "Commit or stash them before opening a line",
                      {"git status", "sele task list " + ctx.line_id});
             }
+            if (!core::gitrt::has_head(ctx.lay.root)) {
+                fail(exit_codes::ENV_ERROR, "Git repository has no commits",
+                     "Create an initial commit before opening a line");
+            }
 
             const std::string branch = branch_for(ctx.line_id);
+            if (core::gitrt::current_branch(ctx.lay.root).rfind("sele/", 0) != 0) {
+                core::gitrt::commit_all(ctx.lay.root,
+                                        "chore(sele): plan " + ctx.line_id);
+            }
+            ctx.line.base_commit = core::gitrt::head_short(ctx.lay.root);
             if (core::gitrt::branch_exists(ctx.lay.root, branch)) {
                 core::gitrt::switch_branch(ctx.lay.root, branch);
             } else {
@@ -553,10 +571,11 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
         util::Output output(global_opts.output_format);
         exit_code = ng::handle(output, [&] {
             auto ctx = ng::load(global_opts, switch_args->id);
-            if (ctx.line.status == "done" || ctx.line.status == "abandoned") {
+            if (ctx.line.status == "done" || ctx.line.status == "abandoned" ||
+                ctx.line.status == "merged") {
                 fail(exit_codes::STATE_CONFLICT,
                      "Line " + ctx.line_id + " is " + ctx.line.status + " and cannot be switched to",
-                     "Done lines are read-only", {"sele line show " + ctx.line_id});
+                     "Done or merged lines are read-only", {"sele line show " + ctx.line_id});
             }
             if (!core::gitrt::is_repo(ctx.lay.root)) {
                 fail(exit_codes::ENV_ERROR, "Not a git repository: " + ctx.lay.root.string(),
@@ -594,14 +613,15 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     // line done
     struct DoneArgs {
         std::string id;
-        bool commit = false;
+        bool no_commit = false;
     };
     auto done_args = std::make_shared<DoneArgs>();
     auto* cmd_done = group->add_subcommand("done", "Finish a line when all tasks and acceptance pass");
     add_line_options(cmd_done, global_opts);
     cmd_done->add_option("id", done_args->id, "Line id (default: session pointer)");
-    cmd_done->add_flag("--commit", done_args->commit, "Commit .sele metadata after closing");
-    cmd_done->footer("Example:\n  sele line done 20261029-fix-login\n  sele line done --commit");
+    cmd_done->add_flag("--no-commit", done_args->no_commit,
+                       "Leave .sele metadata uncommitted (default: commit it)");
+    cmd_done->footer("Example:\n  sele line done 20261029-fix-login\n  sele line done --no-commit");
     cmd_done->callback([&global_opts, &exit_code, done_args]() {
         util::Output output(global_opts.output_format);
         exit_code = ng::handle(output, [&] {
@@ -633,12 +653,11 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             ng::append_log(ctx, "line.done");
 
             bool committed = false;
-            if (done_args->commit) {
-                if (!core::gitrt::is_repo(ctx.lay.root)) {
-                    fail(exit_codes::ENV_ERROR, "Not a git repository: " + ctx.lay.root.string(), "");
+            if (!done_args->no_commit && core::gitrt::is_repo(ctx.lay.root)) {
+                if (core::gitrt::current_branch(ctx.lay.root) == branch_for(ctx.line_id)) {
+                    committed = core::gitrt::commit_all(
+                        ctx.lay.root, "chore(sele): line " + ctx.line_id + " done");
                 }
-                committed = core::gitrt::commit_all(ctx.lay.root,
-                                                    "chore(sele): line " + ctx.line_id + " done");
             }
 
             nlohmann::json result;
@@ -653,11 +672,10 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             std::ostringstream text;
             text << "Closed " << ctx.line_id << " (done)\n"
                  << "  acceptance: " << summary.passed << " pass, " << summary.failed << " fail";
-            if (done_args->commit) {
-                text << "\n  metadata: " << (committed ? "committed" : "nothing to commit");
+            if (done_args->no_commit) {
+                text << "\n  metadata: uncommitted (--no-commit)";
             } else {
-                text << "\n  metadata: uncommitted (.sele changes stay in the working tree; "
-                        "use --commit or commit manually)";
+                text << "\n  metadata: " << (committed ? "committed" : "nothing to commit");
             }
             output.print_both(text.str(), result);
         });
@@ -819,10 +837,11 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 output.print_both("Line " + ctx.line_id + " is already abandoned (unchanged)", result);
                 return;
             }
-            if (ctx.line.status == "done") {
-                fail(exit_codes::STATE_CONFLICT, "Line " + ctx.line_id + " is done, not abandoned",
-                     "Done lines are read-only; reopen it first if it must be abandoned",
-                     {"sele line reopen " + ctx.line_id + " --reason \"...\""});
+            if (ctx.line.status == "done" || ctx.line.status == "merged") {
+                fail(exit_codes::STATE_CONFLICT,
+                     "Line " + ctx.line_id + " is " + ctx.line.status + ", not abandoned",
+                     "Done or merged lines are read-only",
+                     {"sele line show " + ctx.line_id});
             }
             ctx.line.status = "abandoned";
             ng::save_line(ctx);
@@ -859,10 +878,11 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
         util::Output output(global_opts.output_format);
         exit_code = ng::handle(output, [&] {
             auto ctx = ng::load(global_opts, amend_args->id);
-            if (ctx.line.status == "done" || ctx.line.status == "abandoned") {
+            if (ctx.line.status == "done" || ctx.line.status == "abandoned" ||
+                ctx.line.status == "merged") {
                 fail(exit_codes::STATE_CONFLICT,
                      "Line " + ctx.line_id + " is " + ctx.line.status + " and cannot be amended",
-                     "Reopen a done line first", {"sele line reopen " + ctx.line_id + " --reason \"...\""});
+                     "Reopen a done line first", {"sele line show " + ctx.line_id});
             }
             if (amend_args->goal.empty() && amend_args->acceptance.empty() &&
                 amend_args->modules.empty()) {
@@ -933,6 +953,152 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             result["reason"] = amend_args->reason;
             result["frozen"] = ctx.line.acceptance_sha256;
             output.print_both("Amended " + ctx.line_id + ": " + amend_args->reason, result);
+        });
+    });
+
+    // line merge
+    struct MergeArgs {
+        std::string id;
+        bool confirm = false;
+        std::string onto = "main";
+        bool delete_branch = false;
+    };
+    auto merge_args = std::make_shared<MergeArgs>();
+    auto* cmd_merge = group->add_subcommand("merge", "Merge a done line into its base branch");
+    add_line_options(cmd_merge, global_opts);
+    cmd_merge->add_option("id", merge_args->id, "Line id (default: session pointer)");
+    cmd_merge->add_flag("--confirm", merge_args->confirm, "Confirm the merge");
+    cmd_merge->add_option("--onto", merge_args->onto, "Base branch (default: main)");
+    cmd_merge->add_flag("--delete-branch", merge_args->delete_branch,
+                        "Delete sele/<id> after a successful merge");
+    cmd_merge->footer("Example:\n  sele line merge 20261029-fix-login --confirm\n"
+                      "  sele line merge --confirm --onto main");
+    cmd_merge->callback([&global_opts, &exit_code, merge_args]() {
+        util::Output output(global_opts.output_format);
+        exit_code = ng::handle(output, [&] {
+            auto root = ng::load_root(global_opts);
+            std::string line_id = merge_args->id;
+            if (line_id.empty()) {
+                line_id = core::session::read(root.lay, root.session).line;
+            }
+            if (line_id.empty()) {
+                fail(exit_codes::STATE_CONFLICT,
+                     "No active line for session '" + root.session + "'",
+                     "Switch to a line first", {"sele line list"});
+            }
+            if (!core::sele::valid_line_id(line_id)) {
+                fail(exit_codes::USAGE_ERROR, "Invalid line id: " + line_id,
+                     "Line ids look like <YYYYMMDD>-<slug>", {"sele line list"});
+            }
+            if (!core::gitrt::is_repo(root.lay.root)) {
+                fail(exit_codes::ENV_ERROR, "Not a git repository: " + root.lay.root.string(), "");
+            }
+            if (!core::gitrt::has_head(root.lay.root)) {
+                fail(exit_codes::ENV_ERROR, "Git repository has no commits", "");
+            }
+            if (core::gitrt::is_dirty(root.lay.root)) {
+                fail(exit_codes::STATE_CONFLICT, "Working tree has uncommitted code changes",
+                     "Commit or stash them before merging", {"git status"});
+            }
+            const std::string branch = branch_for(line_id);
+            if (!core::gitrt::branch_exists(root.lay.root, branch)) {
+                fail(exit_codes::STATE_CONFLICT, "Line branch not found: " + branch,
+                     "Open the line to create its branch", {"sele line open " + line_id});
+            }
+            if (!core::gitrt::branch_exists(root.lay.root, merge_args->onto)) {
+                fail(exit_codes::ENV_ERROR, "Base branch not found: " + merge_args->onto,
+                     "Pass --onto <branch>", {"git branch --all"});
+            }
+            if (core::gitrt::current_branch(root.lay.root) != branch) {
+                core::gitrt::switch_branch(root.lay.root, branch);
+            }
+
+            auto ctx = ng::load(global_opts, line_id);
+
+            if (ctx.line.status == "merged") {
+                nlohmann::json result;
+                result["command"] = "line.merge";
+                result["changed"] = false;
+                result["line"] = ctx.line_id;
+                result["status"] = "merged";
+                result["commit"] = ctx.line.merge_commit;
+                output.print_both("Line " + ctx.line_id + " is already merged (unchanged)", result);
+                return;
+            }
+            if (ctx.line.status != "done") {
+                fail(exit_codes::STATE_CONFLICT,
+                     "Line " + ctx.line_id + " is " + ctx.line.status + ", not done",
+                     "Finish the line before merging", {"sele line done " + ctx.line_id});
+            }
+            if (!merge_args->confirm) {
+                fail(exit_codes::USAGE_ERROR, "merge requires --confirm",
+                     "Review the line, then re-run with --confirm",
+                     {"sele line show " + ctx.line_id});
+            }
+            if (ctx.line.base_commit.empty()) {
+                const auto base_head =
+                    core::gitrt::run(ctx.lay.root, {"rev-parse", "--short", merge_args->onto});
+                if (base_head.code == 0) ctx.line.base_commit = trim_text(base_head.out);
+            }
+
+            ctx.line.status = "merged";
+            ctx.line.has_merged = true;
+            ctx.line.merged_at = core::sele::utc_now();
+            ctx.line.merge_commit.clear();
+            ng::save_line(ctx);
+            core::gitrt::commit_all(ctx.lay.root,
+                                    "chore(sele): mark " + ctx.line_id + " merged");
+
+            core::gitrt::switch_branch(ctx.lay.root, merge_args->onto);
+            const auto merge = core::gitrt::run(
+                ctx.lay.root, {"merge", "--no-ff", "-m", "sele: merge " + ctx.line_id, branch});
+            if (merge.code != 0) {
+                const auto conflicts =
+                    core::gitrt::run(ctx.lay.root, {"diff", "--name-only", "--diff-filter=U"});
+                core::gitrt::run(ctx.lay.root, {"merge", "--abort"});
+                core::gitrt::switch_branch(ctx.lay.root, branch);
+
+                ctx.line.status = "done";
+                ctx.line.has_merged = false;
+                ctx.line.merged_at.clear();
+                ctx.line.merge_commit.clear();
+                ng::save_line(ctx);
+                core::gitrt::commit_all(ctx.lay.root,
+                                        "chore(sele): unmark " + ctx.line_id + " merged");
+
+                const std::string detail = trim_text(conflicts.out);
+                fail(exit_codes::STATE_CONFLICT,
+                     "Merge conflict in " + ctx.line_id + (detail.empty() ? "" : ": " + detail),
+                     "Resolve it on " + branch + " and retry",
+                     {"git switch " + branch, "git merge " + merge_args->onto,
+                      "sele line merge " + ctx.line_id + " --confirm"});
+            }
+
+            ctx.line.merge_commit = core::gitrt::head_short(ctx.lay.root);
+            ng::append_log(ctx, "line.merge",
+                           {{"commit", ctx.line.merge_commit}, {"base", merge_args->onto}});
+            ng::save_line(ctx);
+            core::gitrt::commit_all(ctx.lay.root,
+                                    "chore(sele): record merge " + ctx.line_id);
+
+            if (merge_args->delete_branch) {
+                core::gitrt::run(ctx.lay.root, {"branch", "-d", branch});
+            }
+
+            nlohmann::json result;
+            result["command"] = "line.merge";
+            result["changed"] = true;
+            result["line"] = ctx.line_id;
+            result["status"] = "merged";
+            result["commit"] = ctx.line.merge_commit;
+            result["base"] = merge_args->onto;
+            result["branch_deleted"] = merge_args->delete_branch;
+
+            std::ostringstream text;
+            text << "Merged " << ctx.line_id << " into " << merge_args->onto << " at "
+                 << ctx.line.merge_commit;
+            if (merge_args->delete_branch) text << "\n  branch: " << branch << " deleted";
+            output.print_both(text.str(), result);
         });
     });
 }

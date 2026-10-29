@@ -41,6 +41,11 @@ struct Line {
     std::string closed_at;
     int closed_pass = 0;
     int closed_fail = 0;
+
+    std::string base_commit;
+    bool has_merged = false;
+    std::string merged_at;
+    std::string merge_commit;
 };
 
 struct TaskSpec {

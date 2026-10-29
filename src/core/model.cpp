@@ -87,6 +87,16 @@ ojson to_json(const Line& line) {
     } else {
         value["closed"] = nullptr;
     }
+
+    value["base_commit"] = line.base_commit.empty() ? ojson(nullptr) : ojson(line.base_commit);
+    if (line.has_merged) {
+        ojson merged = ojson::object();
+        merged["at"] = line.merged_at;
+        merged["commit"] = line.merge_commit;
+        value["merged"] = merged;
+    } else {
+        value["merged"] = nullptr;
+    }
     return value;
 }
 
@@ -134,6 +144,16 @@ Line line_from_json(const ojson& value) {
             line.closed_pass = summary.value("pass", 0);
             line.closed_fail = summary.value("fail", 0);
         }
+    }
+
+    if (value.contains("base_commit") && value["base_commit"].is_string()) {
+        line.base_commit = value["base_commit"].get<std::string>();
+    }
+    if (value.contains("merged") && value["merged"].is_object()) {
+        const auto& merged = value["merged"];
+        line.has_merged = true;
+        line.merged_at = str(merged, "at");
+        line.merge_commit = str(merged, "commit");
     }
     return line;
 }

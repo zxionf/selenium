@@ -20,11 +20,11 @@
 | D5 | 元数据用 **JSON**（复用 nlohmann/json），不引入 YAML |
 | D6 | `.sele/` 分 tracked 与 runtime 两区：规格与里程碑入库，运行态本机忽略 |
 | D7 | `line.json` 为权威状态、`log.jsonl` 为审计；`fsck` 对账，v0.3 不做事件重放重建 |
-| D8 | v0.3 = 多线共存 + 单线单写者：不做 fork/join、worktree、merge/rebase/revert |
+| D8 | v0.3 = 多线共存 + 单线单写者；`line merge` 在 v0.4 补上；不做 fork/join、worktree、rebase/revert |
 
 ### 1.2 v0.3 明确不做
 
-fork/join、并行组、worktree 检出、`line merge`、`line rebase`、`task revert`、`line revert`、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
+fork/join、并行组、worktree 检出、`line rebase`、`task revert`、`line revert`、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
 
 ### 1.3 单仓库边界
 
@@ -80,7 +80,7 @@ fork/join、并行组、worktree 检出、`line merge`、`line rebase`、`task r
 | `log.jsonl` | line 级里程碑 + task.done + acceptance 结果 | 低 | 是 |
 | `runtime/events.jsonl` | task/acceptance 过程事件 | 高 | 否 |
 
-线级状态（`line.json.status`）入库，因为它是团队要 review 的事实；`line done` 后可能让工作树 dirty，用 `--commit` 或手动提交解决（§6.2）。
+线级状态（`line.json.status`）入库，因为它是团队要 review 的事实；`line done` 默认提交元数据（`--no-commit` 可关闭），`line open` 会把计划提交到 base（§6.2）。
 
 ### 3.2 克隆后的状态
 
@@ -247,7 +247,7 @@ fork/join、并行组、worktree 检出、`line merge`、`line rebase`、`task r
 draft ──open──> active ──block──> blocked ──unblock──> active
   │               │  ↑                                  │
   │               │  └────────── reopen（done→active）───┘
-  │               ├──done──> done
+  │               ├──done──> done ──merge──> merged
   └──abandon──> abandoned <──abandon── active / blocked
 ```
 
@@ -258,11 +258,12 @@ draft ──open──> active ──block──> blocked ──unblock──> a
 | blocked → active | `line unblock` | — | 清 `blocked`；写日志 |
 | active → done | `line done` | 全部 task `done`、全部 acceptance `pass` | 写 `closed`；写日志 |
 | done → active | `line reopen --reason` | 有 reason | 清 `closed`；保留 `frozen`；写日志 |
+| done → merged | `line merge --confirm` | done、工作树干净（§8.5）、`--confirm`、base 分支存在 | 标记 `merged`、记录 merge commit、切到 base 合并、写日志 |
 | draft/active/blocked → abandoned | `line abandon --reason` | 有 reason | 写 `status=abandoned`；目录保留不移动；写日志 |
 | active/draft/blocked 状态不变 | `line amend` | 有 reason | 重算 `frozen`；写日志 |
 
 - `done` 状态不可 `amend`，必须 `reopen` 后改。
-- `merged` 状态 v0.4 引入，v0.3 不出现。
+- `merged` 为终态：不可 `reopen`/`amend`/`abandon`/`switch`/`task add`。
 - task 的 blocked **不改变** line 状态；`line status` 显示阻塞点，`line done` 因 task 未 done 而拒绝。
 
 ### 5.2 Task
@@ -313,7 +314,8 @@ sele line switch <id>
 sele line block <id> --reason <s>
 sele line unblock <id>
 sele line amend <id> --reason <s> [--goal <s>] [--acceptance …] [--modules a,b]
-sele line done <id> [--commit]
+sele line done <id> [--no-commit]
+sele line merge <id> [--confirm] [--onto <branch>] [--delete-branch]
 sele line reopen <id> --reason <s>
 sele line abandon <id> --reason <s>
 
@@ -372,8 +374,8 @@ sele line new fix-login \
 检查项：`linear_chain`（单根、单前驱、无环）、`frozen_acceptance`（active 后 goal/acceptance 哈希未变）、`module_registry`（白名单非空时校验）、`done_consistency`、`cross_line_modules`（跨 line 同模块：默认只告警，`--strict` 时计为失败）。全部通过退 0，否则退 3。
 
 #### `sele line open <id>`
-前置：`draft`、≥1 task、字段完整、git 仓库、工作树干净（§8.5）、`sele/<id>` 分支不存在或可切换。
-副作用：写 `frozen`（对归一化后的 goal 与 acceptance 取 SHA-256）、`status=active`、`git switch -c sele/<id>`、写 `log.jsonl`，并把会话指针指向该 line。
+前置：`draft`、≥1 task、字段完整、git 仓库且有提交、工作树干净（§8.5）、`sele/<id>` 分支不存在或可切换。
+副作用：若当前在 base 分支，先把 `.sele` 计划提交（`chore(sele): plan <id>`），让 base 也拥有 `.sele`；记录 `base_commit = HEAD`；写 `frozen`（对归一化后的 goal 与 acceptance 取 SHA-256）、`status=active`、`git switch -c sele/<id>`、写 `log.jsonl`，并把会话指针指向该 line。
 失败：工作树 dirty → 退 2，`next: ["git status", "sele task list"]`。
 
 #### `sele line switch <id>`
@@ -389,24 +391,33 @@ sele line new fix-login \
 - 重算并覆盖 `frozen`，旧哈希写入 `events.jsonl`（`op=line.amend`，含 `old_frozen`）。
 - `active` 后 `acceptance` 的 `id` 不可删除；新增验收项需要 reason。
 
-#### `sele line done <id> [--commit]`
+#### `sele line done <id> [--no-commit]`
 
 - 前置：`active`、全部 task `done`、全部 acceptance `pass`。
 - 副作用：`status=done`、`closed={at, acceptance_summary}`、写 `log.jsonl`。
-- `--commit`：`git add .sele && git commit -m "chore(sele): line <id> done"`；不加时只写文件并在输出 `next` 提示手动提交。
+- 默认在 line 分支上提交 `.sele` 元数据（`chore(sele): line <id> done`）；`--no-commit` 只写文件。
 
-#### `sele task add [<line>] "<title>" --modules a,b`
+#### `sele line merge <id> [--confirm] [--onto <branch>] [--delete-branch]`
+
+- 前置：`done`、`--confirm`、git 仓库有提交、工作树干净（§8.5）、`sele/<id>` 分支存在、base 分支存在（默认 `main`）。
+- 命令会自行切到 line 分支再加载状态（base 上的 `line.json` 可能还是 draft 计划）。
+- 在 line 分支上先把 `status` 置为 `merged` 并提交（`chore(sele): mark <id> merged`），保证状态随合并进入 base。
+- 切到 base，执行 `git merge --no-ff -m "sele: merge <id>" sele/<id>`。
+- 冲突：立即 `git merge --abort`，切回 line 分支，把状态回滚为 `done` 并提交（`unmark`），退 2 并列出冲突文件；人工在 line 分支解决后重试。
+- 成功：在 base 上记录 `merged.{at,commit}` 并提交（`record merge`），写 `log.jsonl` 的 `line.merge`；`--delete-branch` 时删除 `sele/<id>`。
+
+#### `sele task add "<title>" --modules a,b [--line <id>] [--depends <task>]`
 
 - 自动分配 `T<n>`，`depends` 默认为当前链尾（无 task 时为空）。
 - 只允许 `draft` / `active` / `blocked` 的 line；`done` / `abandoned` 退 2。
 - `--modules` 必填（≥1），用于跨线冲突告警。
 
-#### `sele task start [<line>] <task>`
+#### `sele task start <task> [--line <id>]`
 
 - 前置：line `active`、task `pending`、该 line 无其他 `running` task。
 - 副作用：runtime 写 `running`、会话 `task` 指针更新、写 events。
 
-#### `sele task checkpoint [<line>] <task> [--msg <s>]`
+#### `sele task checkpoint <task> [--line <id>] [--msg <s>]`
 
 - 前置：task `running`、line `active`、当前分支为 `sele/<line>`。
 - 行为：`git add -A && git commit -m <msg|默认>`；无改动时不提交，复用上一个 checkpoint，`changed:false`。`git add -A` 会把 `.sele` 下尚未提交的元数据（`line.json`、`tasks/*.json`、`log.jsonl`）一并提交，因此元数据随 checkpoint 入库；`runtime/` 被 `.sele/.gitignore` 排除。
@@ -414,13 +425,13 @@ sele line new fix-login \
 - 默认提交信息：`<line-id>: <task-id> <title>`。
 - 这是 v0.3 中**唯一由 sele 主动创建 commit** 的命令。
 
-#### `sele task done [<line>] <task>`
+#### `sele task done <task> [--line <id>]`
 
 - 前置：`running`、存在 checkpoint、工作树干净（§8.5）、line `active`。
 - 失败：dirty → 退 2，`next: ["sele task checkpoint <line> <task>"]`。
 - 副作用：runtime `done` + `finished_at`；写 `log.jsonl`（含 `commit`）；写 events。
 
-#### `sele acceptance pass|fail [<line>] <acceptance> --evidence <s>`
+#### `sele acceptance pass|fail <acceptance> [--line <id>] --evidence <s>`
 
 - 前置：line 为 `active`（`done` 后不再接受记账，避免推翻已关闭结论）；acceptance id 存在。
 - 副作用：runtime 写结果；写 `log.jsonl`（含 evidence）+ events。`--by` 默认取 actor。
@@ -509,6 +520,7 @@ v0.3 假定同一 line 同时只有一个写入者（一个 agent 会话）。�
 
 - line ↔ 分支 `sele/<line-id>` 1:1。
 - v0.3 不创建 worktree；`line switch` 用 `git switch`。
+- `line open` 在切到 line 分支前把 `.sele` 计划提交到 base，保证 base 也有 `.sele`；`line done` 默认提交元数据；`line merge` 依次在 line 分支标记、在 base 合并、在 base 记录 merge commit。
 - 所有 git 调用使用参数数组（`fork`/`execvp` 或 `posix_spawn`），**不用 `popen` 拼接命令**（旧 `core/git` 保留给 legacy 命令，新代码用 `core/gitrt`）。
 
 ### 8.5 干净性判定
@@ -521,7 +533,7 @@ git status --porcelain --untracked-files=no -- . ':(exclude).sele'
 
 为空即视为干净。`line open` / `line switch` / `task done` 依赖此判定。
 
-排除 `.sele/` 是必需的：`line new` / `log` 追加 / 状态写入都会改动被跟踪的元数据，若把它们算进 dirty，`line open` 会在自己刚写完文件后失败；而 `.sele` 的未提交改动由下一次 `task checkpoint` 的 `git add -A` 顺带提交，`line done --commit` 也能显式提交，`overview` 会提示还有未提交的元数据。
+排除 `.sele/` 是必需的：`line new` / `log` 追加 / 状态写入都会改动被跟踪的元数据，若把它们算进 dirty，`line open` 会在自己刚写完文件后失败；而 `.sele` 的未提交改动由一次 `task checkpoint` 的 `git add -A` 顺带提交，`line done` 默认提交，`--no-commit` 可关闭，`overview` 会提示还有未提交的元数据。
 
 `.sele/runtime/` 由 `.sele/.gitignore` 排除在版本控制之外，但同样不计入干净性判定（它在排除路径内）。
 
@@ -578,7 +590,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 31 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 36 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功与冲突回滚。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|
@@ -664,8 +676,8 @@ src/
 
 ## 14. 开放问题（不影响 v0.3 开工）
 
-1. `line done --commit` 是否需要自动推送到远端？v0.3 不推送。
+1. `line done` / `line merge` 产生的元数据提交是否需要推送到远端？v0.3/v0.4 不推送。
 2. `log` 是否应合并 `events.jsonl`（`--events`）？v0.3 不做。
 3. 跨线 modules 冲突在 v0.3 只告警；v0.4 merge 时是否阻断，待定。
-4. `main` 的基线记录：v0.4 在 `line.json` 增加 `base_commit` 与 `head_commit`。
+4. `main` 的基线记录：`base_commit` 已在 `line open` 时写入；`head_commit` 仍需时再补。
 5. 多仓库线：v0.4+ 需要全局 `~/.sele/` 索引，本文不涉及。

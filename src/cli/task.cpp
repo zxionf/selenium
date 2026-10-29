@@ -78,10 +78,11 @@ void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
         util::Output output(global_opts.output_format);
         exit_code = ng::handle(output, [&] {
             auto ctx = ng::load(global_opts, add_args->line);
-            if (ctx.line.status == "done" || ctx.line.status == "abandoned") {
+            if (ctx.line.status == "done" || ctx.line.status == "abandoned" ||
+                ctx.line.status == "merged") {
                 fail(exit_codes::STATE_CONFLICT,
                      "Line " + ctx.line_id + " is " + ctx.line.status + " and cannot take new tasks",
-                     "Reopen the line first", {"sele line reopen " + ctx.line_id + " --reason \"...\""});
+                     "Reopen the line first", {"sele line show " + ctx.line_id});
             }
             if (add_args->title.empty()) {
                 fail(exit_codes::USAGE_ERROR, "Task title must not be empty", "");

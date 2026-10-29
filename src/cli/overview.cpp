@@ -257,7 +257,8 @@ void register_fsck(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 }
 
                 if (line.has_frozen &&
-                    (line.status == "active" || line.status == "blocked" || line.status == "done")) {
+                    (line.status == "active" || line.status == "blocked" ||
+                     line.status == "done" || line.status == "merged")) {
                     if (core::goal_digest(line) != line.goal_sha256 ||
                         core::acceptance_digest(line) != line.acceptance_sha256) {
                         frozen_ok = false;
@@ -271,7 +272,7 @@ void register_fsck(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                     runtime = core::model::runtime_from_json(core::sele::read_json(state_path));
                 }
 
-                if (line.status == "done") {
+                if (line.status == "done" || line.status == "merged") {
                     for (const auto& task : tasks) {
                         const auto found = runtime.tasks.find(task.id);
                         if (found == runtime.tasks.end() || found->second.status != "done") {

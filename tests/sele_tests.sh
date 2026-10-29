@@ -20,7 +20,7 @@ run_test() {
 setup_next() {
     local proj
     proj=$(mktemp -d)
-    git -C "$proj" init -q
+    git -C "$proj" init -q -b main
     git -C "$proj" config user.email test@example.com
     git -C "$proj" config user.name tester
     echo seed > "$proj/seed.txt"
@@ -497,6 +497,74 @@ test_done_rejects_new_task() {
     rm -rf "$proj"
 }
 
+test_merge_success() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    "$BIN" --root "$proj" line merge "$id" --confirm >/dev/null
+    jq -e '.status == "merged" and .merged.commit != null' \
+        "$proj/.sele/lines/$id/line.json" >/dev/null
+    [[ "$(git -C "$proj" branch --show-current)" == "main" ]]
+    git -C "$proj" log --oneline --merges | grep -q "$id"
+    grep -q '"op":"line.merge"' "$proj/.sele/log.jsonl"
+    [[ -z "$(git -C "$proj" status --porcelain)" ]]
+    rm -rf "$proj"
+}
+
+test_merge_conflict() {
+    local proj id out code
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    git -C "$proj" switch main >/dev/null 2>&1
+    echo main-side > "$proj/seed.txt"
+    git -C "$proj" add -A
+    git -C "$proj" commit -qm "main side"
+
+    out=$(mktemp)
+    set +e
+    "$BIN" --root "$proj" line merge "$id" --confirm > "$out" 2>&1
+    code=$?
+    set -e
+    [[ $code -eq 2 ]]
+    grep -q "Merge conflict" "$out"
+    rm -f "$out"
+
+    jq -e '.status == "done" and .merged == null' "$proj/.sele/lines/$id/line.json" >/dev/null
+    [[ "$(git -C "$proj" branch --show-current)" == "sele/$id" ]]
+    [[ -z "$(git -C "$proj" status --porcelain)" ]]
+    rm -rf "$proj"
+}
+
+test_merge_requires_done() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    expect_code 2 "$BIN" --root "$proj" line merge "$id" --confirm
+    rm -rf "$proj"
+}
+
+test_merge_requires_confirm() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    expect_code 1 "$BIN" --root "$proj" line merge "$id"
+    jq -e '.status == "done"' "$proj/.sele/lines/$id/line.json" >/dev/null
+    rm -rf "$proj"
+}
+
+test_merged_is_read_only() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(finish_line "$proj")
+    "$BIN" --root "$proj" line merge "$id" --confirm >/dev/null
+    expect_code 2 "$BIN" --root "$proj" task add "late" --modules auth
+    expect_code 2 "$BIN" --root "$proj" line switch "$id"
+    expect_code 2 "$BIN" --root "$proj" line amend "$id" --reason "x" --goal "y"
+    expect_code 2 "$BIN" --root "$proj" line done "$id"
+    "$BIN" --root "$proj" line show "$id" | grep -q 'merged'
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -528,5 +596,10 @@ run_test "line switch rejects a dirty tree" test_switch_rejects_dirty
 run_test "line switch rejects a done line" test_switch_rejects_done
 run_test "check --strict fails on cross-line modules" test_check_strict_cross_line
 run_test "done line rejects new tasks" test_done_rejects_new_task
+run_test "line merge succeeds and records the merge commit" test_merge_success
+run_test "merge conflict aborts and keeps the line done" test_merge_conflict
+run_test "merge requires a done line" test_merge_requires_done
+run_test "merge requires --confirm" test_merge_requires_confirm
+run_test "merged line is read-only" test_merged_is_read_only
 
 echo "=== All sele tests passed! ==="

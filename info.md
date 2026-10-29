@@ -15,6 +15,7 @@ sele task checkpoint T1 --msg "wip"                              # 唯一的自�
 sele task done T1
 sele acceptance pass A1 --evidence "pytest 12 passed"            # 只记账，不执行命令
 sele line done <id>
+sele line merge <id> --confirm                                      # 合并进 main（冲突则 abort 并退回 done）
 sele overview
 ```
 

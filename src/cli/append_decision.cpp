@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 
+#include "cli/nextgen.hpp"
 #include "core/root.hpp"
 #include "core/template.hpp"
 #include "util/exit_codes.hpp"
@@ -35,6 +36,7 @@ void register_append_decision(CLI::App& app, GlobalOptions& global_opts, int& ex
     cmd_append->footer("Example:\n  sele append-decision --context \"Use C++20\" --decision \"Adopt modules\" --consequences \"Cleaner imports\" --change-id 20261018-my-feature");
     cmd_append->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
+        if (!ng::legacy_guard(global_opts, output, exit_code, "append-decision")) return;
         try {
             fs::path root = global_opts.root.empty() ? fs::current_path() : global_opts.root;
             fs::path design_root = core::find_design_root(root);

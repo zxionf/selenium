@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(sele VERSION 0.2.2 LANGUAGES CXX)
+project(sele VERSION 0.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
@@ -60,11 +60,23 @@ add_executable(sele
     src/cli/lint.cpp
     src/cli/close.cpp
     src/cli/version.cpp
+    src/cli/line.cpp
+    src/cli/task.cpp
+    src/cli/acceptance.cpp
+    src/cli/overview.cpp
+    src/cli/nextgen.cpp
     src/core/root.cpp
     src/core/id.cpp
     src/core/template.cpp
     src/core/git.cpp
     src/core/version.cpp
+    src/core/fs.cpp
+    src/core/hash.cpp
+    src/core/gitrt.cpp
+    src/core/journal.cpp
+    src/core/model.cpp
+    src/core/sele.cpp
+    src/core/session.cpp
     src/util/output.cpp
 )
 
@@ -121,4 +133,5 @@ if(WIN32)
     add_test(NAME cli WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND powershell -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tests/cli_tests.ps1 -SeleBin $<TARGET_FILE:sele>)
 else()
     add_test(NAME cli WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND bash tests/cli_tests.sh $<TARGET_FILE:sele>)
+    add_test(NAME sele_ng WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND bash tests/sele_tests.sh $<TARGET_FILE:sele>)
 endif()

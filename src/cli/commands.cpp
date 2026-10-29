@@ -15,5 +15,7 @@ void add_output_opt(CLI::App* sub, GlobalOptions& global_opts) {
 void add_global_opts(CLI::App* sub, GlobalOptions& global_opts) {
     sub->add_option("--root", global_opts.root, "Project root directory")
         ->capture_default_str();
+    sub->add_option("--session", global_opts.session,
+                    "Session id for the current line pointer (default: $SELE_SESSION or 'default')");
     add_output_opt(sub, global_opts);
 }

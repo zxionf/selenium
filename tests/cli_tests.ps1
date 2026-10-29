@@ -356,7 +356,7 @@ Run-Test "status text output" {
 # Test 12: every command produces text output in default format
 Run-Test "text output for all commands" {
     $fresh = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
-    $text = (& $SeleBin init $fresh) -join "`n"
+    $text = (& $SeleBin init --legacy $fresh) -join "`n"
     if ($text -notmatch '^Initialized ') { throw "init produced no text output: $text" }
     Remove-Item -Recurse -Force $fresh
 

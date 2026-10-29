@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 
+#include "cli/nextgen.hpp"
 #include "core/root.hpp"
 #include "util/exit_codes.hpp"
 #include "util/output.hpp"
@@ -48,6 +49,7 @@ void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code) 
     cmd_status->footer("Example:\n  sele status --output json");
     cmd_status->callback([&global_opts, &exit_code]() {
         util::Output output(global_opts.output_format);
+        if (!ng::legacy_guard(global_opts, output, exit_code, "status")) return;
         try {
             fs::path root = global_opts.root.empty() ? fs::current_path() : global_opts.root;
             fs::path design_root = core::find_design_root(root);

@@ -1,6 +1,24 @@
 # sele CLI
 
-一个用于管理 `.design/` 与 `.agent/` 目录的 C++20 命令行工具，支撑「创建变更 → 追加决策 → 查询状态 → 规则检查 → 归档预览」这一最小闭环。
+> **v0.3（当前）**：新增 `.sele/` 线任务体系——`line` / `task` / `acceptance` / `overview` / `log` / `fsck`。`sele init` 默认创建 `.sele/`；旧的 `.design/.agent` 体系保留，用 `sele init --legacy` 创建。两套命令按项目类型分派，规格见 [`docs/sele-v1-spec.md`](docs/sele-v1-spec.md)。下文“命令”一节描述的是 v0.2.2 legacy 体系，仍然可用。
+
+## v0.3 线任务体系（摘要）
+
+```bash
+sele init                                                        # 创建 .sele/
+sele line new fix-login --goal "登录失败时给出可操作错误" \
+  --acceptance "错误密码返回 401::pytest tests/test_login.py" --modules auth
+sele task add "复现 401 分支" --modules auth
+sele line open <id>                                              # 冻结验收、创建 sele/<id> 分支
+sele task start T1
+sele task checkpoint T1 --msg "wip"                              # 唯一的自动 git 提交
+sele task done T1
+sele acceptance pass A1 --evidence "pytest 12 passed"            # 只记账，不执行命令
+sele line done <id>
+sele overview
+```
+
+目录：`.sele/lines/<id>/{line.json,tasks/*.json}` 与 `.sele/log.jsonl` 入库；`.sele/runtime/`（会话指针、task 状态、细则事件）本机忽略。任务状态机为线内严格串行，跨 line 可并存（v0.3 为单写者，不做 fork/join、worktree、merge）。
 
 ## 构建
 

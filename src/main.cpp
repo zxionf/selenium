@@ -11,19 +11,22 @@
 #include "util/exit_codes.hpp"
 
 int main(int argc, char** argv) {
-    CLI::App app{"sele - Manage .design/ and .agent/ directories"};
+    CLI::App app{"sele - line/task orchestration for agents (.sele) and legacy .design/.agent projects"};
     app.require_subcommand(1);
     app.set_version_flag("--version", &core::version_display, "Show version information and exit");
 
     GlobalOptions global_opts;
     int exit_code = exit_codes::SUCCESS;
 
-    app.add_option("--root", global_opts.root, "Project root directory (default: current dir, search upward for .design/)");
+    app.add_option("--root", global_opts.root, "Project root directory (default: current dir, search upward for .sele/ or .design/)");
     app.add_option("--output", global_opts.output_format, "Output format: text or json")
         ->transform(CLI::CheckedTransformer(std::map<std::string, util::Output::Format>{
             {"text", util::Output::Format::TEXT},
             {"json", util::Output::Format::JSON}
         }, CLI::ignore_case));
+
+    app.add_option("--session", global_opts.session,
+                   "Session id for the current line pointer (default: $SELE_SESSION or 'default')");
 
     cli::register_init(app, global_opts, exit_code);
     cli::register_new(app, global_opts, exit_code);
@@ -32,6 +35,10 @@ int main(int argc, char** argv) {
     cli::register_lint(app, global_opts, exit_code);
     cli::register_close(app, global_opts, exit_code);
     cli::register_version(app, global_opts, exit_code);
+    cli::register_line(app, global_opts, exit_code);
+    cli::register_task(app, global_opts, exit_code);
+    cli::register_acceptance(app, global_opts, exit_code);
+    cli::register_overview(app, global_opts, exit_code);
 
     try {
         app.parse(argc, argv);

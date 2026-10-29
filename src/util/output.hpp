@@ -2,6 +2,7 @@
 
 #include <nlohmann/json.hpp>
 #include <string>
+#include <vector>
 
 namespace util {
 
@@ -14,7 +15,8 @@ public:
     void print_text(const std::string& message);
     void print_json(const nlohmann::json& json);
     void print_both(const std::string& text, const nlohmann::json& json);
-    void error(const std::string& message, const std::string& suggestion = "");
+    void error(const std::string& message, const std::string& suggestion = "",
+               const std::vector<std::string>& next = {});
 
     Format get_format() const { return format_; }
 

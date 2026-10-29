@@ -12,6 +12,7 @@
 #include <system_error>
 #include <vector>
 
+#include "cli/nextgen.hpp"
 #include "core/root.hpp"
 #include "util/exit_codes.hpp"
 #include "util/output.hpp"
@@ -275,6 +276,7 @@ void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     cmd_close->footer("Example:\n  sele close 20261018-my-feature --dry-run\n  sele close 20261018-my-feature");
     cmd_close->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
+        if (!ng::legacy_guard(global_opts, output, exit_code, "close")) return;
         try {
             fs::path root = global_opts.root.empty() ? fs::current_path() : global_opts.root;
             fs::path design_root = core::find_design_root(root);

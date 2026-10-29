@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "core/git.hpp"
+#include "cli/nextgen.hpp"
 #include "core/root.hpp"
 #include "core/template.hpp"
 #include "util/exit_codes.hpp"
@@ -32,6 +33,7 @@ void register_lint(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     cmd_lint->footer("Example:\n  sele lint\n  sele lint --fix");
     cmd_lint->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
+        if (!ng::legacy_guard(global_opts, output, exit_code, "lint")) return;
         try {
             fs::path root = global_opts.root.empty() ? fs::current_path() : global_opts.root;
             fs::path design_root = core::find_design_root(root);

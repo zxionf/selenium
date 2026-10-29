@@ -8,6 +8,7 @@
 struct GlobalOptions {
     std::filesystem::path root;
     util::Output::Format output_format = util::Output::Format::TEXT;
+    std::string session;
 };
 
 void add_output_opt(CLI::App* sub, GlobalOptions& global_opts);
@@ -22,5 +23,9 @@ void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_lint(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_version(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_acceptance(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_overview(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 
 } // namespace cli

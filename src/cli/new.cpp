@@ -9,6 +9,7 @@
 #include <string>
 
 #include "core/id.hpp"
+#include "cli/nextgen.hpp"
 #include "core/root.hpp"
 #include "core/template.hpp"
 #include "util/exit_codes.hpp"
@@ -31,6 +32,7 @@ void register_new(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     cmd_new->footer("Example:\n  sele new --slug my-feature");
     cmd_new->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
+        if (!ng::legacy_guard(global_opts, output, exit_code, "new")) return;
         try {
             fs::path root = global_opts.root.empty() ? fs::current_path() : global_opts.root;
 

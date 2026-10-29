@@ -320,7 +320,7 @@ test_status_text() {
 test_text_for_all_commands() {
     local fresh=$(mktemp -d)
     rmdir "$fresh"
-    local init_out=$("$DESIGN_BIN" init "$fresh")
+    local init_out=$("$DESIGN_BIN" init --legacy "$fresh")
     echo "$init_out" | grep -q '^Initialized '
     rm -rf "$fresh"
 

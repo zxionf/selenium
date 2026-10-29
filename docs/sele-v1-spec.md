@@ -1,7 +1,7 @@
-# sele v0.4 规格（.sele 体系）
+# sele v0.5 规格（.sele 体系）
 
-> 状态：已实现（v0.3 基础 + v0.4 merge/revert）  
-> 版本：0.4.0  
+> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert）  
+> 版本：0.5.0  
 > 定位：以 `.sele/` 作为工具私有状态目录（类比 `.git/`），用「线（line）→ 任务（task）→ 验收（acceptance）」的显式状态机替代 `.design/.agent` 的自由文本状态。
 > 与 `docs/sele-e.md` 的差异见 §13。本文是**实现依据**，与 `sele-e.md` 冲突处以本文为准。
 
@@ -20,11 +20,11 @@
 | D5 | 元数据用 **JSON**（复用 nlohmann/json），不引入 YAML |
 | D6 | `.sele/` 分 tracked 与 runtime 两区：规格与里程碑入库，运行态本机忽略 |
 | D7 | `line.json` 为权威状态、`log.jsonl` 为审计；`fsck` 对账，v0.3 不做事件重放重建 |
-| D8 | v0.3 = 多线共存 + 单线单写者；v0.4 补 `line merge` 与 `line revert`；不做 fork/join、worktree、rebase、`task revert` |
+| D8 | v0.3 = 多线共存 + 单线单写者；v0.4 补 `line merge`/`line revert`，v0.5 补 `task revert`；不做 fork/join、worktree、rebase |
 
 ### 1.2 v0.4 仍不做
 
-fork/join、并行组、worktree 检出、`line rebase`、`task revert`、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
+fork/join、并行组、worktree 检出、`line rebase`、archive 目录移动、跨仓库线、Web UI、YAML 元数据、模块强制白名单、任务级验收映射、验收自动执行。
 
 ### 1.3 单仓库边界
 
@@ -330,6 +330,7 @@ sele task fail <task> [--line <id>] --reason <s>
 sele task retry <task> [--line <id>]
 sele task block <task> [--line <id>] --reason <s>
 sele task unblock <task> [--line <id>]
+sele task revert <task> [--line <id>]
 
 sele acceptance pass|fail <acceptance> [--line <id>] --evidence <s> [--by <s>]
 
@@ -440,6 +441,14 @@ sele line new fix-login \
 - 前置：`running`、存在 checkpoint、工作树干净（§8.5）、line `active`。
 - 失败：dirty → 退 2，`next: ["sele task checkpoint <line> <task>"]`。
 - 副作用：runtime `done` + `finished_at`；写 `log.jsonl`（含 `commit`）；写 events。
+
+#### `sele task revert <task> [--line <id>]`
+
+- 前置：git 仓库、工作树干净（§8.5）、line 不是 `merged`/`abandoned`、task 存在。
+- 非根 task：`git reset --hard <前驱.checkpoint>`；前驱必须有 checkpoint，否则退 2。
+- 根 task：`git reset --hard <line.base_commit>`，line 回到 `draft`（`frozen` 清空），需 `line open` 重新开始。
+- 重置集合：该 task 及其之后所有 task → `pending`，清空 checkpoint/reason/finished_at/started_at；acceptance 全部 `pending`；非根时 line 若为 `done` 则回到 `active`。
+- 与 `line revert --to <task>` 的区别：`line revert` 保留目标 task 的完成状态；`task revert` 撤销目标 task 本身。
 
 #### `sele acceptance pass|fail <acceptance> [--line <id>] --evidence <s>`
 
@@ -600,7 +609,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 39 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 42 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|

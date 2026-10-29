@@ -17,6 +17,7 @@ sele acceptance pass A1 --evidence "pytest 12 passed"            # 只记账，�
 sele line done <id>
 sele line merge <id> --confirm                                      # 合并进 main（冲突则 abort 并退回 done）
 sele line revert <id> --to T1                                      # 回退到 T1 的 checkpoint（T2 起重置为 pending）
+sele task revert T2                                                # 撤销 T2 本身（回到 T1 完成时）
 sele overview
 ```
 

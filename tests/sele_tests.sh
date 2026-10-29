@@ -618,6 +618,61 @@ test_revert_rejects_merged() {
     rm -rf "$proj"
 }
 
+test_task_revert_middle() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" task add "second" --modules auth >/dev/null
+    echo one >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T1 >/dev/null
+    "$BIN" --root "$proj" task done T1 >/dev/null
+    "$BIN" --root "$proj" task start T2 >/dev/null
+    echo two >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T2 >/dev/null
+    "$BIN" --root "$proj" task done T2 >/dev/null
+    "$BIN" --root "$proj" acceptance pass A1 --evidence ok >/dev/null
+    "$BIN" --root "$proj" line done >/dev/null
+
+    "$BIN" --root "$proj" task revert T2 >/dev/null
+    jq -e '.status == "active"' "$proj/.sele/lines/$id/line.json" >/dev/null
+    jq -e '.tasks.T1.status == "done"' "$proj/.sele/runtime/state/$id.json" >/dev/null
+    jq -e '.tasks.T2.status == "pending" and .tasks.T2.checkpoint == null' \
+        "$proj/.sele/runtime/state/$id.json" >/dev/null
+    jq -e '.acceptance == {}' "$proj/.sele/runtime/state/$id.json" >/dev/null
+    grep -q '^one$' "$proj/seed.txt"
+    ! grep -q '^two$' "$proj/seed.txt"
+    grep -q '"op":"task.revert"' "$proj/.sele/log.jsonl"
+    rm -rf "$proj"
+}
+
+test_task_revert_root() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    echo one >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T1 >/dev/null
+    "$BIN" --root "$proj" task done T1 >/dev/null
+    "$BIN" --root "$proj" acceptance pass A1 --evidence ok >/dev/null
+    "$BIN" --root "$proj" line done >/dev/null
+
+    "$BIN" --root "$proj" task revert T1 >/dev/null
+    jq -e '.status == "draft" and .frozen == null' "$proj/.sele/lines/$id/line.json" >/dev/null
+    jq -e '.tasks.T1.status == "pending"' "$proj/.sele/runtime/state/$id.json" >/dev/null
+    ! grep -q '^one$' "$proj/seed.txt"
+
+    "$BIN" --root "$proj" line open "$id" >/dev/null
+    jq -e '.status == "active"' "$proj/.sele/lines/$id/line.json" >/dev/null
+    rm -rf "$proj"
+}
+
+test_task_revert_requires_checkpoint() {
+    local proj
+    proj=$(setup_running_line)
+    "$BIN" --root "$proj" task add "second" --modules auth >/dev/null
+    expect_code 2 "$BIN" --root "$proj" task revert T2
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -657,5 +712,8 @@ run_test "merged line is read-only" test_merged_is_read_only
 run_test "merge --delete-branch removes the line branch" test_merge_delete_branch
 run_test "line revert resets to a task checkpoint" test_line_revert
 run_test "revert rejects merged lines" test_revert_rejects_merged
+run_test "task revert undoes a middle task" test_task_revert_middle
+run_test "task revert of the root task returns the line to draft" test_task_revert_root
+run_test "task revert requires a predecessor checkpoint" test_task_revert_requires_checkpoint
 
 echo "=== All sele tests passed! ==="

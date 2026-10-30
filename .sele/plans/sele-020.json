@@ -4,17 +4,17 @@
       "desc": "文档一致：README/AGENTS/docs 与 0.20 一致",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T13:35:47Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "Git 代理：sele git commit 生成 checkpoint，漂移 D1-D3 检测",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T13:35:47Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T13:28:49Z",
@@ -32,5 +32,5 @@
       "id": "git-proxy"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

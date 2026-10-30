@@ -1,0 +1,29 @@
+{
+  "entity": {
+    "line": "git-proxy",
+    "plan": "sele-020",
+    "step": "S1",
+    "task": "T3",
+    "task_uid": "tsk_01M66FZCG3GXKCH55J4A7Y3W7E",
+    "type": "step"
+  },
+  "git": {
+    "branch": "sele/20261030-v2-core",
+    "commit": "7777112cdaae1249916d016533a2bd70316078d6",
+    "diff_stat": " .sele/cache/git-fingerprint.json               |  2 +-\n .sele/checkpoints/2026-10/ck-20261030-001.json | 40 ++++++++++++++++++++++++++\n .sele/log.jsonl                                | 11 +++++++\n .sele/tasks/1d/453c64ab5c801c.json             | 10 +++----\n .sele/tasks/94/8bfb8efe15415a.json             | 17 +++++++++--\n .sele/tasks/95/e0441b4f52ae0c.json             | 16 +++++------\n 6 files changed, 79 insertions(+), 17 deletions(-)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/cache/git-fingerprint.json",
+      ".sele/checkpoints/2026-10/ck-20261030-001.json",
+      ".sele/log.jsonl",
+      ".sele/tasks/1d/453c64ab5c801c.json",
+      ".sele/tasks/94/8bfb8efe15415a.json",
+      ".sele/tasks/95/e0441b4f52ae0c.json"
+    ],
+    "source": "sele",
+    "tree": "8eaa9aa591b6a52d6f677e1181bb3f08ecf3c11c"
+  },
+  "id": "ck-20261030-002",
+  "status": "valid",
+  "ts": "2026-10-30T13:35:47Z"
+}

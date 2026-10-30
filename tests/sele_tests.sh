@@ -978,6 +978,16 @@ test_init_next_to_legacy() {
     rm -rf "$proj"
 }
 
+test_init_creates_contract() {
+    local proj
+    proj=$(mktemp -d)
+    "$BIN" --root "$proj" init >/dev/null
+    [[ -f "$proj/.sele/CONTRACT.md" ]]
+    grep -q "不可违反" "$proj/.sele/CONTRACT.md"
+    grep -q ".sele/CONTRACT.md" "$proj/AGENTS.md"
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -1037,5 +1047,6 @@ run_test "archive requires merged/abandoned" test_archive_requires_finished
 run_test "archive refuses a line with a worktree" test_archive_rejects_worktree
 run_test "init writes AGENTS.md without overwriting" test_init_creates_agents
 run_test "init adds .sele next to legacy directories" test_init_next_to_legacy
+run_test "init writes .sele/CONTRACT.md and links it from AGENTS" test_init_creates_contract
 
 echo "=== All sele tests passed! ==="

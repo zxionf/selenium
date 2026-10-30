@@ -255,6 +255,59 @@ test_cross_line_dep() {
     rm -rf "$ROOT"
 }
 
+test_pause_snapshot() {
+    setup_git_project
+    "$BIN" task pause T1 --root "$ROOT" --line a --reason "switch" >/dev/null
+    if jq -e '.pause_context.git_snapshot.head != null' "$ROOT"/.sele/tasks/*/*.json >/dev/null 2>&1; then
+        pass "pause records a git snapshot"
+    else
+        fail "pause records a git snapshot"
+    fi
+    rm -rf "$ROOT"
+}
+
+test_skipped_count() {
+    setup_project
+    "$BIN" task add "t1" --root "$ROOT" --line a >/dev/null
+    "$BIN" task add "t2" --root "$ROOT" --line a >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" task start T2 --root "$ROOT" --line a >/dev/null
+    if "$BIN" task list --root "$ROOT" --line a --output json |
+        jq -e '[.items[] | select(.id == "T1")][0].skipped_count == 1' >/dev/null; then
+        pass "switching away increments skipped_count"
+    else
+        fail "switching away increments skipped_count"
+    fi
+    "$BIN" task keep T1 --root "$ROOT" --line a >/dev/null
+    if "$BIN" task list --root "$ROOT" --line a --output json |
+        jq -e '[.items[] | select(.id == "T1")][0].skipped_count == 0' >/dev/null; then
+        pass "task keep resets skipped_count"
+    else
+        fail "task keep resets skipped_count"
+    fi
+    rm -rf "$ROOT"
+}
+
+test_step_lock() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step add T1 "s" --root "$ROOT" --line a >/dev/null
+    "$BIN" step lock T1 S1 --root "$ROOT" --line a --reason "review" >/dev/null
+    if expect_code 2 "$BIN" step start T1 S1 --root "$ROOT" --line a; then
+        pass "locked step rejects start"
+    else
+        fail "locked step rejects start"
+    fi
+    "$BIN" step unlock T1 S1 --root "$ROOT" --line a >/dev/null
+    if "$BIN" step start T1 S1 --root "$ROOT" --line a >/dev/null 2>&1; then
+        pass "unlocked step can start"
+    else
+        fail "unlocked step can start"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -457,6 +510,9 @@ test_log_compact
 test_decision_replay
 test_task_insert_move
 test_cross_line_dep
+test_pause_snapshot
+test_skipped_count
+test_step_lock
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

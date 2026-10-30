@@ -59,7 +59,10 @@ nlohmann::json to_json(const Step& value) {
                                                             : nlohmann::json(value.skipped_reason)},
             {"jump_meta", value.jump_meta.empty() ? nlohmann::json(nullptr)
                                                   : nlohmann::json(value.jump_meta)},
-            {"requires_review", value.requires_review}};
+            {"requires_review", value.requires_review},
+            {"locked", value.locked},
+            {"lock_reason", value.lock_reason.empty() ? nlohmann::json(nullptr)
+                                                       : nlohmann::json(value.lock_reason)}};
 }
 
 nlohmann::json to_json(const Task& value) {
@@ -78,6 +81,7 @@ nlohmann::json to_json(const Task& value) {
             {"current_step", value.current_step.empty() ? nlohmann::json(nullptr)
                                                         : nlohmann::json(value.current_step)},
             {"checkpoint_strategy", value.checkpoint_strategy},
+            {"skipped_count", value.skipped_count},
             {"modules", value.modules},
             {"depends", value.depends},
             {"acceptance", acceptance},
@@ -168,6 +172,8 @@ Step step_from_json(const nlohmann::json& value) {
     result.skipped_reason = string_or(value, "skipped_reason", "");
     result.jump_meta = string_or(value, "jump_meta", "");
     result.requires_review = bool_or(value, "requires_review", false);
+    result.locked = bool_or(value, "locked", false);
+    result.lock_reason = string_or(value, "lock_reason", "");
     return result;
 }
 
@@ -183,6 +189,10 @@ Task task_from_json(const nlohmann::json& value) {
     result.review_policy = string_or(value, "review_policy", "mixed");
     result.current_step = string_or(value, "current_step", "");
     result.checkpoint_strategy = string_or(value, "checkpoint_strategy", "per-step");
+    if (const auto found = value.find("skipped_count"); found != value.end() &&
+        found->is_number_integer()) {
+        result.skipped_count = found->get<int>();
+    }
     if (const auto found = value.find("modules"); found != value.end() && found->is_array()) {
         result.modules = found->get<std::vector<std::string>>();
     }

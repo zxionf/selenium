@@ -25,6 +25,8 @@ struct Step {
     std::string skipped_reason;
     std::string jump_meta;
     bool requires_review{false};
+    bool locked{false};
+    std::string lock_reason;
 };
 
 struct Task {
@@ -38,6 +40,7 @@ struct Task {
     std::string review_policy{"mixed"};
     std::string current_step;
     std::string checkpoint_strategy{"per-step"};
+    int skipped_count{0};
     std::vector<std::string> modules;
     nlohmann::json depends = nlohmann::json::array();
     std::vector<Acceptance> acceptance;

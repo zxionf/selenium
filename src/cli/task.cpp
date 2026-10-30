@@ -3,6 +3,7 @@
 #include "cli/commands.hpp"
 #include "core/entity.hpp"
 #include "core/fs.hpp"
+#include "core/git.hpp"
 #include "core/id.hpp"
 #include "core/state.hpp"
 #include "core/store.hpp"
@@ -12,6 +13,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -77,6 +79,21 @@ bool find_checkpoint(const core::store::Paths& paths, const std::string& id,
         return true;
     }
     return false;
+}
+
+nlohmann::json git_snapshot(const core::store::Paths& paths) {
+    if (!core::git::present(paths.root)) return nlohmann::json::object();
+    nlohmann::json snapshot = {{"head", core::git::head(paths)},
+                               {"branch", core::git::branch(paths)}};
+    nlohmann::json dirty = nlohmann::json::array();
+    const auto status = core::git::run(paths.root, {"status", "--porcelain"});
+    std::istringstream stream(status.output);
+    std::string line;
+    while (std::getline(stream, line)) {
+        if (line.size() > 3) dirty.push_back(line.substr(3));
+    }
+    snapshot["dirty_files"] = dirty;
+    return snapshot;
 }
 
 std::string next_task_id(const core::store::Paths& paths, const std::string& plan,
@@ -448,10 +465,19 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                                            {"current_step", candidate.current_step.empty()
                                                                 ? nlohmann::json(nullptr)
                                                                 : nlohmann::json(candidate.current_step)},
-                                           {"resume_hint", ""}};
+                                           {"resume_hint", ""},
+                                           {"git_snapshot", git_snapshot(ctx->paths)}};
                 core::store::save_task(ctx->paths, candidate);
                 append_event(ctx->paths, "agent", "task.pause", task_entity(candidate),
                              "in_progress", "paused", "auto pause on switch");
+            }
+            for (auto& candidate : core::store::load_tasks(ctx->paths)) {
+                if (candidate.uid == item.uid) continue;
+                if (candidate.status != "paused") continue;
+                ++candidate.skipped_count;
+                core::store::save_task(ctx->paths, candidate);
+                append_event(ctx->paths, "agent", "task.skip", task_entity(candidate), nullptr,
+                             candidate.skipped_count, "skipped by start " + item.id);
             }
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
@@ -491,7 +517,8 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                               {"current_step", item.current_step.empty()
                                                    ? nlohmann::json(nullptr)
                                                    : nlohmann::json(item.current_step)},
-                              {"resume_hint", pause_args->hint}};
+                              {"resume_hint", pause_args->hint},
+                              {"git_snapshot", git_snapshot(ctx->paths)}};
         try {
             core::store::save_task(ctx->paths, item);
             append_event(ctx->paths, "agent", "task.pause", task_entity(item), "in_progress",
@@ -501,6 +528,31 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             return;
         }
         ctx->out.print_both("Paused " + item.id, {{"task", item.id}, {"status", item.status}});
+    });
+
+    auto keep_args = std::make_shared<SelectArgs>();
+    auto* keep_cmd = task->add_subcommand("keep", "Keep a paused task and reset its skip count");
+    add_global_opts(keep_cmd, global);
+    keep_cmd->add_option("id", keep_args->id, "Task id")->required();
+    keep_cmd->add_option("--plan", keep_args->plan, "Plan id");
+    keep_cmd->add_option("--line", keep_args->line, "Line id");
+    keep_cmd->callback([&global, &exit_code, keep_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task item;
+        if (!find_task(*ctx, exit_code, keep_args->id, keep_args->plan, keep_args->line, item)) {
+            return;
+        }
+        item.skipped_count = 0;
+        try {
+            core::store::save_task(ctx->paths, item);
+            append_event(ctx->paths, "human", "task.keep", task_entity(item), nullptr, 0,
+                         "reset skip count");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Kept " + item.id + " (skip count reset)",
+                            {{"task", item.id}, {"skipped_count", 0}});
     });
 
     auto resume_args = std::make_shared<SelectArgs>();
@@ -858,6 +910,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                                  {"line", item.line},
                                  {"title", item.title},
                                  {"status", item.status},
+                                 {"skipped_count", item.skipped_count},
                                  {"steps", item.steps.size()}});
             }
             ctx->out.print_both("Tasks: " + std::to_string(items.size()),

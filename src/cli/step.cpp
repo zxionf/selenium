@@ -218,6 +218,11 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Step not found: " + start_args->step);
             return;
         }
+        if (item->locked) {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Step " + item->id + " is locked: " + item->lock_reason);
+            return;
+        }
         if (!transition_step(*ctx, exit_code, *item, "in_progress")) return;
         for (const auto& other : task.steps) {
             if (other.id != item->id && other.status == "in_progress") {
@@ -259,6 +264,11 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Step not found: " + done_args->step);
             return;
         }
+        if (item->locked) {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Step " + item->id + " is locked: " + item->lock_reason);
+            return;
+        }
         const std::string target = item->requires_review ? "pending_review" : "done";
         if (!transition_step(*ctx, exit_code, *item, target)) return;
         item->status = target;
@@ -293,6 +303,11 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         auto* item = find_step(task, skip_args->step);
         if (item == nullptr) {
             fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Step not found: " + skip_args->step);
+            return;
+        }
+        if (item->locked) {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Step " + item->id + " is locked: " + item->lock_reason);
             return;
         }
         if (!transition_step(*ctx, exit_code, *item, "skipped")) return;
@@ -362,6 +377,74 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         }
         ctx->out.print_both("Jumped to " + target->id + " in " + task.id,
                             {{"task", task.id}, {"step", target->id}, {"status", target->status}});
+    });
+
+    auto lock_args = std::make_shared<SkipArgs>();
+    auto* lock_cmd = step->add_subcommand("lock", "Lock a step");
+    add_global_opts(lock_cmd, global);
+    lock_cmd->add_option("task", lock_args->task, "Task id")->required();
+    lock_cmd->add_option("step", lock_args->step, "Step id")->required();
+    lock_cmd->add_option("--plan", lock_args->plan, "Plan id");
+    lock_cmd->add_option("--line", lock_args->line, "Line id");
+    lock_cmd->add_option("--reason", lock_args->reason, "Lock reason")->required();
+    lock_cmd->callback([&global, &exit_code, lock_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, lock_args->task, lock_args->plan, lock_args->line,
+                       task)) {
+            return;
+        }
+        auto* item = find_step(task, lock_args->step);
+        if (item == nullptr) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Step not found: " + lock_args->step);
+            return;
+        }
+        item->locked = true;
+        item->lock_reason = lock_args->reason;
+        if (!save_task(*ctx, exit_code, task)) return;
+        try {
+            append_event(ctx->paths, "human", "step.lock", step_entity(task, *item), nullptr,
+                         "locked", lock_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Locked " + item->id + " in " + task.id,
+                            {{"task", task.id}, {"step", item->id}, {"locked", true}});
+    });
+
+    auto unlock_args = std::make_shared<StepArgs>();
+    auto* unlock_cmd = step->add_subcommand("unlock", "Unlock a step");
+    add_global_opts(unlock_cmd, global);
+    unlock_cmd->add_option("task", unlock_args->task, "Task id")->required();
+    unlock_cmd->add_option("step", unlock_args->step, "Step id")->required();
+    unlock_cmd->add_option("--plan", unlock_args->plan, "Plan id");
+    unlock_cmd->add_option("--line", unlock_args->line, "Line id");
+    unlock_cmd->callback([&global, &exit_code, unlock_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, unlock_args->task, unlock_args->plan, unlock_args->line,
+                       task)) {
+            return;
+        }
+        auto* item = find_step(task, unlock_args->step);
+        if (item == nullptr) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Step not found: " + unlock_args->step);
+            return;
+        }
+        item->locked = false;
+        item->lock_reason.clear();
+        if (!save_task(*ctx, exit_code, task)) return;
+        try {
+            append_event(ctx->paths, "human", "step.unlock", step_entity(task, *item),
+                         "locked", "todo", "unlock step");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Unlocked " + item->id + " in " + task.id,
+                            {{"task", task.id}, {"step", item->id}, {"locked", false}});
     });
 
     auto approve_args = std::make_shared<StepArgs>();

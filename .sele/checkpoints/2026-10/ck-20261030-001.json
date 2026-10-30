@@ -1,0 +1,40 @@
+{
+  "entity": {
+    "line": "git-proxy",
+    "plan": "sele-020",
+    "step": "S1",
+    "task": "T1",
+    "task_uid": "tsk_01M66FZCFYSVHGRJQCNCN58BV6",
+    "type": "step"
+  },
+  "git": {
+    "branch": "sele/20261030-v2-core",
+    "commit": "e8ec3b2e8a76d2aa37d5ecd714a378d4a8d47c50",
+    "diff_stat": " .sele/cache/git-fingerprint.json   |   3 +\n .sele/log.jsonl                    |   5 +\n .sele/tasks/00/fbdf441b730c60.json |  10 +-\n .sele/tasks/95/e0441b4f52ae0c.json |  17 +++-\n AGENTS.md                          |   2 +-\n CMakeLists.txt                     |   3 +\n README.md                          |   1 +\n docs/sele-0.20.0.md                |  28 +++++-\n src/cli/common.cpp                 |   7 ++\n src/cli/common.hpp                 |   3 +\n src/cli/git.cpp                    | 197 +++++++++++++++++++++++++++++++++++++\n src/core/checkpoint.cpp            |  65 ++++++++++++\n src/core/checkpoint.hpp            |  14 +++\n src/core/git.cpp                   | 174 ++++++++++++++++++++++++++++++++\n src/core/git.hpp                   |  37 +++++++\n src/main.cpp                       |   1 +\n tests/sele_v2_tests.sh             |  53 ++++++++++\n 17 files changed, 606 insertions(+), 14 deletions(-)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/cache/git-fingerprint.json",
+      ".sele/log.jsonl",
+      ".sele/tasks/00/fbdf441b730c60.json",
+      ".sele/tasks/95/e0441b4f52ae0c.json",
+      "AGENTS.md",
+      "CMakeLists.txt",
+      "README.md",
+      "docs/sele-0.20.0.md",
+      "src/cli/common.cpp",
+      "src/cli/common.hpp",
+      "src/cli/git.cpp",
+      "src/core/checkpoint.cpp",
+      "src/core/checkpoint.hpp",
+      "src/core/git.cpp",
+      "src/core/git.hpp",
+      "src/main.cpp",
+      "tests/sele_v2_tests.sh"
+    ],
+    "source": "sele",
+    "tree": "a7015b60bad87f75ef638f927f7677d422c10976"
+  },
+  "id": "ck-20261030-001",
+  "status": "valid",
+  "ts": "2026-10-30T13:35:06Z"
+}

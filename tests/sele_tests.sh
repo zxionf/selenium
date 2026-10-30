@@ -106,12 +106,12 @@ test_init_creates_sele() {
     rm -rf "$proj"
 }
 
-test_init_legacy() {
+test_init_rejects_legacy_flag() {
     local proj
     proj=$(mktemp -d)
-    "$BIN" --root "$proj" init --legacy >/dev/null
-    [[ -f "$proj/.design/SPEC.md" ]]
-    [[ -f "$proj/.agent/STATE.md" ]]
+    expect_code 1 "$BIN" --root "$proj" init --legacy
+    [[ ! -d "$proj/.design" ]]
+    [[ ! -d "$proj/.agent" ]]
     [[ ! -d "$proj/.sele" ]]
     rm -rf "$proj"
 }
@@ -338,9 +338,9 @@ test_mode_dispatch() {
     proj=$(setup_next)
     local id
     id=$(line_id "$proj")
-    expect_code 4 "$BIN" --root "$proj" close "$id"
-    expect_code 4 "$BIN" --root "$proj" lint
-    expect_code 4 "$BIN" --root "$proj" status
+    expect_code 1 "$BIN" --root "$proj" close "$id"
+    expect_code 1 "$BIN" --root "$proj" lint
+    expect_code 1 "$BIN" --root "$proj" status
 
     legacy=$(mktemp -d)
     mkdir -p "$legacy/.design/changes" "$legacy/.agent/work"
@@ -970,11 +970,11 @@ test_init_next_to_legacy() {
     printf '# Spec\n' > "$proj/.design/SPEC.md"
     printf '# State\n\nActive Change: 无\n' > "$proj/.agent/STATE.md"
     "$BIN" --root "$proj" init --output json | \
-        jq -e '.initialized == true and .legacy_present == true' >/dev/null
+        jq -e '.initialized == true' >/dev/null
     [[ -d "$proj/.sele" ]]
     [[ -d "$proj/.design" && -d "$proj/.agent" ]]
     [[ -f "$proj/AGENTS.md" ]]
-    "$BIN" --root "$proj" status >/dev/null
+    expect_code 1 "$BIN" --root "$proj" status
     rm -rf "$proj"
 }
 
@@ -1001,7 +1001,7 @@ test_init_repairs_missing_files() {
 }
 
 run_test "init creates .sele" test_init_creates_sele
-run_test "init --legacy creates .design/.agent" test_init_legacy
+run_test "init rejects --legacy" test_init_rejects_legacy_flag
 run_test "line new creates draft and session pointer" test_line_new
 run_test "line new duplicate id" test_line_duplicate
 run_test "line new invalid slug/acceptance" test_line_invalid_slug
@@ -1018,7 +1018,7 @@ run_test "amend re-freezes acceptance" test_amend_refreezes
 run_test "line check passes for a valid chain" test_line_check_passes
 run_test "line check fails for a broken chain" test_line_check_fails_offline_chain
 run_test "fsck detects a corrupt log" test_fsck_and_corrupt_log
-run_test "legacy and next commands refuse each other" test_mode_dispatch
+run_test "legacy dirs coexist but legacy commands are gone" test_mode_dispatch
 run_test "text and json outputs" test_text_outputs
 run_test "sessions keep independent pointers" test_session_isolation
 run_test "task fail then retry clears the reason" test_task_fail_retry

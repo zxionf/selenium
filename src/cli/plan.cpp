@@ -2,9 +2,9 @@
 
 #include "cli/commands.hpp"
 #include "core/entity.hpp"
-#include "core/event.hpp"
 #include "core/fs.hpp"
 #include "core/id.hpp"
+#include "core/state.hpp"
 #include "core/store.hpp"
 
 #include <nlohmann/json.hpp>
@@ -15,23 +15,33 @@
 
 namespace {
 
-void append_event(const core::store::Paths& paths, const std::string& actor,
-                  const std::string& op, const nlohmann::json& entity,
-                  const nlohmann::json& before, const nlohmann::json& after,
-                  const std::string& reason) {
-    core::model::Event event;
-    event.ts = core::model::now_utc();
-    event.actor = actor;
-    event.op = op;
-    event.entity = entity;
-    event.before = before;
-    event.after = after;
-    event.reason = reason;
-    core::event::append(paths, event);
-}
-
 nlohmann::json plan_entity(const core::model::Plan& plan) {
     return {{"type", "plan"}, {"plan", plan.id}};
+}
+
+bool load_plan(Context& ctx, int& exit_code, const std::string& id, core::model::Plan& out) {
+    const auto path = core::store::plan_path(ctx.paths, id);
+    if (!core::fsys::exists(path)) {
+        fail(ctx, exit_code, exit_codes::USAGE_ERROR, "Plan not found: " + id);
+        return false;
+    }
+    try {
+        out = core::model::plan_from_json(nlohmann::json::parse(core::fsys::read_file(path)));
+    } catch (const std::exception& error) {
+        fail(ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+        return false;
+    }
+    return true;
+}
+
+bool transition_plan(Context& ctx, int& exit_code, core::model::Plan& plan,
+                     const std::string& to) {
+    if (!core::state::plan_transition(plan.status, to)) {
+        fail(ctx, exit_code, exit_codes::STATE_CONFLICT,
+             "Plan " + plan.id + " cannot go from " + plan.status + " to " + to);
+        return false;
+    }
+    return true;
 }
 
 struct NewArgs {
@@ -48,6 +58,47 @@ struct ListArgs {
 
 struct ShowArgs {
     std::string id;
+};
+
+struct SubmitArgs {
+    std::string id;
+    std::string reason{"submit for approval"};
+};
+
+struct ApproveArgs {
+    std::string id;
+    std::string by{"human"};
+    std::string reason{"approve plan"};
+};
+
+struct RejectArgs {
+    std::string id;
+    std::string reason;
+};
+
+struct DoneArgs {
+    std::string id;
+    std::string reason{"all lines done"};
+};
+
+struct StatusArgs {
+    std::string id;
+};
+
+struct ArchiveArgs {
+    std::string id;
+    std::string reason{"archive plan"};
+};
+
+struct RestoreArgs {
+    std::string id;
+    std::string reason{"restore plan"};
+};
+
+struct VerifyArgs {
+    std::string id;
+    std::string acceptance;
+    std::string by{"human"};
 };
 
 } // namespace
@@ -141,18 +192,247 @@ void register_plan_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     show_cmd->add_option("id", show_args->id, "Plan id")->required();
     show_cmd->callback([&global, &exit_code, show_args]() {
         const auto ctx = make_context(global);
-        const auto path = core::store::plan_path(ctx->paths, show_args->id);
-        if (!core::fsys::exists(path)) {
-            fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Plan not found: " + show_args->id);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, show_args->id, item)) return;
+        ctx->out.print_both("Plan " + item.id + " [" + item.status + "] " + item.goal,
+                            core::model::to_json(item));
+    });
+
+    auto submit_args = std::make_shared<SubmitArgs>();
+    auto* submit_cmd = plan->add_subcommand("submit", "Submit a draft plan for approval");
+    add_global_opts(submit_cmd, global);
+    submit_cmd->add_option("id", submit_args->id, "Plan id")->required();
+    submit_cmd->add_option("--reason", submit_args->reason, "Decision reason");
+    submit_cmd->callback([&global, &exit_code, submit_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, submit_args->id, item)) return;
+        if (item.lines.empty()) {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Plan must declare at least one line before submit");
+            return;
+        }
+        if (!transition_plan(*ctx, exit_code, item, "pending_approval")) return;
+        item.status = "pending_approval";
+        try {
+            core::store::save_plan(ctx->paths, item);
+            append_event(ctx->paths, "agent", "plan.submit", plan_entity(item), "draft",
+                         item.status, submit_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Submitted plan " + item.id,
+                            {{"plan", item.id}, {"status", item.status}});
+    });
+
+    auto approve_args = std::make_shared<ApproveArgs>();
+    auto* approve_cmd = plan->add_subcommand("approve", "Approve a pending plan");
+    add_global_opts(approve_cmd, global);
+    approve_cmd->add_option("id", approve_args->id, "Plan id")->required();
+    approve_cmd->add_option("--by", approve_args->by, "Approver identity")->default_val("human");
+    approve_cmd->add_option("--reason", approve_args->reason, "Decision reason");
+    approve_cmd->callback([&global, &exit_code, approve_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, approve_args->id, item)) return;
+        if (!transition_plan(*ctx, exit_code, item, "active")) return;
+        item.status = "active";
+        item.approved_by = approve_args->by;
+        item.approved_at = core::model::now_utc();
+        try {
+            core::store::save_plan(ctx->paths, item);
+            append_event(ctx->paths, approve_args->by, "plan.approve", plan_entity(item),
+                         "pending_approval", item.status, approve_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Approved plan " + item.id,
+                            {{"plan", item.id}, {"status", item.status}});
+    });
+
+    auto reject_args = std::make_shared<RejectArgs>();
+    auto* reject_cmd = plan->add_subcommand("reject", "Reject a pending plan");
+    add_global_opts(reject_cmd, global);
+    reject_cmd->add_option("id", reject_args->id, "Plan id")->required();
+    reject_cmd->add_option("--reason", reject_args->reason, "Rejection reason")->required();
+    reject_cmd->callback([&global, &exit_code, reject_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, reject_args->id, item)) return;
+        if (!transition_plan(*ctx, exit_code, item, "draft")) return;
+        item.status = "draft";
+        try {
+            core::store::save_plan(ctx->paths, item);
+            append_event(ctx->paths, "human", "plan.reject", plan_entity(item),
+                         "pending_approval", item.status, reject_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Rejected plan " + item.id,
+                            {{"plan", item.id}, {"status", item.status}});
+    });
+
+    auto done_args = std::make_shared<DoneArgs>();
+    auto* done_cmd = plan->add_subcommand("done", "Mark an active plan done");
+    add_global_opts(done_cmd, global);
+    done_cmd->add_option("id", done_args->id, "Plan id")->required();
+    done_cmd->add_option("--reason", done_args->reason, "Decision reason");
+    done_cmd->callback([&global, &exit_code, done_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, done_args->id, item)) return;
+        if (!transition_plan(*ctx, exit_code, item, "done")) return;
+
+        try {
+            for (const auto& ref : item.lines) {
+                const auto path = core::store::line_path(ctx->paths, item.id, ref.id);
+                if (!core::fsys::exists(path)) {
+                    fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                         "Line not found: " + ref.id);
+                    return;
+                }
+                const auto line =
+                    core::model::line_from_json(nlohmann::json::parse(core::fsys::read_file(path)));
+                if (line.status != "done" && line.status != "abandoned") {
+                    fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                         "Line " + ref.id + " is still " + line.status);
+                    return;
+                }
+            }
+            for (const auto& acceptance : item.acceptance) {
+                if (acceptance.status != "pass") {
+                    fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                         "Acceptance " + acceptance.id + " is " + acceptance.status);
+                    return;
+                }
+            }
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+
+        item.status = "done";
+        try {
+            core::store::save_plan(ctx->paths, item);
+            append_event(ctx->paths, "human", "plan.done", plan_entity(item), "active",
+                         item.status, done_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Closed plan " + item.id,
+                            {{"plan", item.id}, {"status", item.status}});
+    });
+
+    auto status_args = std::make_shared<StatusArgs>();
+    auto* status_cmd = plan->add_subcommand("status", "Show plan status and line counts");
+    add_global_opts(status_cmd, global);
+    status_cmd->add_option("id", status_args->id, "Plan id")->required();
+    status_cmd->callback([&global, &exit_code, status_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, status_args->id, item)) return;
+        nlohmann::json counts = nlohmann::json::object();
+        try {
+            for (const auto& line : core::store::load_lines(ctx->paths)) {
+                if (line.plan != item.id) continue;
+                counts[line.status] = counts.value(line.status, 0) + 1;
+            }
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Plan " + item.id + " [" + item.status + "]",
+                            {{"plan", item.id},
+                             {"status", item.status},
+                             {"lines", counts},
+                             {"acceptance", item.acceptance.size()}});
+    });
+
+    auto archive_args = std::make_shared<ArchiveArgs>();
+    auto* archive_cmd = plan->add_subcommand("archive", "Move a done plan to archived");
+    add_global_opts(archive_cmd, global);
+    archive_cmd->add_option("id", archive_args->id, "Plan id")->required();
+    archive_cmd->add_option("--reason", archive_args->reason, "Decision reason");
+    archive_cmd->callback([&global, &exit_code, archive_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, archive_args->id, item)) return;
+        if (!transition_plan(*ctx, exit_code, item, "archived")) return;
+        item.status = "archived";
+        try {
+            core::store::save_plan(ctx->paths, item);
+            append_event(ctx->paths, "human", "plan.archive", plan_entity(item), "done",
+                         item.status, archive_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Archived plan " + item.id,
+                            {{"plan", item.id}, {"status", item.status}});
+    });
+
+    auto restore_args = std::make_shared<RestoreArgs>();
+    auto* restore_cmd = plan->add_subcommand("restore", "Restore an archived plan to active");
+    add_global_opts(restore_cmd, global);
+    restore_cmd->add_option("id", restore_args->id, "Plan id")->required();
+    restore_cmd->add_option("--reason", restore_args->reason, "Decision reason");
+    restore_cmd->callback([&global, &exit_code, restore_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, restore_args->id, item)) return;
+        if (!transition_plan(*ctx, exit_code, item, "active")) return;
+        item.status = "active";
+        try {
+            core::store::save_plan(ctx->paths, item);
+            append_event(ctx->paths, "human", "plan.restore", plan_entity(item), "archived",
+                         item.status, restore_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Restored plan " + item.id,
+                            {{"plan", item.id}, {"status", item.status}});
+    });
+
+    auto verify_args = std::make_shared<VerifyArgs>();
+    auto* verify_cmd = plan->add_subcommand("verify", "Verify a plan acceptance point");
+    add_global_opts(verify_cmd, global);
+    verify_cmd->add_option("id", verify_args->id, "Plan id")->required();
+    verify_cmd->add_option("acceptance", verify_args->acceptance, "Acceptance id")->required();
+    verify_cmd->add_option("--by", verify_args->by, "Verifier identity")->default_val("human");
+    verify_cmd->callback([&global, &exit_code, verify_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, verify_args->id, item)) return;
+        bool found = false;
+        for (auto& acceptance : item.acceptance) {
+            if (acceptance.id != verify_args->acceptance) continue;
+            acceptance.status = "pass";
+            acceptance.verified_by = verify_args->by;
+            acceptance.verified_at = core::model::now_utc();
+            found = true;
+            break;
+        }
+        if (!found) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Acceptance not found: " + verify_args->acceptance);
             return;
         }
         try {
-            const auto item = core::model::plan_from_json(
-                nlohmann::json::parse(core::fsys::read_file(path)));
-            ctx->out.print_both("Plan " + item.id + " [" + item.status + "] " + item.goal,
-                                core::model::to_json(item));
+            core::store::save_plan(ctx->paths, item);
+            append_event(ctx->paths, verify_args->by, "plan.verify", plan_entity(item),
+                         "unverified", "pass", verify_args->acceptance);
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
         }
+        ctx->out.print_both("Verified " + verify_args->acceptance + " on plan " + item.id,
+                            {{"plan", item.id},
+                             {"acceptance", verify_args->acceptance},
+                             {"status", "pass"}});
     });
 }

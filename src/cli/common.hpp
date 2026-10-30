@@ -5,6 +5,7 @@
 #include "util/output.hpp"
 
 #include <CLI/CLI.hpp>
+#include <nlohmann/json.hpp>
 
 #include <memory>
 #include <string>
@@ -30,6 +31,12 @@ std::vector<std::string> split_csv(const std::string& value);
 void fail(Context& ctx, int& exit_code, int code, const std::string& message,
           const std::string& suggestion = "");
 
+void append_event(const core::store::Paths& paths, const std::string& actor,
+                  const std::string& op, const nlohmann::json& entity,
+                  const nlohmann::json& before, const nlohmann::json& after,
+                  const std::string& reason);
+
 void register_init_cmd(CLI::App& app, GlobalOptions& global, int& exit_code);
 void register_version_cmd(CLI::App& app, GlobalOptions& global, int& exit_code);
 void register_plan_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);
+void register_line_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);

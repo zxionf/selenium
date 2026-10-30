@@ -1,5 +1,8 @@
 #include "cli/common.hpp"
 
+#include "core/entity.hpp"
+#include "core/event.hpp"
+
 #include <sstream>
 
 void add_global_opts(CLI::App* app, GlobalOptions& options) {
@@ -31,4 +34,19 @@ void fail(Context& ctx, int& exit_code, int code, const std::string& message,
           const std::string& suggestion) {
     ctx.out.error(message, suggestion);
     exit_code = code;
+}
+
+void append_event(const core::store::Paths& paths, const std::string& actor,
+                  const std::string& op, const nlohmann::json& entity,
+                  const nlohmann::json& before, const nlohmann::json& after,
+                  const std::string& reason) {
+    core::model::Event event;
+    event.ts = core::model::now_utc();
+    event.actor = actor;
+    event.op = op;
+    event.entity = entity;
+    event.before = before;
+    event.after = after;
+    event.reason = reason;
+    core::event::append(paths, event);
 }

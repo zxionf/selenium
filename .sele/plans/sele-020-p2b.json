@@ -4,17 +4,17 @@
       "desc": "log/status/task 查询选项可用",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:45:35Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "config.json 字段生效（module_scope/pause_policy）",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:45:35Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T14:39:56Z",
@@ -32,5 +32,5 @@
       "id": "config"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

@@ -1,0 +1,38 @@
+{
+  "entity": {
+    "line": "config",
+    "plan": "sele-020-p2b",
+    "step": "S1",
+    "task": "T1",
+    "task_uid": "tsk_01M66M1K3HB5JFCJN2M1QQ3S8D",
+    "type": "step"
+  },
+  "git": {
+    "branch": "sele/20261030-v2-core",
+    "commit": "be474168479426d1cb92f5ff8631b51dfa855b17",
+    "diff_stat": " .sele/checkpoints/2026-10/ck-20261030-018.json | 33 ++++++++++++++++++++++\n .sele/lines/sele-020-p2b.query.json            |  8 +++---\n .sele/log.jsonl                                | 10 +++++++\n .sele/tasks/1c/7fdc9c6d5f4c16.json             | 19 +++++++++++--\n .sele/tasks/ef/1b3e418bbe630b.json             | 16 +++++------\n CMakeLists.txt                                 |  2 ++\n src/cli/common.hpp                             |  1 +\n src/cli/config.cpp                             | 23 ++++++++++++++++\n src/cli/git.cpp                                | 34 +++++++++++++++++++++--\n src/cli/init.cpp                               |  2 ++\n src/cli/query.cpp                              | 19 +++++++++++++\n src/core/config.cpp                            | 38 ++++++++++++++++++++++++++\n src/core/config.hpp                            | 20 ++++++++++++++\n src/main.cpp                                   |  1 +\n tests/sele_v2_tests.sh                         | 30 +++++++++++++++++++-\n 15 files changed, 238 insertions(+), 18 deletions(-)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/checkpoints/2026-10/ck-20261030-018.json",
+      ".sele/lines/sele-020-p2b.query.json",
+      ".sele/log.jsonl",
+      ".sele/tasks/1c/7fdc9c6d5f4c16.json",
+      ".sele/tasks/ef/1b3e418bbe630b.json",
+      "CMakeLists.txt",
+      "src/cli/common.hpp",
+      "src/cli/config.cpp",
+      "src/cli/git.cpp",
+      "src/cli/init.cpp",
+      "src/cli/query.cpp",
+      "src/core/config.cpp",
+      "src/core/config.hpp",
+      "src/main.cpp",
+      "tests/sele_v2_tests.sh"
+    ],
+    "source": "sele",
+    "tree": "0e12e6c4bdce34f0d80e7757c5a9e3f70ad3eb95"
+  },
+  "id": "ck-20261030-019",
+  "status": "valid",
+  "ts": "2026-10-30T14:45:35Z"
+}

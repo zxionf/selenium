@@ -1,12 +1,4 @@
 {
-  "schema_version": 1,
-  "actor": "git",
-  "modules": {
-    "allow": []
-  },
-  "checkpoint": {
-    "strategy": "git-commit",
-    "allow_empty": false
-  },
-  "commit": { "language": "zh", "scope": "module", "task_type": "auto" }
+  "created_at": "2026-10-30T13:26:29Z",
+  "version": 2
 }

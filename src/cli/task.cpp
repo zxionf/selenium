@@ -147,6 +147,7 @@ struct SelectArgs {
     std::string id;
     std::string plan;
     std::string line;
+    std::string reason;
 };
 
 struct PauseArgs {
@@ -431,6 +432,8 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     start_cmd->add_option("id", start_args->id, "Task id")->required();
     start_cmd->add_option("--plan", start_args->plan, "Plan id");
     start_cmd->add_option("--line", start_args->line, "Line id");
+    start_cmd->add_option("--reason", start_args->reason, "Decision reason")
+        ->default_val("start task");
     start_cmd->callback([&global, &exit_code, start_args]() {
         const auto ctx = make_context(global);
         core::model::Task item;
@@ -492,7 +495,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         try {
             core::store::save_task(ctx->paths, item);
             append_event(ctx->paths, "agent", "task.start", task_entity(item), "todo",
-                         item.status, "start task");
+                         item.status, start_args->reason);
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
             return;
@@ -565,6 +568,8 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     resume_cmd->add_option("id", resume_args->id, "Task id")->required();
     resume_cmd->add_option("--plan", resume_args->plan, "Plan id");
     resume_cmd->add_option("--line", resume_args->line, "Line id");
+    resume_cmd->add_option("--reason", resume_args->reason, "Decision reason")
+        ->default_val("resume task");
     resume_cmd->callback([&global, &exit_code, resume_args]() {
         const auto ctx = make_context(global);
         core::model::Task item;
@@ -577,7 +582,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         try {
             core::store::save_task(ctx->paths, item);
             append_event(ctx->paths, "agent", "task.resume", task_entity(item), "paused",
-                         item.status, "resume task");
+                         item.status, resume_args->reason);
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
             return;
@@ -643,6 +648,8 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     approve_cmd->add_option("id", approve_args->id, "Task id")->required();
     approve_cmd->add_option("--plan", approve_args->plan, "Plan id");
     approve_cmd->add_option("--line", approve_args->line, "Line id");
+    approve_cmd->add_option("--reason", approve_args->reason, "Decision reason")
+        ->default_val("approved");
     approve_cmd->callback([&global, &exit_code, approve_args]() {
         const auto ctx = make_context(global);
         core::model::Task item;
@@ -656,7 +663,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         try {
             core::store::save_task(ctx->paths, item);
             append_event(ctx->paths, "human", "task.approve", task_entity(item),
-                         "pending_review", item.status, "approved");
+                         "pending_review", item.status, approve_args->reason);
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
             return;
@@ -747,6 +754,8 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     unblock_cmd->add_option("id", unblock_args->id, "Task id")->required();
     unblock_cmd->add_option("--plan", unblock_args->plan, "Plan id");
     unblock_cmd->add_option("--line", unblock_args->line, "Line id");
+    unblock_cmd->add_option("--reason", unblock_args->reason, "Decision reason")
+        ->default_val("unblock");
     unblock_cmd->callback([&global, &exit_code, unblock_args]() {
         const auto ctx = make_context(global);
         core::model::Task item;
@@ -759,7 +768,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         try {
             core::store::save_task(ctx->paths, item);
             append_event(ctx->paths, "human", "task.unblock", task_entity(item), "blocked",
-                         item.status, "unblock");
+                         item.status, unblock_args->reason);
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
             return;
@@ -1027,6 +1036,8 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     archive_cmd->add_option("id", archive_args->id, "Task id")->required();
     archive_cmd->add_option("--plan", archive_args->plan, "Plan id");
     archive_cmd->add_option("--line", archive_args->line, "Line id");
+    archive_cmd->add_option("--reason", archive_args->reason, "Decision reason")
+        ->default_val("archive task");
     archive_cmd->callback([&global, &exit_code, archive_args]() {
         const auto ctx = make_context(global);
         core::model::Task item;
@@ -1040,7 +1051,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         try {
             core::store::save_task(ctx->paths, item);
             append_event(ctx->paths, "human", "task.archive", task_entity(item), "done",
-                         item.status, "archive task");
+                         item.status, archive_args->reason);
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
             return;
@@ -1054,6 +1065,8 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     revive_cmd->add_option("id", revive_args->id, "Task id")->required();
     revive_cmd->add_option("--plan", revive_args->plan, "Plan id");
     revive_cmd->add_option("--line", revive_args->line, "Line id");
+    revive_cmd->add_option("--reason", revive_args->reason, "Decision reason")
+        ->default_val("revive task");
     revive_cmd->callback([&global, &exit_code, revive_args]() {
         const auto ctx = make_context(global);
         core::model::Task item;
@@ -1068,7 +1081,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         try {
             core::store::save_task(ctx->paths, item);
             append_event(ctx->paths, "human", "task.revive", task_entity(item), "archived",
-                         item.status, "revive task");
+                         item.status, revive_args->reason);
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
             return;

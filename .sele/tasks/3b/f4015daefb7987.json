@@ -13,7 +13,7 @@
   "archived_git_head": null,
   "checkpoint_strategy": "per-step",
   "created_at": "2026-10-30T14:23:31Z",
-  "current_step": null,
+  "current_step": "S1",
   "depends": [],
   "finished_at": null,
   "goal": "迁移命令 --reason",
@@ -29,8 +29,21 @@
   "plan": "sele-020-p0",
   "review_policy": "mixed",
   "skipped_count": 0,
-  "status": "todo",
-  "steps": [],
+  "status": "in_progress",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "reason"
+    }
+  ],
   "title": "迁移命令 --reason",
   "uid": "tsk_01M66K3HEPWMKJ1TJH1Z2XTNKG"
 }

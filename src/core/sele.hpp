@@ -15,6 +15,7 @@ struct Layout {
     std::filesystem::path root;
     std::filesystem::path sele;
     std::filesystem::path lines;
+    std::filesystem::path epics;
     std::filesystem::path runtime;
     std::filesystem::path state;
     std::filesystem::path sessions;
@@ -45,11 +46,14 @@ std::string utc_stamp();
 
 bool valid_slug(const std::string& slug);
 bool valid_line_id(const std::string& id);
+bool valid_epic_id(const std::string& id);
 
 std::filesystem::path line_dir(const Layout& layout, const std::string& id);
 std::filesystem::path line_file(const Layout& layout, const std::string& id);
 std::filesystem::path tasks_dir(const Layout& layout, const std::string& id);
 std::filesystem::path state_file(const Layout& layout, const std::string& id);
+std::filesystem::path epic_dir(const Layout& layout, const std::string& id);
+std::filesystem::path epic_file(const Layout& layout, const std::string& id);
 
 json read_json(const std::filesystem::path& path);
 void write_json(const std::filesystem::path& path, const json& value);

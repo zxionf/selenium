@@ -46,6 +46,7 @@ Layout layout(const std::filesystem::path& root) {
     out.root = root;
     out.sele = root / ".sele";
     out.lines = out.sele / "lines";
+    out.epics = out.sele / "epics";
     out.runtime = out.sele / "runtime";
     out.state = out.runtime / "state";
     out.sessions = out.runtime / "sessions";
@@ -168,6 +169,11 @@ bool valid_line_id(const std::string& id) {
     return std::regex_match(id, pattern);
 }
 
+bool valid_epic_id(const std::string& id) {
+    static const std::regex pattern("^[a-z][a-z0-9-]{2,40}$");
+    return std::regex_match(id, pattern);
+}
+
 std::filesystem::path line_dir(const Layout& layout, const std::string& id) {
     return layout.lines / id;
 }
@@ -182,6 +188,14 @@ std::filesystem::path tasks_dir(const Layout& layout, const std::string& id) {
 
 std::filesystem::path state_file(const Layout& layout, const std::string& id) {
     return layout.state / (id + ".json");
+}
+
+std::filesystem::path epic_dir(const Layout& layout, const std::string& id) {
+    return layout.epics / id;
+}
+
+std::filesystem::path epic_file(const Layout& layout, const std::string& id) {
+    return layout.epics / id / "epic.json";
 }
 
 json read_json(const std::filesystem::path& path) {

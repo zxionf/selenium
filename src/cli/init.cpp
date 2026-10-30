@@ -43,6 +43,7 @@ void init_next(const fs::path& target, util::Output& output, int& exit_code) {
     config["commit"]["task_type"] = "auto";
 
     core::fsys::ensure_dir(layout.lines);
+    core::fsys::ensure_dir(layout.epics);
     core::fsys::ensure_dir(layout.state);
     core::fsys::ensure_dir(layout.sessions);
 

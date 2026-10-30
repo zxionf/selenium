@@ -127,6 +127,10 @@ struct ShowArgs {
     std::string id;
 };
 
+struct SwitchArgs {
+    std::string id;
+};
+
 struct SubmitArgs {
     std::string id;
     std::string reason{"submit for approval"};
@@ -264,6 +268,33 @@ void register_plan_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         if (!load_plan(*ctx, exit_code, show_args->id, item)) return;
         ctx->out.print_both("Plan " + item.id + " [" + item.status + "] " + item.goal,
                             core::model::to_json(item));
+    });
+
+    auto switch_args = std::make_shared<SwitchArgs>();
+    auto* switch_cmd = plan->add_subcommand("switch", "Set the current plan context");
+    add_global_opts(switch_cmd, global);
+    switch_cmd->add_option("id", switch_args->id, "Plan id")->required();
+    switch_cmd->callback([&global, &exit_code, switch_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, switch_args->id, item)) return;
+        nlohmann::json context = nlohmann::json::object();
+        if (core::fsys::exists(ctx->paths.context)) {
+            try {
+                context = nlohmann::json::parse(core::fsys::read_file(ctx->paths.context));
+            } catch (...) {
+                context = nlohmann::json::object();
+            }
+        }
+        context["plan"] = item.id;
+        context.erase("line");
+        try {
+            core::fsys::write_atomic(ctx->paths.context, context.dump(2) + "\n");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Switched to plan " + item.id, {{"plan", item.id}});
     });
 
     auto submit_args = std::make_shared<SubmitArgs>();

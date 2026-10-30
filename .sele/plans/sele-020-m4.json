@@ -1,0 +1,48 @@
+{
+  "acceptance": [
+    {
+      "desc": "上下文：plan switch 写入 cache/context.json",
+      "id": "PA1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "编排：task insert/move 与跨线依赖",
+      "id": "PA2",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "审计：decision record 与 log --replay",
+      "id": "PA3",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "approved_at": "2026-10-30T14:01:50Z",
+  "approved_by": "human:zxionf",
+  "created_at": "2026-10-30T14:01:50Z",
+  "goal": "M4 辅助命令：上下文、任务编排、审计",
+  "id": "sele-020-m4",
+  "lines": [
+    {
+      "depends": [],
+      "id": "ctx"
+    },
+    {
+      "depends": [],
+      "id": "task"
+    },
+    {
+      "depends": [],
+      "id": "log"
+    }
+  ],
+  "status": "active"
+}

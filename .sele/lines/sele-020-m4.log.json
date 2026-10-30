@@ -1,0 +1,21 @@
+{
+  "acceptance": [
+    {
+      "desc": "decision 与 replay 可用",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T14:01:50Z",
+  "depends": [],
+  "goal": "审计",
+  "id": "log",
+  "modules": [
+    "cli"
+  ],
+  "plan": "sele-020-m4",
+  "status": "active"
+}

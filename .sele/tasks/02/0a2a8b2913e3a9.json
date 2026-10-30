@@ -1,0 +1,35 @@
+{
+  "acceptance": [
+    {
+      "desc": "insert/move/依赖可用",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "archived_at": null,
+  "archived_git_head": null,
+  "checkpoint_strategy": "per-step",
+  "created_at": "2026-10-30T14:01:50Z",
+  "current_step": null,
+  "depends": [],
+  "finished_at": null,
+  "goal": "task insert/move/跨线依赖",
+  "id": "T1",
+  "line": "task",
+  "locked": {
+    "locked": false
+  },
+  "modules": [
+    "cli"
+  ],
+  "pause_context": null,
+  "plan": "sele-020-m4",
+  "review_policy": "mixed",
+  "status": "todo",
+  "steps": [],
+  "title": "task insert/move/跨线依赖",
+  "uid": "tsk_01M66HVTG3XDF89N8PC7724T7Q"
+}

@@ -1,0 +1,50 @@
+{
+  "acceptance": [
+    {
+      "desc": "C2/C5/C7/C8/C9 生效",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "archived_at": null,
+  "archived_git_head": null,
+  "checkpoint_strategy": "per-step",
+  "created_at": "2026-10-30T14:39:03Z",
+  "current_step": "S1",
+  "depends": [],
+  "finished_at": null,
+  "goal": "check 扩展",
+  "id": "T1",
+  "line": "check",
+  "locked": {
+    "locked": false
+  },
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "pause_context": null,
+  "plan": "sele-020-check",
+  "review_policy": "mixed",
+  "skipped_count": 0,
+  "status": "in_progress",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "check"
+    }
+  ],
+  "title": "check 扩展",
+  "uid": "tsk_01M66KZZMF78JJ5F4NWGX2G432"
+}

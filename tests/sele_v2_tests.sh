@@ -464,6 +464,58 @@ test_depends_uid() {
     rm -rf "$ROOT"
 }
 
+test_check_extended() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    local file
+    file=$(jq -r 'select(.id == "T1") | input_filename' "$ROOT"/.sele/tasks/*/*.json | head -1)
+    mv "$file" "$(dirname "$file")/wrong.json"
+    if expect_code 3 "$BIN" check --root "$ROOT"; then
+        pass "check detects task file name mismatch"
+    else
+        fail "check detects task file name mismatch"
+    fi
+    rm -rf "$ROOT"
+
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    "$BIN" cache rebuild --root "$ROOT" >/dev/null
+    file=$(jq -r 'select(.id == "T1") | input_filename' "$ROOT"/.sele/tasks/*/*.json | head -1)
+    rm "$file"
+    if expect_code 3 "$BIN" check --root "$ROOT"; then
+        pass "check detects stale index"
+    else
+        fail "check detects stale index"
+    fi
+    rm -rf "$ROOT"
+
+    setup_project
+    mkdir -p "$ROOT/.sele/archive/bogus-1"
+    if expect_code 3 "$BIN" check --root "$ROOT"; then
+        pass "check detects archive without manifest"
+    else
+        fail "check detects archive without manifest"
+    fi
+    rm -rf "$ROOT"
+
+    setup_project
+    "$BIN" task add "t1" --root "$ROOT" --line a >/dev/null
+    "$BIN" task add "t2" --root "$ROOT" --line a >/dev/null
+    local f1 f2 u1 u2
+    f1=$(jq -r 'select(.id == "T1") | input_filename' "$ROOT"/.sele/tasks/*/*.json | head -1)
+    f2=$(jq -r 'select(.id == "T2") | input_filename' "$ROOT"/.sele/tasks/*/*.json | head -1)
+    u1=$(jq -r '.uid' "$f1")
+    u2=$(jq -r '.uid' "$f2")
+    jq --arg uid "$u2" '.depends = [{"type":"task","uid":$uid}]' "$f1" > "$f1.tmp" && mv "$f1.tmp" "$f1"
+    jq --arg uid "$u1" '.depends = [{"type":"task","uid":$uid}]' "$f2" > "$f2.tmp" && mv "$f2.tmp" "$f2"
+    if expect_code 3 "$BIN" check --root "$ROOT"; then
+        pass "check detects task dependency cycle"
+    else
+        fail "check detects task dependency cycle"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -675,6 +727,7 @@ test_revert_exec_guard
 test_next_i1
 test_p1_commands
 test_depends_uid
+test_check_extended
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

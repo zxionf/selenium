@@ -1,0 +1,22 @@
+{
+  "acceptance": [
+    {
+      "desc": "扩展检查生效",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T14:39:03Z",
+  "depends": [],
+  "goal": "check 补全",
+  "id": "check",
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "plan": "sele-020-check",
+  "status": "active"
+}

@@ -136,6 +136,23 @@ std::string compact_stamp() {
     return stamp;
 }
 
+std::vector<core::model::Checkpoint> load_checkpoints(const core::store::Paths& paths) {
+    std::vector<core::model::Checkpoint> result;
+    if (!core::fsys::exists(paths.checkpoints)) return result;
+    for (const auto& month : std::filesystem::directory_iterator(paths.checkpoints)) {
+        if (!month.is_directory()) continue;
+        for (const auto& entry : std::filesystem::directory_iterator(month.path())) {
+            if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
+            try {
+                result.push_back(core::model::checkpoint_from_json(
+                    nlohmann::json::parse(core::fsys::read_file(entry.path()))));
+            } catch (...) {
+            }
+        }
+    }
+    return result;
+}
+
 } // namespace
 
 void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
@@ -443,6 +460,17 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             for (const auto& line : lines) {
                 if (!check_args->plan.empty() && line.plan != check_args->plan) continue;
                 if (!core::id::valid_name(line.id)) problems.push_back("invalid line id " + line.id);
+                bool plan_found = false;
+                for (const auto& plan : plans) {
+                    if (plan.id == line.plan) plan_found = true;
+                }
+                if (!plan_found) {
+                    problems.push_back("line " + line.id + " references missing plan " +
+                                       line.plan);
+                }
+                if (!core::fsys::exists(core::store::line_path(ctx->paths, line.plan, line.id))) {
+                    problems.push_back("line file missing: " + line.plan + "." + line.id);
+                }
             }
             for (const auto& task : tasks) {
                 if (!check_args->plan.empty() && task.plan != check_args->plan) continue;
@@ -483,6 +511,114 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 core::event::load(ctx->paths);
             } catch (const std::exception& error) {
                 problems.push_back(std::string("event log: ") + error.what());
+            }
+
+            for (const auto& task : tasks) {
+                if (!check_args->plan.empty() && task.plan != check_args->plan) continue;
+                if (!core::fsys::exists(core::store::task_path(ctx->paths, task.uid))) {
+                    problems.push_back("task file missing for uid " + task.uid);
+                }
+            }
+            if (core::fsys::exists(ctx->paths.tasks)) {
+                for (const auto& bucket : std::filesystem::directory_iterator(ctx->paths.tasks)) {
+                    if (!bucket.is_directory()) continue;
+                    for (const auto& entry : std::filesystem::directory_iterator(bucket.path())) {
+                        if (!entry.is_regular_file() || entry.path().extension() != ".json") {
+                            continue;
+                        }
+                        try {
+                            const auto task = core::model::task_from_json(
+                                nlohmann::json::parse(core::fsys::read_file(entry.path())));
+                            const auto relative =
+                                std::filesystem::relative(entry.path(), ctx->paths.tasks)
+                                    .generic_string();
+                            const auto expected = core::id::task_bucket(task.uid) + "/" +
+                                                  core::id::task_file(task.uid) + ".json";
+                            if (relative != expected) {
+                                problems.push_back(
+                                    "task file name does not match uid: " + relative);
+                            }
+                        } catch (...) {
+                            problems.push_back("invalid task file: " +
+                                               entry.path().filename().string());
+                        }
+                    }
+                }
+            }
+            for (const auto& checkpoint : load_checkpoints(ctx->paths)) {
+                const std::string task_id = checkpoint.entity.value("task", "");
+                if (task_id.empty()) continue;
+                const std::string plan_id = checkpoint.entity.value("plan", "");
+                const std::string line_id = checkpoint.entity.value("line", "");
+                bool found = false;
+                for (const auto& task : tasks) {
+                    if (task.id == task_id && task.plan == plan_id && task.line == line_id) {
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    problems.push_back("checkpoint " + checkpoint.id +
+                                       " references missing task " + task_id);
+                }
+            }
+            const auto index_file = ctx->paths.cache / "index.json";
+            if (core::fsys::exists(index_file)) {
+                try {
+                    const auto index = nlohmann::json::parse(core::fsys::read_file(index_file));
+                    if (index.contains("tasks") && index["tasks"].size() != tasks.size()) {
+                        problems.push_back("cache/index.json task count mismatch; run cache rebuild");
+                    }
+                    if (index.contains("lines") && index["lines"].size() != lines.size()) {
+                        problems.push_back("cache/index.json line count mismatch; run cache rebuild");
+                    }
+                } catch (...) {
+                    problems.push_back("cache/index.json is invalid");
+                }
+            }
+            if (core::fsys::exists(ctx->paths.archive)) {
+                for (const auto& entry : std::filesystem::directory_iterator(ctx->paths.archive)) {
+                    if (!entry.is_directory()) continue;
+                    if (!core::fsys::exists(entry.path() / "_manifest.json")) {
+                        problems.push_back("archive " + entry.path().filename().string() +
+                                           " has no _manifest.json");
+                    }
+                }
+            }
+            {
+                std::map<std::string, std::vector<std::string>> graph;
+                for (const auto& task : tasks) {
+                    auto& edges = graph[task.uid];
+                    for (const auto& dep : task.depends) {
+                        if (dep.value("type", "") != "task") continue;
+                        const std::string dep_uid = dep.value("uid", "");
+                        if (!dep_uid.empty()) edges.push_back(dep_uid);
+                    }
+                }
+                std::function<bool(const std::string&, const std::string&,
+                                   std::set<std::string>&)>
+                    reach = [&](const std::string& from, const std::string& target,
+                                std::set<std::string>& seen) -> bool {
+                    if (from == target) return true;
+                    if (!seen.insert(from).second) return false;
+                    const auto found = graph.find(from);
+                    if (found == graph.end()) return false;
+                    for (const auto& next : found->second) {
+                        if (reach(next, target, seen)) return true;
+                    }
+                    return false;
+                };
+                bool cycle = false;
+                for (const auto& node : graph) {
+                    for (const auto& next : node.second) {
+                        std::set<std::string> seen;
+                        if (reach(next, node.first, seen)) {
+                            cycle = true;
+                            break;
+                        }
+                    }
+                    if (cycle) break;
+                }
+                if (cycle) problems.push_back("task dependency cycle detected");
             }
 
             nlohmann::json result = {{"command", "check"},

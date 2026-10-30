@@ -1,0 +1,29 @@
+{
+  "entity": {
+    "line": "agent-doc",
+    "plan": "sele-020-doc",
+    "step": "S1",
+    "task": "T1",
+    "task_uid": "tsk_01M66N6QX6QB85D68BK5P1S2TB",
+    "type": "step"
+  },
+  "git": {
+    "branch": "main",
+    "commit": "ed821cc994a0aa2b192a89ea19c9440c7b2aa255",
+    "diff_stat": " .sele/lines/sele-020-doc.agent-doc.json |  21 +++\n .sele/log.jsonl                         |   9 ++\n .sele/plans/sele-020-doc.json           |  24 ++++\n .sele/tasks/a2/fe128dcc67f30a.json      |  49 +++++++\n docs/README.md                          |   1 +\n docs/sele-0.20.0-agent.md               | 239 ++++++++++++++++++++++++++++++++\n 6 files changed, 343 insertions(+)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/lines/sele-020-doc.agent-doc.json",
+      ".sele/log.jsonl",
+      ".sele/plans/sele-020-doc.json",
+      ".sele/tasks/a2/fe128dcc67f30a.json",
+      "docs/README.md",
+      "docs/sele-0.20.0-agent.md"
+    ],
+    "source": "sele",
+    "tree": "bea69d6e90f2b41f7126869d4c496e28b93afe7a"
+  },
+  "id": "ck-20261030-022",
+  "status": "valid",
+  "ts": "2026-10-30T15:00:13Z"
+}

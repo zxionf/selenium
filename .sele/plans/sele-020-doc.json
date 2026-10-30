@@ -4,9 +4,9 @@
       "desc": "手册在 docs/ 且命令存在",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T15:00:13Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T15:00:13Z",
@@ -20,5 +20,5 @@
       "id": "agent-doc"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

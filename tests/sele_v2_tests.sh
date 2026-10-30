@@ -441,6 +441,29 @@ test_p1_commands() {
     rm -rf "$ROOT"
 }
 
+test_depends_uid() {
+    setup_project
+    "$BIN" line new b --root "$ROOT" --plan p --goal "gb" --acceptance "lb" --modules core >/dev/null
+    "$BIN" task add "a1" --root "$ROOT" --line a >/dev/null
+    "$BIN" task add "b1" --root "$ROOT" --line b >/dev/null
+    "$BIN" task add "a2" --root "$ROOT" --line a --depends b.T1 >/dev/null
+    if "$BIN" task status T2 --root "$ROOT" --line a --output json |
+        jq -e '.depends[0].uid | startswith("tsk_")' >/dev/null; then
+        pass "depends stores uid"
+    else
+        fail "depends stores uid"
+    fi
+    local file
+    file=$(jq -r 'select(.id == "T2") | input_filename' "$ROOT"/.sele/tasks/*/*.json)
+    jq '.depends = [{"type":"task","plan":"p","line":"b","id":"T1"}]' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+    if "$BIN" task start T2 --root "$ROOT" --line a >/dev/null 2>&1; then
+        fail "legacy depends blocks start"
+    else
+        pass "legacy depends blocks start"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -651,6 +674,7 @@ test_full_ref
 test_revert_exec_guard
 test_next_i1
 test_p1_commands
+test_depends_uid
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

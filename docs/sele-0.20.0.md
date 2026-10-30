@@ -198,6 +198,12 @@ todo → in_progress → done
 | 3 | 一致性检查失败 |
 | 4 | 环境/数据错误 |
 
+## 6.1 引用与 uid
+
+`depends` 存储目标 task 的 `uid`（不可变），语义 ID 仅用于命令与展示。
+旧格式 `{"type":"task","plan":...,"line":...,"id":...}` 仍可解析（回退）。
+全限定引用 `T1` / `line.T1` / `plan.line.T1` 在 CLI 层解析后同样落到 uid。
+
 ## 7. 与 sele-f 规范的差异（0.20.0 进度）
 
 已实现 **M1（账本）** 与 **M2（Git 代理）**：

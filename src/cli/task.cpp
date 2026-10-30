@@ -297,15 +297,19 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             result.acceptance.push_back(item);
         }
         for (const auto& dep : add_args->depends) {
-            std::string dep_line = line.id;
-            std::string dep_id = dep;
-            const auto dot = dep.find('.');
-            if (dot != std::string::npos) {
-                dep_line = dep.substr(0, dot);
-                dep_id = dep.substr(dot + 1);
+            const auto ref = parse_task_ref(dep, line.plan, line.id);
+            std::string uid;
+            for (const auto& candidate : core::store::load_tasks(ctx->paths)) {
+                if (candidate.plan != ref.plan) continue;
+                if (candidate.line != ref.line) continue;
+                if (candidate.id != ref.id) continue;
+                uid = candidate.uid;
             }
-            result.depends.push_back(
-                {{"type", "task"}, {"plan", line.plan}, {"line", dep_line}, {"id", dep_id}});
+            if (uid.empty()) {
+                fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Dependency not found: " + dep);
+                return;
+            }
+            result.depends.push_back({{"type", "task"}, {"uid", uid}});
         }
 
         try {
@@ -386,10 +390,20 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             inserted.acceptance.push_back(item);
         }
         if (!insert_args->after.empty()) {
-            inserted.depends.push_back({{"type", "task"},
-                                        {"plan", line.plan},
-                                        {"line", line.id},
-                                        {"id", insert_args->after}});
+            const auto ref = parse_task_ref(insert_args->after, line.plan, line.id);
+            std::string anchor_uid;
+            for (const auto& candidate : all) {
+                if (candidate.plan != ref.plan) continue;
+                if (candidate.line != ref.line) continue;
+                if (candidate.id != ref.id) continue;
+                anchor_uid = candidate.uid;
+            }
+            if (anchor_uid.empty()) {
+                fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                     "Anchor task not found: " + insert_args->after);
+                return;
+            }
+            inserted.depends.push_back({{"type", "task"}, {"uid", anchor_uid}});
         }
 
         try {
@@ -399,10 +413,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 for (auto& candidate : core::store::load_tasks(ctx->paths)) {
                     if (candidate.id != insert_args->before) continue;
                     if (candidate.plan != line.plan || candidate.line != line.id) continue;
-                    candidate.depends.push_back({{"type", "task"},
-                                                 {"plan", line.plan},
-                                                 {"line", line.id},
-                                                 {"id", inserted.id}});
+                    candidate.depends.push_back({{"type", "task"}, {"uid", inserted.uid}});
                     core::store::save_task(ctx->paths, candidate);
                 }
             }
@@ -453,15 +464,17 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         try {
             for (const auto& dep : item.depends) {
                 if (dep.value("type", "") != "task") continue;
+                const std::string dep_uid = dep.value("uid", "");
                 const std::string dep_id = dep.value("id", "");
                 const std::string dep_plan = dep.value("plan", item.plan);
                 const std::string dep_line = dep.value("line", item.line);
                 std::vector<core::model::Task> matches;
                 for (const auto& candidate : core::store::load_tasks(ctx->paths)) {
-                    if (candidate.id == dep_id && candidate.plan == dep_plan &&
-                        candidate.line == dep_line) {
-                        matches.push_back(candidate);
-                    }
+                    const bool by_uid = !dep_uid.empty() && candidate.uid == dep_uid;
+                    const bool by_name = dep_uid.empty() && candidate.id == dep_id &&
+                                         candidate.plan == dep_plan &&
+                                         candidate.line == dep_line;
+                    if (by_uid || by_name) matches.push_back(candidate);
                 }
                 if (matches.empty() || (matches.front().status != "done" &&
                                         matches.front().status != "archived")) {

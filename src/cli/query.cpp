@@ -51,13 +51,16 @@ bool task_ready(const core::model::Task& task, const std::vector<core::model::Pl
     if (!line_ok) return false;
     for (const auto& dep : task.depends) {
         if (dep.value("type", "") != "task") continue;
+        const std::string dep_uid = dep.value("uid", "");
         const std::string dep_id = dep.value("id", "");
         const std::string dep_plan = dep.value("plan", task.plan);
         const std::string dep_line = dep.value("line", task.line);
         bool done = false;
         for (const auto& candidate : tasks) {
-            if (candidate.plan == dep_plan && candidate.line == dep_line &&
-                candidate.id == dep_id &&
+            const bool by_uid = !dep_uid.empty() && candidate.uid == dep_uid;
+            const bool by_name = dep_uid.empty() && candidate.id == dep_id &&
+                                 candidate.plan == dep_plan && candidate.line == dep_line;
+            if ((by_uid || by_name) &&
                 (candidate.status == "done" || candidate.status == "archived")) {
                 done = true;
                 break;
@@ -449,11 +452,21 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 }
                 for (const auto& dep : task.depends) {
                     if (dep.value("type", "") != "task") continue;
-                    const auto key = dep.value("plan", task.plan) + "." +
-                                     dep.value("line", task.line) + "." + dep.value("id", "");
-                    if (task_index.find(key) == task_index.end()) {
+                    const std::string dep_uid = dep.value("uid", "");
+                    bool found = false;
+                    if (!dep_uid.empty()) {
+                        for (const auto& candidate : tasks) {
+                            if (candidate.uid == dep_uid) found = true;
+                        }
+                    } else {
+                        const auto key = dep.value("plan", task.plan) + "." +
+                                         dep.value("line", task.line) + "." +
+                                         dep.value("id", "");
+                        found = task_index.find(key) != task_index.end();
+                    }
+                    if (!found) {
                         problems.push_back("task " + task.id + " depends on missing " +
-                                           dep.value("id", ""));
+                                           dep.value("id", dep.value("uid", "")));
                     }
                 }
                 if (task.status == "done") {

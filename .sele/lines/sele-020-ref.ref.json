@@ -1,0 +1,22 @@
+{
+  "acceptance": [
+    {
+      "desc": "depends 用 uid",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T14:32:07Z",
+  "depends": [],
+  "goal": "依赖引用",
+  "id": "ref",
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "plan": "sele-020-ref",
+  "status": "active"
+}

@@ -100,6 +100,13 @@ void init_next(const fs::path& target, util::Output& output, int& exit_code) {
         agents_written = true;
     }
 
+    const auto contract = layout.sele / "CONTRACT.md";
+    bool contract_written = false;
+    if (!core::fsys::exists(contract)) {
+        core::fsys::write_atomic(contract, core::render_sele_contract_template());
+        contract_written = true;
+    }
+
     nlohmann::json result;
     result["initialized"] = true;
     result["mode"] = "next";
@@ -107,13 +114,17 @@ void init_next(const fs::path& target, util::Output& output, int& exit_code) {
     result["sele_path"] = layout.sele.string();
     result["agents_path"] = agents.string();
     result["agents_written"] = agents_written;
+    result["contract_path"] = contract.string();
+    result["contract_written"] = contract_written;
     result["legacy_present"] = legacy_present;
 
     std::ostringstream text;
     text << "Initialized .sele/ in " << target.string() << '\n'
          << "  sele: " << layout.sele.string() << '\n'
          << "  agents: " << agents.string()
-         << (agents_written ? "" : " (existing, untouched)") << '\n';
+         << (agents_written ? "" : " (existing, untouched)") << '\n'
+         << "  contract: " << contract.string()
+         << (contract_written ? "" : " (existing, untouched)") << '\n';
     if (legacy_present) {
         text << "  legacy: .design/.agent present (kept untouched)\n";
     }

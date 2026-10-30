@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": 1,
+  "version": 2,
   "id": "20261030-contract-md",
   "type": "feature",
   "goal": "sele init 生成 .sele/CONTRACT.md 并在 AGENTS.md 中关联",
@@ -22,10 +22,14 @@
   ],
   "created_at": "2026-10-30T05:58:30Z",
   "created_by": "zxionf",
-  "status": "draft",
-  "frozen": null,
+  "status": "active",
+  "frozen": {
+    "goal_sha256": "4da2c3a177723b3445e15412f2456db32e37c1d9d126bfdba6db0fc234046fa9",
+    "acceptance_sha256": "6d0737c4faa5f07065ed3887c23c6d6e1550f9a0baa79d7058c753fc019521b3",
+    "at": "2026-10-30T05:58:30Z"
+  },
   "blocked": null,
   "closed": null,
-  "base_commit": null,
+  "base_commit": "1cd3924",
   "merged": null
 }

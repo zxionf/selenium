@@ -40,3 +40,5 @@ void register_init_cmd(CLI::App& app, GlobalOptions& global, int& exit_code);
 void register_version_cmd(CLI::App& app, GlobalOptions& global, int& exit_code);
 void register_plan_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);
 void register_line_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);
+void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);
+void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);

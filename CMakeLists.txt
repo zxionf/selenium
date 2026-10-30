@@ -57,6 +57,8 @@ add_executable(sele
     src/cli/version.cpp
     src/cli/plan.cpp
     src/cli/line.cpp
+    src/cli/task.cpp
+    src/cli/step.cpp
     src/core/entity.cpp
     src/core/event.cpp
     src/core/fs.cpp

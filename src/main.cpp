@@ -16,6 +16,8 @@ int main(int argc, char** argv) {
     register_version_cmd(app, global, exit_code);
     register_plan_cmds(app, global, exit_code);
     register_line_cmds(app, global, exit_code);
+    register_task_cmds(app, global, exit_code);
+    register_step_cmds(app, global, exit_code);
 
     app.require_subcommand(1);
     try {

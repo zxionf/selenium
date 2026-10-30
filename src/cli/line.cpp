@@ -55,6 +55,7 @@ nlohmann::json line_view(const core::Line& line) {
     value["type"] = line.type;
     value["goal"] = line.goal;
     value["modules"] = line.modules;
+    value["epic"] = line.epic.empty() ? nlohmann::json(nullptr) : nlohmann::json(line.epic);
     value["status"] = line.status;
     value["version"] = line.version;
     value["acceptance"] = nlohmann::json::array();
@@ -109,6 +110,7 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
         std::string modules;
         std::string type = "feature";
         std::string id;
+        std::string epic;
         std::vector<std::string> acceptance;
     };
     auto new_args = std::make_shared<NewArgs>();
@@ -121,6 +123,7 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     cmd_new->add_option("--modules", new_args->modules, "Comma-separated module tags")->required();
     cmd_new->add_option("--type", new_args->type, "feature|fix|chore|refactor|spike");
     cmd_new->add_option("--id", new_args->id, "Full line id (default: <UTC date>-<slug>)");
+    cmd_new->add_option("--epic", new_args->epic, "Epic id to attach (optional)");
     cmd_new->footer("Example:\n  sele line new fix-login --goal \"Login shows actionable errors\" "
                     "--acceptance \"wrong password returns 401::pytest tests/test_login.py\" --modules auth");
     cmd_new->callback([&global_opts, &exit_code, new_args]() {
@@ -188,6 +191,20 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 fail(exit_codes::STATE_CONFLICT, "Line already exists: " + id, "Choose another slug",
                      {"sele line list"});
             }
+            if (!new_args->epic.empty()) {
+                const auto epic_path = core::sele::epic_file(ctx.lay, new_args->epic);
+                if (!core::fsys::exists(epic_path)) {
+                    fail(exit_codes::STATE_CONFLICT, "Epic not found: " + new_args->epic,
+                         "List epics", {"sele epic list"});
+                }
+                const auto epic = core::model::epic_from_json(core::sele::read_json(epic_path));
+                if (epic.status != "active") {
+                    fail(exit_codes::STATE_CONFLICT,
+                         "Epic " + epic.id + " is " + epic.status + ", not active",
+                         "Reopen it first",
+                         {"sele epic reopen " + epic.id + " --reason \"...\""});
+                }
+            }
 
             ctx.line_id = id;
             ctx.line = core::Line{};
@@ -197,6 +214,7 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             ctx.line.goal = new_args->goal;
             ctx.line.acceptance = acceptance;
             ctx.line.modules = modules;
+            ctx.line.epic = new_args->epic;
             ctx.line.created_at = core::sele::utc_now();
             ctx.line.created_by = ctx.actor;
             ctx.line.status = "draft";
@@ -214,13 +232,15 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             result["changed"] = true;
             result["line"] = id;
             result["status"] = "draft";
+            result["epic"] = ctx.line.epic;
             result["path"] = core::sele::line_file(ctx.lay, id).string();
 
             std::ostringstream text;
             text << "Created line " << id << " (draft)\n"
                  << "  goal: " << ctx.line.goal << '\n'
-                 << "  modules: " << comma_list(ctx.line.modules) << '\n'
-                 << "  acceptance: " << ctx.line.acceptance.size() << '\n'
+                 << "  modules: " << comma_list(ctx.line.modules) << '\n';
+            if (!ctx.line.epic.empty()) text << "  epic: " << ctx.line.epic << '\n';
+            text << "  acceptance: " << ctx.line.acceptance.size() << '\n'
                  << "  next: sele task add " << id << " \"...\" --modules " << ctx.line.modules.front();
             output.print_both(text.str(), result);
         });
@@ -229,12 +249,14 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     // line list
     struct ListArgs {
         std::string status;
+        std::string epic;
         bool all = false;
     };
     auto list_args = std::make_shared<ListArgs>();
     auto* cmd_list = group->add_subcommand("list", "List lines");
     add_line_options(cmd_list, global_opts);
     cmd_list->add_option("--status", list_args->status, "Filter by status");
+    cmd_list->add_option("--epic", list_args->epic, "Filter by epic id");
     cmd_list->add_flag("--all", list_args->all, "Include archived lines");
     cmd_list->footer("Example:\n  sele line list\n  sele line list --status active\n  sele line list --all");
     cmd_list->callback([&global_opts, &exit_code, list_args]() {
@@ -257,6 +279,7 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                     if (!core::fsys::exists(file)) continue;
                     const auto line = core::model::line_from_json(core::sele::read_json(file));
                     if (!list_args->status.empty() && line.status != list_args->status) continue;
+                    if (!list_args->epic.empty() && line.epic != list_args->epic) continue;
 
                     core::RuntimeState runtime;
                     const auto state_path = core::sele::state_file(ctx.lay, line.id);
@@ -282,6 +305,8 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                     item["status"] = line.status;
                     item["goal"] = line.goal;
                     item["archived"] = archived;
+                    item["epic"] = line.epic.empty() ? nlohmann::json(nullptr)
+                                                     : nlohmann::json(line.epic);
                     item["tasks"] = nlohmann::json::object({{"done", done}, {"total", total}});
                     item["acceptance"] = nlohmann::json::object({
                         {"pass", summary.passed},
@@ -326,7 +351,8 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             std::ostringstream text;
             text << "Line: " << ctx.line.id << " [" << ctx.line.status << "]\n"
                  << "Goal: " << ctx.line.goal << '\n'
-                 << "Modules: " << comma_list(ctx.line.modules) << "\n\nTasks:";
+                 << "Modules: " << comma_list(ctx.line.modules) << '\n'
+                 << "Epic: " << (ctx.line.epic.empty() ? "none" : ctx.line.epic) << "\n\nTasks:";
 
             for (const auto& spec : ctx.tasks) {
                 const std::string status = ng::status_of(ctx, spec.id);
@@ -903,6 +929,7 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
         std::string reason;
         std::string goal;
         std::string modules;
+        std::string epic;
         std::vector<std::string> acceptance;
     };
     auto amend_args = std::make_shared<AmendArgs>();
@@ -913,6 +940,7 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
     cmd_amend->add_option("--goal", amend_args->goal, "New goal");
     cmd_amend->add_option("--acceptance", amend_args->acceptance, "Replacement acceptance list");
     cmd_amend->add_option("--modules", amend_args->modules, "Replacement module tags");
+    cmd_amend->add_option("--epic", amend_args->epic, "Epic id, or \"none\" to detach");
     cmd_amend->footer("Example:\n  sele line amend 20261029-fix-login --reason \"scope shrank\" "
                       "--goal \"Login rejects bad credentials\"");
     cmd_amend->callback([&global_opts, &exit_code, amend_args]() {
@@ -926,12 +954,13 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                      "Reopen a done line first", {"sele line show " + ctx.line_id});
             }
             if (amend_args->goal.empty() && amend_args->acceptance.empty() &&
-                amend_args->modules.empty()) {
+                amend_args->modules.empty() && amend_args->epic.empty()) {
                 fail(exit_codes::USAGE_ERROR, "Nothing to amend",
-                     "Pass at least one of --goal/--acceptance/--modules");
+                     "Pass at least one of --goal/--acceptance/--modules/--epic");
             }
 
             const std::string old_frozen = ctx.line.acceptance_sha256;
+            const std::string old_epic = ctx.line.epic;
             if (!amend_args->goal.empty()) {
                 if (amend_args->goal.size() > 120) {
                     fail(exit_codes::USAGE_ERROR, "Goal must be <= 120 characters", "");
@@ -947,6 +976,25 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                     }
                 }
                 ctx.line.modules = modules;
+            }
+            if (!amend_args->epic.empty()) {
+                if (amend_args->epic == "none") {
+                    ctx.line.epic.clear();
+                } else {
+                    const auto epic_path = core::sele::epic_file(ctx.lay, amend_args->epic);
+                    if (!core::fsys::exists(epic_path)) {
+                        fail(exit_codes::STATE_CONFLICT, "Epic not found: " + amend_args->epic,
+                             "List epics", {"sele epic list"});
+                    }
+                    const auto epic = core::model::epic_from_json(core::sele::read_json(epic_path));
+                    if (epic.status != "active") {
+                        fail(exit_codes::STATE_CONFLICT,
+                             "Epic " + epic.id + " is " + epic.status + ", not active",
+                             "Reopen it first",
+                             {"sele epic reopen " + epic.id + " --reason \"...\""});
+                    }
+                    ctx.line.epic = amend_args->epic;
+                }
             }
             if (!amend_args->acceptance.empty()) {
                 std::vector<core::Acceptance> acceptance;
@@ -983,6 +1031,10 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 ctx.line.frozen_at = core::sele::utc_now();
             }
             ng::save_line(ctx);
+            if (ctx.line.epic != old_epic) {
+                ng::append_log(ctx, "line.epic",
+                               {{"old", old_epic}, {"new", ctx.line.epic}});
+            }
             ng::append_log(ctx, "line.amend",
                            {{"reason", amend_args->reason}, {"old_frozen", old_frozen},
                             {"frozen", ctx.line.acceptance_sha256}});

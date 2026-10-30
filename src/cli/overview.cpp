@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -112,10 +113,15 @@ void register_log(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
 }
 
 void register_overview_cmd(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
+    struct OverviewArgs {
+        std::string epic;
+    };
+    auto args = std::make_shared<OverviewArgs>();
     auto* cmd = app.add_subcommand("overview", "Show all lines, the session pointer and metadata state");
     add_global_opts(cmd, global_opts);
-    cmd->footer("Example:\n  sele overview\n  sele overview --output json");
-    cmd->callback([&global_opts, &exit_code]() {
+    cmd->add_option("--epic", args->epic, "Filter by epic id");
+    cmd->footer("Example:\n  sele overview\n  sele overview --epic auth-overhaul\n  sele overview --output json");
+    cmd->callback([&global_opts, &exit_code, args]() {
         util::Output output(global_opts.output_format);
         exit_code = ng::handle(output, [&] {
             auto ctx = ng::load_root(global_opts);
@@ -125,11 +131,30 @@ void register_overview_cmd(CLI::App& app, GlobalOptions& global_opts, int& exit_
             std::ostringstream text;
             int active = 0;
             int done = 0;
+            struct EpicCount {
+                int total = 0;
+                int active = 0;
+                int blocked = 0;
+                int done = 0;
+                int merged = 0;
+                int abandoned = 0;
+            };
+            std::map<std::string, EpicCount> epic_counts;
 
             for (const auto& directory : line_directories(ctx.lay)) {
                 const auto file = directory / "line.json";
                 if (!core::fsys::exists(file)) continue;
                 const auto line = core::model::line_from_json(core::sele::read_json(file));
+                if (!args->epic.empty() && line.epic != args->epic) continue;
+                if (!line.epic.empty()) {
+                    auto& count = epic_counts[line.epic];
+                    ++count.total;
+                    if (line.status == "active") ++count.active;
+                    else if (line.status == "blocked") ++count.blocked;
+                    else if (line.status == "done") ++count.done;
+                    else if (line.status == "merged") ++count.merged;
+                    else if (line.status == "abandoned") ++count.abandoned;
+                }
                 core::RuntimeState runtime;
                 const auto state_path = core::sele::state_file(ctx.lay, line.id);
                 if (core::fsys::exists(state_path)) {
@@ -158,6 +183,8 @@ void register_overview_cmd(CLI::App& app, GlobalOptions& global_opts, int& exit_
                 item["status"] = line.status;
                 item["goal"] = line.goal;
                 item["current"] = current;
+                item["epic"] = line.epic.empty() ? nlohmann::json(nullptr)
+                                                 : nlohmann::json(line.epic);
                 item["tasks"] = nlohmann::json::object({{"done", tasks_done}, {"total", tasks_total}});
                 item["acceptance"] = nlohmann::json::object({{"pass", summary.passed},
                                                               {"fail", summary.failed},
@@ -182,6 +209,41 @@ void register_overview_cmd(CLI::App& app, GlobalOptions& global_opts, int& exit_
             if (!pointer.task.empty()) text << '/' << pointer.task;
             text << "\nLines: " << items.size() << " total, " << active << " active, " << done
                  << " done";
+
+            nlohmann::json epics = nlohmann::json::array();
+            if (core::fsys::exists(ctx.lay.epics)) {
+                for (const auto& entry : fs::directory_iterator(ctx.lay.epics)) {
+                    if (!entry.is_directory()) continue;
+                    const auto file = entry.path() / "epic.json";
+                    if (!core::fsys::exists(file)) continue;
+                    const auto epic = core::model::epic_from_json(core::sele::read_json(file));
+                    if (!args->epic.empty() && epic.id != args->epic) continue;
+                    const auto found = epic_counts.find(epic.id);
+                    const EpicCount count = found == epic_counts.end() ? EpicCount{} : found->second;
+                    nlohmann::json item;
+                    item["id"] = epic.id;
+                    item["goal"] = epic.goal;
+                    item["status"] = epic.status;
+                    item["lines"] = nlohmann::json::object({{"total", count.total},
+                                                            {"active", count.active},
+                                                            {"blocked", count.blocked},
+                                                            {"done", count.done},
+                                                            {"merged", count.merged},
+                                                            {"abandoned", count.abandoned}});
+                    epics.push_back(item);
+                }
+            }
+            if (!epics.empty()) {
+                text << "\nEpics:";
+                for (const auto& epic : epics) {
+                    text << "\n  " << epic["status"].get<std::string>() << "  "
+                         << epic["id"].get<std::string>() << "  "
+                         << epic["lines"]["total"].get<int>() << " lines  "
+                         << epic["goal"].get<std::string>();
+                }
+            } else {
+                text << "\nEpics: 0";
+            }
             if (meta_dirty) text << "\nMetadata: uncommitted .sele changes";
 
             nlohmann::json result;
@@ -189,6 +251,7 @@ void register_overview_cmd(CLI::App& app, GlobalOptions& global_opts, int& exit_
             result["session"] = ctx.session;
             result["current"] = pointer.line;
             result["items"] = items;
+            result["epics"] = epics;
             result["meta_dirty"] = meta_dirty;
             output.print_both(text.str(), result);
         });
@@ -242,6 +305,46 @@ void register_fsck(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 }
             }
             add("schema", schema_ok, schema_ok ? std::to_string(line_count) + " lines" : schema_detail);
+
+            bool epic_schema_ok = true;
+            std::string epic_schema_detail = "no epics";
+            if (core::fsys::exists(ctx.lay.epics)) {
+                for (const auto& entry : fs::directory_iterator(ctx.lay.epics)) {
+                    if (!entry.is_directory()) continue;
+                    const auto file = entry.path() / "epic.json";
+                    if (!core::fsys::exists(file)) {
+                        epic_schema_ok = false;
+                        epic_schema_detail = "missing epic.json in " + entry.path().filename().string();
+                        break;
+                    }
+                    try {
+                        const auto epic = core::model::epic_from_json(core::sele::read_json(file));
+                        if (!core::sele::valid_epic_id(epic.id) || epic.goal.empty() ||
+                            (epic.status != "active" && epic.status != "done" &&
+                             epic.status != "abandoned")) {
+                            epic_schema_ok = false;
+                            epic_schema_detail = "invalid epic: " + epic.id;
+                            break;
+                        }
+                        if (epic.status == "done" && epic.closed_at.empty()) {
+                            epic_schema_ok = false;
+                            epic_schema_detail = "epic " + epic.id + " is done without closed_at";
+                            break;
+                        }
+                        if (epic.status == "abandoned" && !epic.has_abandoned) {
+                            epic_schema_ok = false;
+                            epic_schema_detail = "epic " + epic.id + " is abandoned without reason";
+                            break;
+                        }
+                        epic_schema_detail = "ok";
+                    } catch (const std::exception& error) {
+                        epic_schema_ok = false;
+                        epic_schema_detail = error.what();
+                        break;
+                    }
+                }
+            }
+            add("epic_schema", epic_schema_ok, epic_schema_detail);
 
             // Linear chain + frozen + done consistency, per line.
             std::string chain_detail = "ok";
@@ -313,6 +416,44 @@ void register_fsck(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             add("task_graph", chain_ok, chain_detail);
             add("frozen_acceptance", frozen_ok, frozen_detail);
             add("done_consistency", done_ok, done_detail);
+
+            bool epic_refs_ok = true;
+            std::string epic_refs_detail = "ok";
+            {
+                std::map<std::string, std::string> epic_status;
+                if (core::fsys::exists(ctx.lay.epics)) {
+                    for (const auto& entry : fs::directory_iterator(ctx.lay.epics)) {
+                        if (!entry.is_directory()) continue;
+                        const auto file = entry.path() / "epic.json";
+                        if (!core::fsys::exists(file)) continue;
+                        try {
+                            const auto epic = core::model::epic_from_json(core::sele::read_json(file));
+                            epic_status[epic.id] = epic.status;
+                        } catch (...) {
+                        }
+                    }
+                }
+                for (const auto& directory : line_directories(ctx.lay)) {
+                    const auto file = directory / "line.json";
+                    if (!core::fsys::exists(file)) continue;
+                    const auto line = core::model::line_from_json(core::sele::read_json(file));
+                    if (line.epic.empty()) continue;
+                    const auto found = epic_status.find(line.epic);
+                    if (found == epic_status.end()) {
+                        epic_refs_ok = false;
+                        epic_refs_detail = "line " + line.id + " references missing epic " + line.epic;
+                        break;
+                    }
+                    if (found->second == "done" &&
+                        (line.status == "active" || line.status == "blocked")) {
+                        epic_refs_ok = false;
+                        epic_refs_detail = "epic " + line.epic + " is done but line " + line.id +
+                                           " is " + line.status;
+                        break;
+                    }
+                }
+            }
+            add("epic_consistency", epic_refs_ok, epic_refs_detail);
 
             const auto log_result = core::journal::read(ctx.lay.log);
             add("log_parse", log_result.bad_lines == 0,

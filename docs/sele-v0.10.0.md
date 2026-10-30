@@ -104,15 +104,15 @@ sele line archive <id>
 
 | 命令 | 关键参数 | 作用 |
 |---|---|---|
-| `line new <slug>` | `--goal`（必填）、`--acceptance "desc::check"`（可重复）、`--modules a,b`（必填）、`--type`、`--id` | 建 draft；id 默认 `<UTC日期>-<slug>` |
-| `line list` | `--status`、`--all` | 列表；`--all` 含归档线（`archived:true`） |
+| `line new <slug>` | `--goal`（必填）、`--acceptance "desc::check"`（可重复）、`--modules a,b`（必填）、`--type`、`--id`、`--epic` | 建 draft；id 默认 `<UTC日期>-<slug>`；可关联 epic |
+| `line list` | `--status`、`--epic`、`--all` | 列表；`--all` 含归档线（`archived:true`） |
 | `line show [<id>]` | — | 任务、验收、阻塞点 |
 | `line check [<id>]` | `--strict` | 任务图/冻结/模块检查；失败退 3 |
 | `line open <id>` | — | draft→active；需 ≥1 task、git 干净 |
 | `line switch <id>` | — | 切当前会话（git switch + 会话指针） |
 | `line block <id> --reason` | 必填 | active→blocked |
 | `line unblock <id>` | — | blocked→active |
-| `line amend <id> --reason` | `--goal`/`--acceptance`/`--modules` | 改计划并重算冻结哈希 |
+| `line amend <id> --reason` | `--goal`/`--acceptance`/`--modules`/`--epic` | 改计划并重算冻结哈希；`--epic none` 解除关联 |
 | `line done [<id>]` | `--no-commit` | active→done；默认提交元数据 |
 | `line reopen <id> --reason` | 必填 | done→active |
 | `line abandon <id> --reason` | 必填 | 放弃（保留记录） |
@@ -147,8 +147,20 @@ sele line archive <id>
 | `worktree add <line>` | `--path` | 为线创建独立工作树 |
 | `worktree list` | — | 已记录的 worktree（`present` 表示目录存在） |
 | `worktree remove <line>` | `--force` | 删除工作树并清指针 |
-| `init` | `--legacy` | 建 `.sele/`，缺 `AGENTS.md` / `.sele/CONTRACT.md` 时生成；`--legacy` 建旧体系 |
+| `init` | — | 建 `.sele/`，缺 `AGENTS.md` / `.sele/CONTRACT.md` 时生成 |
 | `version` | — | 版本与依赖版本 |
+
+### epic
+
+| 命令 | 关键参数 | 作用 |
+|---|---|---|
+| `epic new <id>` | `--goal`（必填） | 创建长期目标容器（active） |
+| `epic list` | `--status` | 列表 + 子线计数 |
+| `epic show <id>` | — | 目标、子线、进度、阻塞 |
+| `epic amend <id>` | `--goal`、`--reason`（必填） | 改目标 |
+| `epic close <id>` | `--force` | 关闭（子线需结束） |
+| `epic reopen <id>` | `--reason`（必填） | 重新打开 |
+| `epic abandon <id>` | `--reason`（必填） | 放弃 |
 
 `<line>` 省略时取会话指针；`<task>` / `<A-id>` 是 `T1` / `A1` 形式的 id。
 
@@ -280,14 +292,13 @@ revert 会 `git reset --hard`，只用于未合并的线；merged/abandoned 只�
 
 ---
 
-## 12. 双模式与旧体系
+## 12. 旧体系（历史）
 
-- 检测顺序：先向上找 `.sele/`，再找 `.design/`。
-- `.sele/` 项目可用：`line` / `task` / `acceptance` / `overview` / `log` / `fsck` / `worktree` / `version`。
-- `.design/` 项目可用旧命令：`new` / `append-decision` / `status` / `lint` / `close` / `version`。
-- 两者同时存在时旧命令仍可用（迁移期）。
-- `sele init` 允许在已有 `.design/.agent` 的目录创建 `.sele/`（旧目录保留），不会覆盖已有的 `AGENTS.md`。
-- 在新项目里跑旧命令或用 `status` 会退 4 并提示替代命令；旧体系用 `sele status`，新体系用 `sele overview`。
+0.11 起 sele 只支持 `.sele/`：
+
+- 旧命令 `new` / `append-decision` / `status` / `lint` / `close` 已删除；
+- `.design/` 与 `.agent/` 不再识别，只作为历史文件保留；
+- 旧 `sele init --legacy` 已移除，`init` 只创建 `.sele/`。
 
 ---
 

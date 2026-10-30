@@ -24,6 +24,7 @@ struct Line {
     std::string goal;
     std::vector<Acceptance> acceptance;
     std::vector<std::string> modules;
+    std::string epic;
     std::string created_at;
     std::string created_by;
     std::string status = "draft";
@@ -83,6 +84,20 @@ struct RuntimeState {
     std::string rebase_onto;
 };
 
+struct Epic {
+    int schema_version = 1;
+    int version = 1;
+    std::string id;
+    std::string goal;
+    std::string status = "active";
+    std::string created_at;
+    std::string created_by;
+    std::string closed_at;
+    bool has_abandoned = false;
+    std::string abandoned_reason;
+    std::string abandoned_at;
+};
+
 namespace model {
 
 ojson to_json(const Line& line);
@@ -93,6 +108,9 @@ TaskSpec task_from_json(const ojson& value);
 
 ojson to_json(const RuntimeState& runtime);
 RuntimeState runtime_from_json(const ojson& value);
+
+ojson to_json(const Epic& epic);
+Epic epic_from_json(const ojson& value);
 
 std::string goal_digest(const Line& line);
 std::string acceptance_digest(const Line& line);

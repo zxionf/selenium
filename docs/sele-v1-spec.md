@@ -1,7 +1,7 @@
-# sele v0.11 规格（.sele 体系）
+# sele v0.12 规格（.sele 体系）
 
-> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase + v0.7 worktree + v0.8 log --events + v0.9 fork/join + v0.10 archive + v0.11 移除 legacy 兼容/提交信息可配置）  
-> 版本：0.11.1  
+> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase + v0.7 worktree + v0.8 log --events + v0.9 fork/join + v0.10 archive + v0.11 移除 legacy/提交信息可配置 + v0.12 epic）  
+> 版本：0.12.0  
 > 定位：以 `.sele/` 作为工具私有状态目录（类比 `.git/`），用「线（line）→ 任务（task）→ 验收（acceptance）」的显式状态机替代 `.design/.agent` 的自由文本状态。
 > 与 `docs/sele-e.md` 的差异见 §13。本文是**实现依据**，与 `sele-e.md` 冲突处以本文为准。
 
@@ -656,7 +656,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 63 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝、`log --events` 合并、fork/join 并行与组约束、`archive` 移动/只读/幂等/前置拒绝、`init` 生成 AGENTS.md 与不覆盖已有文件、与 `.design/.agent` 共存初始化、`init` 生成 `.sele/CONTRACT.md` 并在 AGENTS 中关联。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 69 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝、`log --events` 合并、fork/join 并行与组约束、`archive` 移动/只读/幂等/前置拒绝、`init` 生成 AGENTS.md 与不覆盖已有文件、与 `.design/.agent` 共存初始化、`init` 生成 `.sele/CONTRACT.md` 并在 AGENTS 中关联。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|
@@ -747,3 +747,54 @@ src/
 3. 跨线 modules 冲突在 v0.3 只告警；v0.4 merge 时是否阻断，待定。
 4. `main` 的基线记录：`base_commit` 已在 `line open` 时写入；`head_commit` 仍需时再补。
 5. 多仓库线：v0.4+ 需要全局 `~/.sele/` 索引，本文不涉及。
+
+---
+
+## 15. Epic（v0.12）
+
+Epic 是长期目标容器，跨多条 line；不建分支、不做验收。完整设计见 `docs/feat-epic.md`。
+
+### 15.1 数据模型
+
+- `.sele/epics/<id>/epic.json`（tracked）：`schema_version` / `version` / `id` / `goal` / `status` / `created_at` / `created_by` / `closed_at` / `abandoned`。
+- `line.json` 新增 `epic`（string | null）。
+- epic id：`^[a-z][a-z0-9-]{2,40}$`，不带日期；line id 保持日期前缀。
+
+### 15.2 状态机
+
+```
+active ──close──> done ──reopen──> active
+   └──abandon──> abandoned
+```
+
+- `close` 前置：所有子线状态 ∈ {done, merged, abandoned}；空 epic 允许；`--force` 可跳过 active/blocked 检查。
+- `done` 不能直接 `abandon`；`abandoned` 是终态。
+- epic 没有 `blocked`；子线阻塞只在 `epic show` 中展示。
+
+### 15.3 命令
+
+| 命令 | 作用 |
+|---|---|
+| `epic new <id> --goal` | 创建 active epic |
+| `epic list [--status]` | 列表 + 子线计数 |
+| `epic show <id>` | 目标、子线、进度、阻塞 |
+| `epic amend <id> --goal --reason` | 改目标 |
+| `epic close <id> [--force]` | 关闭 |
+| `epic reopen <id> --reason` | 重新打开 |
+| `epic abandon <id> --reason` | 放弃 |
+| `line new --epic <id>` / `line amend --epic <id\|none>` | 关联/解除 |
+| `line list --epic <id>` / `overview --epic <id>` | 过滤 |
+
+### 15.4 一致性与审计
+
+- `fsck` 新增 `epic_schema`（schema/id/goal/status/closed_at/abandoned）与 `epic_consistency`（line.epic 引用存在、done epic 不得有 active/blocked 子线）。
+- `log.jsonl` 新增 `epic.new` / `epic.amend` / `epic.close` / `epic.reopen` / `epic.abandon` / `line.epic`。
+- `line archive` 保留 `epic` 字段；`epic show` 同时扫描 `lines/` 与 `archive/`，归档线计入 `summary.archived`。
+
+### 15.5 与 git 的关系
+
+- epic 不建分支、不产生 commit；`epic.json` 随下一次 `task checkpoint` / `line done` 或手动提交入库。
+
+### 15.6 非目标
+
+epic 级 acceptance/milestone、epic 分支/merge/rebase、epic 级 task、epic 级 decision、epic 归档、跨仓库 epic、epic modules。

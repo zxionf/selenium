@@ -53,6 +53,7 @@ ojson to_json(const Line& line) {
     }
     value["acceptance"] = acceptance;
     value["modules"] = string_array(line.modules);
+    value["epic"] = line.epic.empty() ? ojson(nullptr) : ojson(line.epic);
     value["created_at"] = line.created_at;
     value["created_by"] = line.created_by;
     value["status"] = line.status;
@@ -111,6 +112,7 @@ Line line_from_json(const ojson& value) {
     line.created_by = str(value, "created_by");
     line.status = str(value, "status", "draft");
     line.modules = strings(value, "modules");
+    line.epic = str(value, "epic");
 
     if (value.contains("acceptance") && value["acceptance"].is_array()) {
         for (const auto& item : value["acceptance"]) {
@@ -245,6 +247,45 @@ RuntimeState runtime_from_json(const ojson& value) {
         }
     }
     return runtime;
+}
+
+ojson to_json(const Epic& epic) {
+    ojson value = ojson::object();
+    value["schema_version"] = epic.schema_version;
+    value["version"] = epic.version;
+    value["id"] = epic.id;
+    value["goal"] = epic.goal;
+    value["status"] = epic.status;
+    value["created_at"] = epic.created_at;
+    value["created_by"] = epic.created_by;
+    value["closed_at"] = epic.closed_at.empty() ? ojson(nullptr) : ojson(epic.closed_at);
+    if (epic.has_abandoned) {
+        ojson abandoned = ojson::object();
+        abandoned["reason"] = epic.abandoned_reason;
+        abandoned["at"] = epic.abandoned_at;
+        value["abandoned"] = abandoned;
+    } else {
+        value["abandoned"] = nullptr;
+    }
+    return value;
+}
+
+Epic epic_from_json(const ojson& value) {
+    Epic epic;
+    epic.schema_version = value.value("schema_version", 1);
+    epic.version = value.value("version", 1);
+    epic.id = str(value, "id");
+    epic.goal = str(value, "goal");
+    epic.status = str(value, "status", "active");
+    epic.created_at = str(value, "created_at");
+    epic.created_by = str(value, "created_by");
+    epic.closed_at = str(value, "closed_at");
+    if (value.contains("abandoned") && value["abandoned"].is_object()) {
+        epic.has_abandoned = true;
+        epic.abandoned_reason = str(value["abandoned"], "reason");
+        epic.abandoned_at = str(value["abandoned"], "at");
+    }
+    return epic;
 }
 
 std::string goal_digest(const Line& line) {

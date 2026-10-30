@@ -1053,6 +1053,87 @@ test_commit_message_zh_module() {
     rm -rf "$proj"
 }
 
+test_epic_lifecycle() {
+    local proj
+    proj=$(setup_next)
+    "$BIN" --root "$proj" epic new auth --goal "认证重构" >/dev/null
+    jq -e '.status == "active"' "$proj/.sele/epics/auth/epic.json" >/dev/null
+    "$BIN" --root "$proj" epic close auth >/dev/null
+    jq -e '.status == "done" and .closed_at != null' "$proj/.sele/epics/auth/epic.json" >/dev/null
+    "$BIN" --root "$proj" epic reopen auth --reason "new scope" >/dev/null
+    jq -e '.status == "active" and .closed_at == null' "$proj/.sele/epics/auth/epic.json" >/dev/null
+    "$BIN" --root "$proj" epic abandon auth --reason "cancel" >/dev/null
+    jq -e '.status == "abandoned" and .abandoned.reason == "cancel"' \
+        "$proj/.sele/epics/auth/epic.json" >/dev/null
+    rm -rf "$proj"
+}
+
+test_epic_line_link() {
+    local proj id
+    proj=$(setup_next)
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" epic new auth --goal "认证" >/dev/null
+    "$BIN" --root "$proj" task add "任务" --modules auth >/dev/null
+    "$BIN" --root "$proj" line amend "$id" --epic auth --reason "link" >/dev/null
+    jq -e '.epic == "auth"' "$proj/.sele/lines/$id/line.json" >/dev/null
+    "$BIN" --root "$proj" line list --epic auth --output json | jq -e '.items | length == 1' >/dev/null
+    "$BIN" --root "$proj" epic show auth --output json | jq -e '.summary.total == 1' >/dev/null
+    "$BIN" --root "$proj" line amend "$id" --epic none --reason "detach" >/dev/null
+    jq -e '.epic == null' "$proj/.sele/lines/$id/line.json" >/dev/null
+    rm -rf "$proj"
+}
+
+test_epic_close_guard() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" epic new auth --goal "认证" >/dev/null
+    "$BIN" --root "$proj" line amend "$id" --epic auth --reason "link" >/dev/null
+    expect_code 2 "$BIN" --root "$proj" epic close auth
+    "$BIN" --root "$proj" epic close auth --force >/dev/null
+    jq -e '.status == "done"' "$proj/.sele/epics/auth/epic.json" >/dev/null
+    rm -rf "$proj"
+}
+
+test_epic_closed_cannot_link() {
+    local proj
+    proj=$(setup_next)
+    "$BIN" --root "$proj" epic new auth --goal "认证" >/dev/null
+    "$BIN" --root "$proj" epic close auth >/dev/null
+    expect_code 2 "$BIN" --root "$proj" line new x --goal "g" --acceptance "d::c" \
+        --modules auth --epic auth
+    "$BIN" --root "$proj" epic reopen auth --reason "new" >/dev/null
+    "$BIN" --root "$proj" line new x --goal "g" --acceptance "d::c" \
+        --modules auth --epic auth >/dev/null
+    rm -rf "$proj"
+}
+
+test_epic_fsck() {
+    local proj id
+    proj=$(setup_next)
+    "$BIN" --root "$proj" epic new auth --goal "认证" >/dev/null
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" line amend "$id" --epic auth --reason "link" >/dev/null
+    rm "$proj/.sele/epics/auth/epic.json"
+    expect_code 3 "$BIN" --root "$proj" fsck
+    rm -rf "$proj"
+}
+
+test_epic_overview() {
+    local proj id
+    proj=$(setup_next)
+    "$BIN" --root "$proj" epic new auth --goal "认证" >/dev/null
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    "$BIN" --root "$proj" line amend "$id" --epic auth --reason "link" >/dev/null
+    "$BIN" --root "$proj" overview --output json | \
+        jq -e '.epics[0].id == "auth" and .items[0].epic == "auth"' >/dev/null
+    "$BIN" --root "$proj" overview --epic auth --output json | jq -e '.items | length == 1' >/dev/null
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init rejects --legacy" test_init_rejects_legacy_flag
 run_test "line new creates draft and session pointer" test_line_new
@@ -1116,5 +1197,11 @@ run_test "init writes .sele/CONTRACT.md and links it from AGENTS" test_init_crea
 run_test "init repairs missing AGENTS/CONTRACT" test_init_repairs_missing_files
 run_test "commit messages: en defaults and --msg override" test_commit_message_en
 run_test "commit messages: zh subject with module scope" test_commit_message_zh_module
+run_test "epic lifecycle: new/close/reopen/abandon" test_epic_lifecycle
+run_test "epic line link and detach" test_epic_line_link
+run_test "epic close refuses active lines" test_epic_close_guard
+run_test "closed epic rejects new lines until reopened" test_epic_closed_cannot_link
+run_test "fsck detects missing epic reference" test_epic_fsck
+run_test "overview includes epics and item epic" test_epic_overview
 
 echo "=== All sele tests passed! ==="

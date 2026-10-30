@@ -95,6 +95,7 @@ sele line archive <id>
 | frozen | 开线时冻结的 goal/acceptance 哈希 | 开线后改计划要 `line amend --reason` |
 | session | 当前会话指向的线 | 多 agent 用 `--session` 隔离 |
 | worktree | 一条线检出到独立目录 | 多线并行写代码时用 |
+| epic | 长期目标容器，跨多条 line | 长期目标用；不建分支、不做验收 |
 | merged / archived | 已合并 / 已归档 | 只读，不能再改 |
 
 ---
@@ -179,6 +180,21 @@ sele line rebase <id> --abort   # 或放弃
 
 merge 冲突时 sele 会自动 `git merge --abort` 并把状态退回 `done`，解决后重试。
 
+### 6.6 Epic（长期目标）
+
+Epic 是跨多条 line 的长期目标容器；它不建分支、不做验收，line 仍是执行与合并单元。
+
+```bash
+sele epic new auth-overhaul --goal "重构认证体系"
+sele line new oauth --goal "..." --acceptance "..." --modules auth --epic auth-overhaul
+sele epic show auth-overhaul
+sele epic close auth-overhaul        # 所有子线结束后；--force 跳过
+sele epic reopen auth-overhaul --reason "..."
+sele epic abandon auth-overhaul --reason "..."
+```
+
+适用：跨阶段、长期存在、没有单一收敛点的目标。一次能收口的目标直接用 line。
+
 ---
 
 ## 7. 命令速查
@@ -212,6 +228,15 @@ merge 冲突时 sele 会自动 `git merge --abort` 并把状态退回 `done`，�
 | `sele task fail --reason` / `retry` | 失败与重试 |
 | `sele task block --reason` / `unblock` | 阻塞与恢复 |
 | `sele task revert <task>` | 撤销任务 |
+
+### epic
+
+| 命令 | 作用 |
+|---|---|
+| `sele epic new <id> --goal "..."` | 建长期目标（active） |
+| `sele epic list` / `show <id>` | 列表 / 详情 |
+| `sele epic close <id> [--force]` / `reopen` / `abandon` | 关闭 / 重新打开 / 放弃 |
+| `sele line new ... --epic <id>` / `sele line amend <id> --epic <id\|none>` | 关联 / 解除 |
 
 ### 验收与全局
 
@@ -303,6 +328,9 @@ sele 会 abort 并把线退回 `done`。在 `sele/<id>` 分支解决冲突、提
 **Q：多个 agent 同时工作？**
 给每个 agent 不同的 `--session`（或 `SELE_SESSION`），或各自用 `worktree`。
 
+**Q：什么时候用 epic？**
+目标跨多个阶段、长期存在（例如“重构认证体系”）时用 epic；能一次收口的目标直接用 line。epic 不建分支、不做验收，验收仍在子 line。
+
 **Q：`sele init` 说已初始化？**
 `.sele/` 已存在且初始化文件齐全时退 2；缺 `AGENTS.md` 或 `.sele/CONTRACT.md` 时会自动补齐（repair 模式）。
 
@@ -315,6 +343,7 @@ sele 会 abort 并把线退回 `done`。在 `sele/<id>` 分支解决冲突、提
 | `docs/sele-user-guide.md` | 本文：人类视角的安装、工作流、FAQ |
 | `docs/sele-config.md` | 配置字段、环境变量、提交信息规则 |
 | `docs/sele-v0.10.0.md` | 面向 agent 的操作手册（命令细节、JSON 契约） |
+| `docs/feat-epic.md` | Epic 完整设计：数据模型、状态机、命令、校验、非目标 |
 | `docs/sele-v1-spec.md` | 实现规格：状态机、数据模型、并发、审计 |
 | `docs/sele-git.md` | 与 git 的协作：提交时刻表、干净判定、冲突 |
 | `docs/README.md` | 文档索引 |

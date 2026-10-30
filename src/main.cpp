@@ -51,6 +51,7 @@ int main(int argc, char** argv) {
     cli::register_acceptance(app, global_opts, exit_code);
     cli::register_overview(app, global_opts, exit_code);
     cli::register_worktree(app, global_opts, exit_code);
+    cli::register_epic(app, global_opts, exit_code);
 
     try {
         app.parse(argc, argv);

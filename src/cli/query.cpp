@@ -295,7 +295,8 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     log_cmd->add_option("--task", log_args->task, "Filter by task id");
     log_cmd->add_flag("--decisions", log_args->decisions, "Only decision events");
     log_cmd->add_option("--limit", log_args->limit, "Maximum events")->default_val(20);
-    log_cmd->callback([&global, &exit_code, log_args]() {
+    log_cmd->callback([&global, &exit_code, log_args, log_cmd]() {
+        if (log_cmd->got_subcommand("compact")) return;
         const auto ctx = make_context(global);
         try {
             auto events = core::event::load(ctx->paths);

@@ -4,25 +4,25 @@
       "desc": "归档可逆：plan archive/restore 移动文件并保留 manifest",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T13:48:13Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "索引可重建：cache rebuild + task locate",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T13:48:13Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "回滚与协调：task revert、reconcile、D4-D6 检测",
       "id": "PA3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T13:48:13Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T13:38:12Z",
@@ -44,5 +44,5 @@
       "id": "revert"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

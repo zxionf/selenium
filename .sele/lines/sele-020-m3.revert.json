@@ -4,9 +4,9 @@
       "desc": "revert 与 reconcile 可用",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T13:48:13Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "created_at": "2026-10-30T13:38:12Z",
@@ -18,5 +18,5 @@
     "cli"
   ],
   "plan": "sele-020-m3",
-  "status": "active"
+  "status": "done"
 }

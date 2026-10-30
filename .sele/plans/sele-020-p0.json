@@ -4,25 +4,25 @@
       "desc": "task done 必须产生 checkpoint",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:26:21Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "next 遵守 I1 与创建顺序",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:26:21Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "迁移事件带 reason",
       "id": "PA3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:26:21Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T14:23:31Z",
@@ -44,5 +44,5 @@
       "id": "reason"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

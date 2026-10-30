@@ -1,0 +1,31 @@
+{
+  "entity": {
+    "line": "reason",
+    "plan": "sele-020-p0",
+    "step": "S1",
+    "task": "T1",
+    "task_uid": "tsk_01M66K3HEPWMKJ1TJH1Z2XTNKG",
+    "type": "step"
+  },
+  "git": {
+    "branch": "sele/20261030-v2-core",
+    "commit": "12bb944bdb385d4db36f275579e097d587614897",
+    "diff_stat": " .sele/checkpoints/2026-10/ck-20261030-013.json | 36 ++++++++++++++++++++++++++\n .sele/lines/sele-020-p0.checkpoint.json        |  8 +++---\n .sele/lines/sele-020-p0.next.json              |  8 +++---\n .sele/log.jsonl                                | 18 +++++++++++++\n .sele/tasks/31/169dfab117e69d.json             | 16 ++++++------\n .sele/tasks/3b/f4015daefb7987.json             | 19 +++++++++++---\n .sele/tasks/d4/c693703c260986.json             | 25 +++++++++++++-----\n src/cli/task.cpp                               | 25 +++++++++++++-----\n 8 files changed, 124 insertions(+), 31 deletions(-)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/checkpoints/2026-10/ck-20261030-013.json",
+      ".sele/lines/sele-020-p0.checkpoint.json",
+      ".sele/lines/sele-020-p0.next.json",
+      ".sele/log.jsonl",
+      ".sele/tasks/31/169dfab117e69d.json",
+      ".sele/tasks/3b/f4015daefb7987.json",
+      ".sele/tasks/d4/c693703c260986.json",
+      "src/cli/task.cpp"
+    ],
+    "source": "sele",
+    "tree": "ab7031d63354062a638e806d7f9a31d77277b4ab"
+  },
+  "id": "ck-20261030-014",
+  "status": "valid",
+  "ts": "2026-10-30T14:26:21Z"
+}

@@ -395,17 +395,4 @@ void check_graph(const std::vector<core::TaskSpec>& tasks, std::vector<std::stri
     }
 }
 
-bool legacy_guard(const GlobalOptions& opts, util::Output& out, int& exit_code, const char* command) {
-    const auto start = opts.root.empty() ? fs::current_path() : opts.root;
-    const auto root = core::sele::find_root(start);
-    if (!root) return true;
-    if (has_dir_upwards(start, ".design")) return true;
-
-    out.error(std::string(command) + " is a legacy command for .design/.agent projects",
-              "Use the line/task commands for .sele projects",
-              {"sele line list", "sele overview"});
-    exit_code = exit_codes::ENV_ERROR;
-    return false;
-}
-
 } // namespace cli::ng

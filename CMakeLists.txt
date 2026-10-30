@@ -54,11 +54,6 @@ add_executable(sele
     src/main.cpp
     src/cli/commands.cpp
     src/cli/init.cpp
-    src/cli/new.cpp
-    src/cli/append_decision.cpp
-    src/cli/status.cpp
-    src/cli/lint.cpp
-    src/cli/close.cpp
     src/cli/version.cpp
     src/cli/line.cpp
     src/cli/task.cpp
@@ -66,10 +61,7 @@ add_executable(sele
     src/cli/overview.cpp
     src/cli/worktree.cpp
     src/cli/nextgen.cpp
-    src/core/root.cpp
-    src/core/id.cpp
     src/core/template.cpp
-    src/core/git.cpp
     src/core/version.cpp
     src/core/fs.cpp
     src/core/hash.cpp

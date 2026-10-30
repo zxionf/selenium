@@ -4,9 +4,9 @@
       "desc": "check 覆盖文件名/孤儿/索引/归档/任务环",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:39:03Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T14:39:03Z",
@@ -20,5 +20,5 @@
       "id": "check"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

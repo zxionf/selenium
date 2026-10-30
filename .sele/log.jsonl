@@ -41,3 +41,4 @@
 {"ts":"2026-10-30T07:46:21Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-user-docs","acceptance":"A2","evidence":"docs/sele-config.md 217 行；覆盖 config 全字段、环境变量、优先级、示例与迁移"}
 {"ts":"2026-10-30T07:46:21Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-user-docs","acceptance":"A3","evidence":"docs/README.md 已登记 user-guide 与 config 两行"}
 {"ts":"2026-10-30T07:46:21Z","actor":"zxionf","op":"line.done","line":"20261030-user-docs"}
+{"ts":"2026-10-30T07:46:21Z","actor":"zxionf","op":"line.merge","line":"20261030-user-docs","commit":"53ccf7e","base":"main"}

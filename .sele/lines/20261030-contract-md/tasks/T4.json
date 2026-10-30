@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "T4",
+  "title": "init 在 .sele 已存在时补齐缺失的 AGENTS/CONTRACT",
+  "depends": [
+    "T3"
+  ],
+  "modules": [
+    "cli"
+  ],
+  "group": null,
+  "created_at": "2026-10-30T06:01:45Z",
+  "created_by": "zxionf"
+}

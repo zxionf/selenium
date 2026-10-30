@@ -33,7 +33,7 @@
 ```bash
 git init -b main
 git add -A && git commit -m "init"      # 必须有初始提交
-sele init                                # 创建 .sele/；缺 AGENTS.md 时一并生成
+sele init                                # 创建 .sele/；缺 AGENTS.md 与 .sele/CONTRACT.md 时生成
 ```
 
 - `line open` / `task checkpoint` / `line merge` / `line rebase` 要求 git 仓库且有提交。
@@ -147,7 +147,7 @@ sele line archive <id>
 | `worktree add <line>` | `--path` | 为线创建独立工作树 |
 | `worktree list` | — | 已记录的 worktree（`present` 表示目录存在） |
 | `worktree remove <line>` | `--force` | 删除工作树并清指针 |
-| `init` | `--legacy` | 建 `.sele/`，缺 `AGENTS.md` 时生成；`--legacy` 建旧体系 |
+| `init` | `--legacy` | 建 `.sele/`，缺 `AGENTS.md` / `.sele/CONTRACT.md` 时生成；`--legacy` 建旧体系 |
 | `version` | — | 版本与依赖版本 |
 
 `<line>` 省略时取会话指针；`<task>` / `<A-id>` 是 `T1` / `A1` 形式的 id。

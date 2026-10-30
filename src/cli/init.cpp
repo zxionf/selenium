@@ -14,6 +14,9 @@
 #include "util/exit_codes.hpp"
 #include "util/output.hpp"
 
+#include <algorithm>
+#include <vector>
+
 namespace fs = std::filesystem;
 
 namespace cli {
@@ -64,13 +67,9 @@ void init_legacy(const fs::path& target, util::Output& output, int& exit_code) {
 
 void init_next(const fs::path& target, util::Output& output, int& exit_code) {
     const auto layout = core::sele::layout(target);
-    if (core::fsys::exists(layout.sele)) {
-        output.error("Already initialized: .sele/ already exists in " + target.string(),
-                     "Use --legacy to create .design/.agent instead");
-        exit_code = exit_codes::STATE_CONFLICT;
-        return;
-    }
-
+    const auto agents = target / "AGENTS.md";
+    const auto contract = layout.sele / "CONTRACT.md";
+    const bool existed = core::fsys::exists(layout.sele);
     // Coexistence is allowed: keep legacy .design/.agent untouched while adding .sele/.
     const bool legacy_present = core::fsys::exists(target / ".design") ||
                                 core::fsys::exists(target / ".agent");
@@ -87,33 +86,61 @@ void init_next(const fs::path& target, util::Output& output, int& exit_code) {
     core::fsys::ensure_dir(layout.lines);
     core::fsys::ensure_dir(layout.state);
     core::fsys::ensure_dir(layout.sessions);
-    core::fsys::write_atomic(layout.sele / "config.json", config.dump(2) + "\n");
-    core::fsys::write_atomic(layout.log, std::string());
-    core::fsys::write_atomic(layout.sele / ".gitignore", "runtime/\n");
-    core::fsys::write_atomic(layout.sele / ".gitattributes", "log.jsonl merge=union\n");
 
-    // AGENTS.md is the agent entry point; never overwrite a user-provided one.
-    const auto agents = target / "AGENTS.md";
-    bool agents_written = false;
-    if (!core::fsys::exists(agents)) {
-        core::fsys::write_atomic(agents, core::render_agents_template());
-        agents_written = true;
+    std::vector<std::string> created;
+    auto ensure_file = [&](const fs::path& path, const std::string& content,
+                           const std::string& label) {
+        if (core::fsys::exists(path)) return;
+        core::fsys::write_atomic(path, content);
+        created.push_back(label);
+    };
+    ensure_file(layout.sele / "config.json", config.dump(2) + "\n", "config.json");
+    ensure_file(layout.log, std::string(), "log.jsonl");
+    ensure_file(layout.sele / ".gitignore", "runtime/\n", ".gitignore");
+    ensure_file(layout.sele / ".gitattributes", "log.jsonl merge=union\n", ".gitattributes");
+    ensure_file(agents, core::render_agents_template(), "AGENTS.md");
+    ensure_file(contract, core::render_sele_contract_template(), ".sele/CONTRACT.md");
+
+    const bool agents_written =
+        std::find(created.begin(), created.end(), "AGENTS.md") != created.end();
+    const bool contract_written =
+        std::find(created.begin(), created.end(), ".sele/CONTRACT.md") != created.end();
+
+    if (existed && created.empty()) {
+        output.error("Already initialized: .sele/ already exists in " + target.string(),
+                     "Use --legacy to create .design/.agent instead");
+        exit_code = exit_codes::STATE_CONFLICT;
+        return;
+    }
+
+    std::string created_text;
+    for (std::size_t i = 0; i < created.size(); ++i) {
+        if (i != 0) created_text += ", ";
+        created_text += created[i];
     }
 
     nlohmann::json result;
     result["initialized"] = true;
-    result["mode"] = "next";
+    result["mode"] = existed ? "repair" : "next";
+    result["repaired"] = existed;
+    result["created"] = created;
     result["root"] = target.string();
     result["sele_path"] = layout.sele.string();
     result["agents_path"] = agents.string();
     result["agents_written"] = agents_written;
+    result["contract_path"] = contract.string();
+    result["contract_written"] = contract_written;
     result["legacy_present"] = legacy_present;
 
     std::ostringstream text;
-    text << "Initialized .sele/ in " << target.string() << '\n'
+    text << (existed ? "Repaired .sele/ in " : "Initialized .sele/ in ") << target.string()
+         << '\n'
          << "  sele: " << layout.sele.string() << '\n'
          << "  agents: " << agents.string()
-         << (agents_written ? "" : " (existing, untouched)") << '\n';
+         << (agents_written ? "" : " (existing, untouched)") << '\n'
+         << "  contract: " << contract.string()
+         << (contract_written ? "" : " (existing, untouched)") << '\n';
+    if (!created_text.empty()) text << "  created: " << created_text << '\n';
     if (legacy_present) {
         text << "  legacy: .design/.agent present (kept untouched)\n";
     }

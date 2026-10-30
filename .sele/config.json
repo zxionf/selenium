@@ -7,5 +7,6 @@
   "checkpoint": {
     "strategy": "git-commit",
     "allow_empty": false
-  }
+  },
+  "commit": { "language": "zh", "scope": "module", "task_type": "auto" }
 }

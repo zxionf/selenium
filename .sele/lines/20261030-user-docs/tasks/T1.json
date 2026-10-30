@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "id": "T1",
+  "title": "编写人类使用文档 docs/sele-user-guide.md",
+  "depends": [],
+  "modules": [
+    "docs"
+  ],
+  "group": null,
+  "created_at": "2026-10-30T07:43:02Z",
+  "created_by": "zxionf"
+}

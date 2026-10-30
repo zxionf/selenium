@@ -1,7 +1,7 @@
-# sele v0.10 规格（.sele 体系）
+# sele v0.11 规格（.sele 体系）
 
-> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase + v0.7 worktree + v0.8 log --events + v0.9 fork/join + v0.10 archive）  
-> 版本：0.10.0  
+> 状态：已实现（v0.3 基础 + v0.4 merge/revert + v0.5 task revert + v0.6 rebase + v0.7 worktree + v0.8 log --events + v0.9 fork/join + v0.10 archive + v0.11 移除 legacy 兼容/提交信息可配置）  
+> 版本：0.11.1  
 > 定位：以 `.sele/` 作为工具私有状态目录（类比 `.git/`），用「线（line）→ 任务（task）→ 验收（acceptance）」的显式状态机替代 `.design/.agent` 的自由文本状态。
 > 与 `docs/sele-e.md` 的差异见 §13。本文是**实现依据**，与 `sele-e.md` 冲突处以本文为准。
 
@@ -98,7 +98,8 @@
   "schema_version": 1,
   "actor": "git",
   "modules": { "allow": [] },
-  "checkpoint": { "strategy": "git-commit", "allow_empty": false }
+  "checkpoint": { "strategy": "git-commit", "allow_empty": false },
+  "commit": { "language": "en", "scope": "sele", "task_type": "auto" }
 }
 ```
 
@@ -107,7 +108,10 @@
 | `schema_version` | 固定 1；读到其他值退 4 |
 | `actor` | `"git"` 表示取 `git config user.name`；也可写死字符串；环境变量 `SELE_ACTOR` 优先级最高 |
 | `modules.allow` | 空数组 = 不限制；非空时 `line check` 校验所有 modules 已登记 |
-| `checkpoint.strategy` | v0.3 只认 `"git-commit"`，其他值退 4 |
+| `checkpoint.strategy` | 只认 `"git-commit"`，其他值退 4 |
+| `commit.language` | `en` / `zh`，默认 `en`；只影响 subject 固定词，前缀/id 不翻译 |
+| `commit.scope` | `sele` / `module` / 字面量；`module` 时 task checkpoint 用 `modules[0]`，line 级仍用 `sele` |
+| `commit.task_type` | `auto` / `chore` / `feat` / `fix` / `refactor`；`auto` 按 line.type 映射 |
 
 ### 4.2 `lines/<id>/line.json`
 
@@ -459,8 +463,17 @@ sele line new fix-login \
 - 前置：task `running`、line `active`、当前分支为 `sele/<line>`。
 - 行为：`git add -A && git commit -m <msg|默认>`；无改动时不提交，复用上一个 checkpoint，`changed:false`。`git add -A` 会把 `.sele` 下尚未提交的元数据（`line.json`、`tasks/*.json`、`log.jsonl`）一并提交，因此元数据随 checkpoint 入库；`runtime/` 被 `.sele/.gitignore` 排除。
 - 副作用：runtime 写 `checkpoint=<sha>`、写 events。
-- 默认提交信息：`<line-id>: <task-id> <title>`。
-- 这是 v0.3 中**唯一由 sele 主动创建 commit** 的命令。
+- 默认提交信息见「自动提交信息」；`--msg` 完全覆盖。
+- 这是唯一由 sele 主动创建 commit 的命令。
+
+#### 自动提交信息
+
+- 格式 `<type>(<scope>): <subject>`，前缀始终英文。
+- `type`：`commit.task_type`；`auto` 时 feature→feat、fix→fix、refactor→refactor、chore/spike→chore；非 task 提交固定 `chore`。
+- `scope`：`commit.scope`；`module` 时 task checkpoint 用 `task.modules[0]`，line 级用 `sele`。
+- `subject`：由 `commit.language`（`en`/`zh`）或环境变量 `SELE_COMMIT_LANG` 决定；id、type、scope 不翻译，task title 原样。
+- `--msg` 完全覆盖，不拼前缀。
+- 覆盖 plan、task checkpoint、line done、merge（mark/unmark/merge/record）、rebase。
 
 #### `sele task done <task> [--line <id>]`
 
@@ -643,7 +656,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 61 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝、`log --events` 合并、fork/join 并行与组约束、`archive` 移动/只读/幂等/前置拒绝、`init` 生成 AGENTS.md 与不覆盖已有文件、与 `.design/.agent` 共存初始化、`init` 生成 `.sele/CONTRACT.md` 并在 AGENTS 中关联。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 63 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝、`log --events` 合并、fork/join 并行与组约束、`archive` 移动/只读/幂等/前置拒绝、`init` 生成 AGENTS.md 与不覆盖已有文件、与 `.design/.agent` 共存初始化、`init` 生成 `.sele/CONTRACT.md` 并在 AGENTS 中关联。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|

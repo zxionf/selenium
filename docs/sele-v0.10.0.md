@@ -128,7 +128,7 @@ sele line archive <id>
 | `task add "<title>"` | `--modules a,b`（必填）、`--line`、`--group <g>`、`--depends <t>`（可重复） | 追加任务；默认 depends=链尾 |
 | `task list` | `--line` | 任务与状态 |
 | `task start <task>` | `--line` | pending→running；前驱必须 done |
-| `task checkpoint <task>` | `--msg`、`--line` | 提交代码+元数据，记录 checkpoint |
+| `task checkpoint <task>` | `--msg`、`--line` | 提交代码+元数据，记录 checkpoint；默认消息可用 `config.commit` 配中英文 |
 | `task done <task>` | `--line` | running→done；需 checkpoint 且工作树干净 |
 | `task fail <task> --reason` | 必填 | running→failed |
 | `task retry <task>` | — | failed→running |

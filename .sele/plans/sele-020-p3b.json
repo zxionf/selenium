@@ -4,17 +4,17 @@
       "desc": "agent 提示词可用",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:55:03Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "remap/keep-audit 可用",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:55:03Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T14:52:17Z",
@@ -32,5 +32,5 @@
       "id": "reconcile"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

@@ -1,0 +1,35 @@
+{
+  "entity": {
+    "line": "agent",
+    "plan": "sele-020-p3b",
+    "step": "S1",
+    "task": "T1",
+    "task_uid": "tsk_01M66MR6G9TK4TDFCKCCVD8VGB",
+    "type": "step"
+  },
+  "git": {
+    "branch": "sele/20261030-v2-core",
+    "commit": "16d80b251f51aaac1634169e20fdefbf273354b8",
+    "diff_stat": " .sele/lines/sele-020-p3b.agent.json     |  21 +++++++\n .sele/lines/sele-020-p3b.reconcile.json |  21 +++++++\n .sele/log.jsonl                         |  11 ++++\n .sele/plans/sele-020-p3b.json           |  36 +++++++++++\n .sele/tasks/62/0342b7e1c1a2bf.json      |  49 +++++++++++++++\n .sele/tasks/fe/4804a29ab5a54e.json      |  36 +++++++++++\n CMakeLists.txt                          |   1 +\n src/cli/agent.cpp                       | 107 ++++++++++++++++++++++++++++++++\n src/cli/common.hpp                      |   1 +\n src/cli/git.cpp                         |  86 +++++++++++++++++++++++++\n src/main.cpp                            |   1 +\n tests/sele_v2_tests.sh                  |  37 +++++++++++\n 12 files changed, 407 insertions(+)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/lines/sele-020-p3b.agent.json",
+      ".sele/lines/sele-020-p3b.reconcile.json",
+      ".sele/log.jsonl",
+      ".sele/plans/sele-020-p3b.json",
+      ".sele/tasks/62/0342b7e1c1a2bf.json",
+      ".sele/tasks/fe/4804a29ab5a54e.json",
+      "CMakeLists.txt",
+      "src/cli/agent.cpp",
+      "src/cli/common.hpp",
+      "src/cli/git.cpp",
+      "src/main.cpp",
+      "tests/sele_v2_tests.sh"
+    ],
+    "source": "sele",
+    "tree": "c70885ac315b8ab209b0811bd098b2f03d74e483"
+  },
+  "id": "ck-20261030-021",
+  "status": "valid",
+  "ts": "2026-10-30T14:55:03Z"
+}

@@ -308,6 +308,65 @@ test_step_lock() {
     rm -rf "$ROOT"
 }
 
+test_step_update_delete_move() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step add T1 "s1" --root "$ROOT" --line a >/dev/null
+    "$BIN" step add T1 "s2" --root "$ROOT" --line a >/dev/null
+    "$BIN" step add T1 "s3" --root "$ROOT" --line a >/dev/null
+    "$BIN" step update T1 S1 --title "design" --root "$ROOT" --line a >/dev/null
+    "$BIN" step move T1 S3 --after S1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step delete T1 S2 --reason "not needed" --root "$ROOT" --line a >/dev/null
+    if "$BIN" step list T1 --root "$ROOT" --line a --output json |
+        jq -e '.items | map(.id) == ["S1", "S3"] and .items[0].title == "design"' >/dev/null; then
+        pass "step update/move/delete work"
+    else
+        fail "step update/move/delete work"
+    fi
+    rm -rf "$ROOT"
+}
+
+test_full_ref() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    if "$BIN" task locate a.T1 --root "$ROOT" --output json |
+        jq -e '.task == "T1" and .line == "a"' >/dev/null; then
+        pass "line.T1 resolves"
+    else
+        fail "line.T1 resolves"
+    fi
+    if "$BIN" task locate p.a.T1 --root "$ROOT" --output json |
+        jq -e '.plan == "p" and .line == "a"' >/dev/null; then
+        pass "plan.line.T1 resolves"
+    else
+        fail "plan.line.T1 resolves"
+    fi
+    rm -rf "$ROOT"
+}
+
+test_revert_exec_guard() {
+    setup_git_project
+    local ck
+    ck=$(basename "$(ls "$ROOT"/.sele/checkpoints/*/*.json 2>/dev/null | head -1)" .json)
+    echo "b" > "$ROOT/b.txt"
+    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --root "$ROOT" >/dev/null
+    if [ -z "$ck" ]; then
+        ck=$(basename "$(ls "$ROOT"/.sele/checkpoints/*/*.json | head -1)" .json)
+    fi
+    if expect_code 1 "$BIN" task revert T1 --to "$ck" --line a --root "$ROOT" --exec; then
+        pass "revert --exec requires --yes"
+    else
+        fail "revert --exec requires --yes"
+    fi
+    if "$BIN" task revert T1 --to "$ck" --line a --root "$ROOT" --exec --yes >/dev/null 2>&1; then
+        pass "revert --exec resets git when confirmed"
+    else
+        fail "revert --exec resets git when confirmed"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -513,6 +572,9 @@ test_cross_line_dep
 test_pause_snapshot
 test_skipped_count
 test_step_lock
+test_step_update_delete_move
+test_full_ref
+test_revert_exec_guard
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

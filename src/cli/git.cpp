@@ -19,11 +19,12 @@ namespace {
 bool load_task(Context& ctx, int& exit_code, const std::string& id, const std::string& plan,
                const std::string& line, core::model::Task& out) {
     std::vector<core::model::Task> matches;
+    const auto ref = parse_task_ref(id, plan, line);
     try {
         for (const auto& task : core::store::load_tasks(ctx.paths)) {
-            if (task.id != id) continue;
-            if (!plan.empty() && task.plan != plan) continue;
-            if (!line.empty() && task.line != line) continue;
+            if (task.id != ref.id) continue;
+            if (!ref.plan.empty() && task.plan != ref.plan) continue;
+            if (!ref.line.empty() && task.line != ref.line) continue;
             matches.push_back(task);
         }
     } catch (const std::exception& error) {

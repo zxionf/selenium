@@ -30,11 +30,12 @@ nlohmann::json task_entity(const core::model::Task& task) {
 bool find_task(Context& ctx, int& exit_code, const std::string& id, const std::string& plan,
                const std::string& line, core::model::Task& out) {
     std::vector<core::model::Task> matches;
+    const auto ref = parse_task_ref(id, plan, line);
     try {
         for (const auto& task : core::store::load_tasks(ctx.paths)) {
-            if (task.id != id) continue;
-            if (!plan.empty() && task.plan != plan) continue;
-            if (!line.empty() && task.line != line) continue;
+            if (task.id != ref.id) continue;
+            if (!ref.plan.empty() && task.plan != ref.plan) continue;
+            if (!ref.line.empty() && task.line != ref.line) continue;
             matches.push_back(task);
         }
     } catch (const std::exception& error) {
@@ -189,6 +190,8 @@ struct RevertArgs {
     std::string to;
     std::string reason{"revert to checkpoint"};
     bool with_git{false};
+    bool exec{false};
+    bool yes{false};
 };
 
 struct InsertArgs {
@@ -821,6 +824,9 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     revert_cmd->add_option("--line", revert_args->line, "Line id");
     revert_cmd->add_option("--reason", revert_args->reason, "Decision reason");
     revert_cmd->add_flag("--with-git", revert_args->with_git, "Print the git reset command");
+    revert_cmd->add_flag("--exec", revert_args->exec,
+                         "Execute git reset --hard (requires --yes)");
+    revert_cmd->add_flag("--yes", revert_args->yes, "Confirm the destructive reset");
     revert_cmd->callback([&global, &exit_code, revert_args]() {
         const auto ctx = make_context(global);
         core::model::Task item;
@@ -839,6 +845,37 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                  "Checkpoint " + target.id + " belongs to another task");
             return;
         }
+        if (revert_args->exec) {
+            if (!revert_args->yes) {
+                fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                     "Pass --yes to confirm git reset --hard");
+                return;
+            }
+            const auto status = core::git::run(
+                ctx->paths.root,
+                {"status", "--porcelain", "--", ".", ":(exclude).sele"});
+            if (!status.output.empty()) {
+                fail(*ctx, exit_code, exit_codes::ENV_ERROR,
+                     "Working tree is not clean; commit or stash before --exec");
+                return;
+            }
+            const std::string commit = target.git.value("commit", "");
+            if (commit.empty()) {
+                fail(*ctx, exit_code, exit_codes::ENV_ERROR, "Checkpoint has no commit");
+                return;
+            }
+            const auto reset = core::git::run(ctx->paths.root, {"reset", "--hard", commit});
+            if (reset.code != 0) {
+                fail(*ctx, exit_code, exit_codes::ENV_ERROR, "git reset failed: " + reset.output);
+                return;
+            }
+            ctx->out.print_both("Reset to " + commit + " and reverted " + item.id,
+                                {{"task", item.id},
+                                 {"checkpoint", target.id},
+                                 {"commit", commit}});
+            return;
+        }
+
         const std::string step_id = target.entity.value("step", "");
         int index = -1;
         for (int position = 0; position < static_cast<int>(item.steps.size()); ++position) {

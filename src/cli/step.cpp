@@ -25,11 +25,12 @@ nlohmann::json step_entity(const core::model::Task& task, const core::model::Ste
 bool load_task(Context& ctx, int& exit_code, const std::string& id, const std::string& plan,
                const std::string& line, core::model::Task& out) {
     std::vector<core::model::Task> matches;
+    const auto ref = parse_task_ref(id, plan, line);
     try {
         for (const auto& task : core::store::load_tasks(ctx.paths)) {
-            if (task.id != id) continue;
-            if (!plan.empty() && task.plan != plan) continue;
-            if (!line.empty() && task.line != line) continue;
+            if (task.id != ref.id) continue;
+            if (!ref.plan.empty() && task.plan != ref.plan) continue;
+            if (!ref.line.empty() && task.line != ref.line) continue;
             matches.push_back(task);
         }
     } catch (const std::exception& error) {
@@ -124,6 +125,25 @@ struct ListArgs {
     std::string task;
     std::string plan;
     std::string line;
+};
+
+struct UpdateArgs {
+    std::string task;
+    std::string step;
+    std::string plan;
+    std::string line;
+    std::string title;
+    std::string desc;
+    bool review{false};
+    bool no_review{false};
+};
+
+struct MoveStepArgs {
+    std::string task;
+    std::string step;
+    std::string plan;
+    std::string line;
+    std::string after;
 };
 
 struct GotoArgs {
@@ -515,6 +535,183 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         }
         ctx->out.print_both("Rejected " + item->id + " in " + task.id,
                             {{"task", task.id}, {"step", item->id}, {"status", item->status}});
+    });
+
+    auto update_args = std::make_shared<UpdateArgs>();
+    auto* update_cmd = step->add_subcommand("update", "Update step metadata");
+    add_global_opts(update_cmd, global);
+    update_cmd->add_option("task", update_args->task, "Task id")->required();
+    update_cmd->add_option("step", update_args->step, "Step id")->required();
+    update_cmd->add_option("--plan", update_args->plan, "Plan id");
+    update_cmd->add_option("--line", update_args->line, "Line id");
+    update_cmd->add_option("--title", update_args->title, "New title");
+    update_cmd->add_option("--desc", update_args->desc, "New description");
+    update_cmd->add_flag("--requires-review", update_args->review, "Require review");
+    update_cmd->add_flag("--no-requires-review", update_args->no_review, "Do not require review");
+    update_cmd->callback([&global, &exit_code, update_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, update_args->task, update_args->plan, update_args->line,
+                       task)) {
+            return;
+        }
+        auto* item = find_step(task, update_args->step);
+        if (item == nullptr) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Step not found: " + update_args->step);
+            return;
+        }
+        if (item->locked) {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Step " + item->id + " is locked: " + item->lock_reason);
+            return;
+        }
+        if (!update_args->title.empty()) item->title = update_args->title;
+        if (!update_args->desc.empty()) item->desc = update_args->desc;
+        if (update_args->review) item->requires_review = true;
+        if (update_args->no_review) item->requires_review = false;
+        if (!save_task(*ctx, exit_code, task)) return;
+        try {
+            append_event(ctx->paths, "agent", "step.update", step_entity(task, *item), nullptr,
+                         item->title, "update step");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Updated " + item->id + " in " + task.id,
+                            {{"task", task.id},
+                             {"step", item->id},
+                             {"title", item->title},
+                             {"requires_review", item->requires_review}});
+    });
+
+    auto delete_args = std::make_shared<SkipArgs>();
+    auto* delete_cmd = step->add_subcommand("delete", "Delete a todo or skipped step");
+    add_global_opts(delete_cmd, global);
+    delete_cmd->add_option("task", delete_args->task, "Task id")->required();
+    delete_cmd->add_option("step", delete_args->step, "Step id")->required();
+    delete_cmd->add_option("--plan", delete_args->plan, "Plan id");
+    delete_cmd->add_option("--line", delete_args->line, "Line id");
+    delete_cmd->add_option("--reason", delete_args->reason, "Delete reason")->required();
+    delete_cmd->callback([&global, &exit_code, delete_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, delete_args->task, delete_args->plan, delete_args->line,
+                       task)) {
+            return;
+        }
+        auto* item = find_step(task, delete_args->step);
+        if (item == nullptr) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Step not found: " + delete_args->step);
+            return;
+        }
+        if (item->locked) {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Step " + item->id + " is locked: " + item->lock_reason);
+            return;
+        }
+        if (item->status != "todo" && item->status != "skipped") {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Only todo/skipped steps can be deleted, step is " + item->status);
+            return;
+        }
+        const std::string removed = item->id;
+        for (auto it = task.steps.begin(); it != task.steps.end(); ++it) {
+            if (it->id != removed) continue;
+            task.steps.erase(it);
+            break;
+        }
+        if (task.current_step == removed) task.current_step.clear();
+        if (!save_task(*ctx, exit_code, task)) return;
+        try {
+            append_event(ctx->paths, "human", "step.delete",
+                         {{"type", "step"},
+                          {"plan", task.plan},
+                          {"line", task.line},
+                          {"task", task.id},
+                          {"step", removed}},
+                         removed, nullptr, delete_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Deleted " + removed + " from " + task.id,
+                            {{"task", task.id}, {"step", removed}});
+    });
+
+    auto move_step_args = std::make_shared<MoveStepArgs>();
+    auto* move_step_cmd = step->add_subcommand("move", "Move a todo step after another step");
+    add_global_opts(move_step_cmd, global);
+    move_step_cmd->add_option("task", move_step_args->task, "Task id")->required();
+    move_step_cmd->add_option("step", move_step_args->step, "Step id")->required();
+    move_step_cmd->add_option("--plan", move_step_args->plan, "Plan id");
+    move_step_cmd->add_option("--line", move_step_args->line, "Line id");
+    move_step_cmd->add_option("--after", move_step_args->after, "Move after this step id")
+        ->required();
+    move_step_cmd->callback([&global, &exit_code, move_step_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, move_step_args->task, move_step_args->plan,
+                       move_step_args->line, task)) {
+            return;
+        }
+        core::model::Step moved;
+        bool found = false;
+        for (const auto& item : task.steps) {
+            if (item.id != move_step_args->step) continue;
+            if (item.locked) {
+                fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                     "Step " + item.id + " is locked: " + item.lock_reason);
+                return;
+            }
+            if (item.status != "todo") {
+                fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                     "Only todo steps can be moved, step is " + item.status);
+                return;
+            }
+            moved = item;
+            found = true;
+        }
+        if (!found) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Step not found: " + move_step_args->step);
+            return;
+        }
+        bool anchor_found = false;
+        for (const auto& item : task.steps) {
+            if (item.id == move_step_args->after) anchor_found = true;
+        }
+        if (!anchor_found) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Anchor step not found: " + move_step_args->after);
+            return;
+        }
+        for (auto it = task.steps.begin(); it != task.steps.end(); ++it) {
+            if (it->id != moved.id) continue;
+            task.steps.erase(it);
+            break;
+        }
+        auto position = task.steps.begin();
+        for (; position != task.steps.end(); ++position) {
+            if (position->id == move_step_args->after) {
+                ++position;
+                break;
+            }
+        }
+        task.steps.insert(position, moved);
+        if (!save_task(*ctx, exit_code, task)) return;
+        try {
+            append_event(ctx->paths, "agent", "step.move", step_entity(task, moved),
+                         move_step_args->step, move_step_args->after, "move step");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Moved " + moved.id + " after " + move_step_args->after,
+                            {{"task", task.id},
+                             {"step", moved.id},
+                             {"after", move_step_args->after}});
     });
 
     auto list_args = std::make_shared<ListArgs>();

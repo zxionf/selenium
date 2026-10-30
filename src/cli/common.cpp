@@ -27,6 +27,23 @@ std::shared_ptr<Context> make_context(const GlobalOptions& options) {
     return ctx;
 }
 
+TaskRef parse_task_ref(const std::string& raw, const std::string& plan,
+                       const std::string& line) {
+    TaskRef ref{plan, line, raw};
+    const auto first = raw.find('.');
+    if (first == std::string::npos) return ref;
+    const auto second = raw.find('.', first + 1);
+    if (second == std::string::npos) {
+        ref.line = raw.substr(0, first);
+        ref.id = raw.substr(first + 1);
+    } else {
+        ref.plan = raw.substr(0, first);
+        ref.line = raw.substr(first + 1, second - first - 1);
+        ref.id = raw.substr(second + 1);
+    }
+    return ref;
+}
+
 std::vector<std::string> split_csv(const std::string& value) {
     std::vector<std::string> result;
     std::istringstream stream(value);

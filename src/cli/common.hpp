@@ -27,6 +27,15 @@ struct Context {
 
 std::shared_ptr<Context> make_context(const GlobalOptions& options);
 
+struct TaskRef {
+    std::string plan;
+    std::string line;
+    std::string id;
+};
+
+// Accepts "T1", "line.T1", or "plan.line.T1".
+TaskRef parse_task_ref(const std::string& raw, const std::string& plan, const std::string& line);
+
 std::vector<std::string> split_csv(const std::string& value);
 
 // Print an error in the active output format and set the process exit code.

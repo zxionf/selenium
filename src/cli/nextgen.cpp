@@ -31,16 +31,6 @@ std::string trim(const std::string& value) {
     return value.substr(begin, end - begin);
 }
 
-bool has_dir_upwards(fs::path start, const char* name) {
-    fs::path current = fs::absolute(start);
-    while (true) {
-        if (is_dir(current / name)) return true;
-        const auto parent = current.parent_path();
-        if (parent == current) return false;
-        current = parent;
-    }
-}
-
 int task_number(const std::string& id) {
     if (id.size() < 2 || id[0] != 'T') return 0;
     int value = 0;
@@ -84,11 +74,6 @@ core::sele::Layout require_layout(const GlobalOptions& opts) {
     const auto start = opts.root.empty() ? fs::current_path() : opts.root;
     const auto root = core::sele::find_root(start);
     if (!root) {
-        if (has_dir_upwards(start, ".design")) {
-            fail(exit_codes::ENV_ERROR,
-                 "This project uses .design/.agent (legacy mode)",
-                 "line/task commands require .sele; run sele init to create it");
-        }
         fail(exit_codes::ENV_ERROR, "No .sele directory found",
              "Run sele init in the project root", {"sele init"});
     }

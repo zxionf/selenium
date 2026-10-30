@@ -4,17 +4,17 @@
       "desc": "per-task 策略生效",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:51:12Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "stash/branch/health 可用",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:51:12Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T14:46:57Z",
@@ -32,5 +32,5 @@
       "id": "git"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

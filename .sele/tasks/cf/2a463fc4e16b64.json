@@ -4,18 +4,18 @@
       "desc": "per-task 时 task done 生成 checkpoint",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:51:12Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "archived_at": null,
   "archived_git_head": null,
   "checkpoint_strategy": "per-step",
   "created_at": "2026-10-30T14:46:57Z",
-  "current_step": "S1",
+  "current_step": null,
   "depends": [],
-  "finished_at": null,
+  "finished_at": "2026-10-30T14:51:12Z",
   "goal": "checkpoint_strategy 驱动",
   "id": "T1",
   "line": "strategy",
@@ -30,10 +30,10 @@
   "plan": "sele-020-p3",
   "review_policy": "mixed",
   "skipped_count": 0,
-  "status": "in_progress",
+  "status": "done",
   "steps": [
     {
-      "checkpoint": null,
+      "checkpoint": "ck-20261030-020",
       "desc": "",
       "id": "S1",
       "jump_meta": null,
@@ -41,7 +41,7 @@
       "locked": false,
       "requires_review": false,
       "skipped_reason": null,
-      "status": "in_progress",
+      "status": "done",
       "title": "strategy"
     }
   ],

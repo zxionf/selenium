@@ -4,6 +4,7 @@
 #include "core/entity.hpp"
 #include "core/event.hpp"
 #include "core/fs.hpp"
+#include "core/git.hpp"
 #include "core/id.hpp"
 #include "core/store.hpp"
 
@@ -100,6 +101,7 @@ struct NextArgs {
 
 struct StatusArgs {
     std::string plan;
+    bool with_git{false};
 };
 
 struct TreeArgs {
@@ -111,8 +113,11 @@ struct LogArgs {
     std::string plan;
     std::string line;
     std::string task;
+    std::string since;
+    std::string step;
     bool decisions{false};
     bool replay{false};
+    bool git_commit{false};
     int limit{20};
 };
 
@@ -221,6 +226,7 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     auto* status_cmd = app.add_subcommand("status", "Show current state");
     add_global_opts(status_cmd, global);
     status_cmd->add_option("--plan", status_args->plan, "Plan id (defaults to context)");
+    status_cmd->add_flag("--with-git", status_args->with_git, "Include git HEAD/branch/dirty");
     status_cmd->callback([&global, &exit_code, status_args]() {
         const auto ctx = make_context(global);
         try {
@@ -263,12 +269,24 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             }
             text << "\nCurrent: " << (current.empty() ? "<none>" : current);
 
+            nlohmann::json git = nlohmann::json::object();
+            if (status_args->with_git && core::git::present(ctx->paths.root)) {
+                git = {{"head", core::git::head(ctx->paths)},
+                       {"branch", core::git::branch(ctx->paths)}};
+                const auto status = core::git::run(ctx->paths.root, {"status", "--porcelain"});
+                git["dirty"] = !status.output.empty();
+                text << "\nGit: " << git["branch"].get<std::string>() << " "
+                     << git["head"].get<std::string>()
+                     << (git["dirty"].get<bool>() ? " (dirty)" : " (clean)");
+            }
+
             nlohmann::json result = {{"command", "status"},
                                      {"plan", plan_id.empty() ? nlohmann::json(nullptr)
                                                               : nlohmann::json(plan_id)},
                                      {"plans", plan_items},
                                      {"lines", line_items},
-                                     {"tasks", task_counts}};
+                                     {"tasks", task_counts},
+                                     {"git", git}};
             result["current"] =
                 current.empty() ? nlohmann::json(nullptr) : nlohmann::json(current);
             ctx->out.print_both(text.str(), result);
@@ -336,6 +354,9 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     log_cmd->add_option("--task", log_args->task, "Filter by task id");
     log_cmd->add_flag("--decisions", log_args->decisions, "Only decision events");
     log_cmd->add_flag("--replay", log_args->replay, "Print the full timeline");
+    log_cmd->add_option("--since", log_args->since, "Only events at or after this timestamp");
+    log_cmd->add_option("--step", log_args->step, "Filter by step id");
+    log_cmd->add_flag("--git-commit", log_args->git_commit, "Show the checkpoint commit");
     log_cmd->add_option("--limit", log_args->limit, "Maximum events")->default_val(20);
     log_cmd->callback([&global, &exit_code, log_args, log_cmd]() {
         if (log_cmd->got_subcommand("compact")) return;
@@ -354,6 +375,10 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 if (!log_args->task.empty() && event.entity.value("task", "") != log_args->task) {
                     continue;
                 }
+                if (!log_args->step.empty() && event.entity.value("step", "") != log_args->step) {
+                    continue;
+                }
+                if (!log_args->since.empty() && event.ts < log_args->since) continue;
                 filtered.push_back(event);
             }
             const std::size_t limit =
@@ -365,12 +390,28 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             }
             nlohmann::json items = nlohmann::json::array();
             std::ostringstream text;
+            std::map<std::string, std::string> commits;
+            if (log_args->git_commit) {
+                for (const auto& checkpoint : load_checkpoints(ctx->paths)) {
+                    commits[checkpoint.id] = checkpoint.git.value("commit", "");
+                }
+            }
             for (const auto& event : filtered) {
-                items.push_back(core::model::to_json(event));
+                nlohmann::json item = core::model::to_json(event);
+                if (log_args->git_commit) {
+                    item["git_commit"] =
+                        event.checkpoint.empty()
+                            ? nlohmann::json(nullptr)
+                            : nlohmann::json(commits[event.checkpoint]);
+                }
+                items.push_back(item);
                 text << event.ts << "  " << event.op << "  "
                      << event.entity.value("plan", "") << "/"
                      << event.entity.value("line", "") << "/"
                      << event.entity.value("task", "") << "  " << event.reason << "\n";
+                if (log_args->git_commit) {
+                    text << "    commit: " << item["git_commit"].dump() << "\n";
+                }
                 if (log_args->replay) {
                     text << "    " << event.before.dump() << " -> " << event.after.dump()
                          << "\n";

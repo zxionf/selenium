@@ -352,3 +352,14 @@
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"line":"check","plan":"sele-020-check","type":"line"},"op":"line.done","reason":"line complete","ts":"2026-10-30T14:39:03Z"}
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-020-check","type":"plan"},"op":"plan.verify","reason":"PA1","ts":"2026-10-30T14:39:03Z"}
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-020-check","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-30T14:39:03Z"}
+{"actor":"sele","after":"4a16d969cca9b54964e3329e62fe65e9af515ae4","before":"7ed9c586d71058aa824049c5612de5de0c041c11","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-30T14:39:56Z"}
+{"actor":"agent","after":"draft","before":null,"context":{},"entity":{"plan":"sele-020-p2b","type":"plan"},"op":"plan.new","reason":"create plan","ts":"2026-10-30T14:39:56Z"}
+{"actor":"agent","after":"pending_approval","before":"draft","context":{},"entity":{"plan":"sele-020-p2b","type":"plan"},"op":"plan.submit","reason":"submit for approval","ts":"2026-10-30T14:39:56Z"}
+{"actor":"human:zxionf","after":"active","before":"pending_approval","context":{},"entity":{"plan":"sele-020-p2b","type":"plan"},"op":"plan.approve","reason":"approve plan","ts":"2026-10-30T14:39:56Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"query","plan":"sele-020-p2b","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T14:39:56Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"config","plan":"sele-020-p2b","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T14:39:56Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"query","plan":"sele-020-p2b","task":"T1","type":"task","uid":"tsk_01M66M1K39A64W00DTKAHC0XTE"},"op":"task.add","reason":"create task","ts":"2026-10-30T14:39:56Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"config","plan":"sele-020-p2b","task":"T1","type":"task","uid":"tsk_01M66M1K3HB5JFCJN2M1QQ3S8D"},"op":"task.add","reason":"create task","ts":"2026-10-30T14:39:56Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"query","plan":"sele-020-p2b","task":"T1","type":"task","uid":"tsk_01M66M1K39A64W00DTKAHC0XTE"},"op":"task.start","reason":"start task","ts":"2026-10-30T14:39:56Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"query","plan":"sele-020-p2b","step":"S1","task":"T1","type":"step"},"op":"step.add","reason":"create step","ts":"2026-10-30T14:42:22Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"query","plan":"sele-020-p2b","step":"S1","task":"T1","type":"step"},"op":"step.start","reason":"start step","ts":"2026-10-30T14:42:22Z"}

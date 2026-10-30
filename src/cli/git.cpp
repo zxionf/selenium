@@ -3,6 +3,7 @@
 #include "cli/commands.hpp"
 #include "core/checkpoint.hpp"
 #include "core/entity.hpp"
+#include "core/event.hpp"
 #include "core/fs.hpp"
 #include "core/git.hpp"
 #include "core/store.hpp"
@@ -207,8 +208,15 @@ void register_git_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             const auto checkpoint = core::checkpoint::create(ctx->paths, task, *step);
             step->checkpoint = checkpoint.id;
             core::store::save_task(ctx->paths, task);
-            append_event(ctx->paths, "agent", "git.commit", checkpoint.entity, nullptr,
-                         checkpoint.id, commit_args->message);
+            core::model::Event event;
+            event.ts = core::model::now_utc();
+            event.actor = "agent";
+            event.op = "git.commit";
+            event.entity = checkpoint.entity;
+            event.after = checkpoint.id;
+            event.reason = commit_args->message;
+            event.checkpoint = checkpoint.id;
+            core::event::append(ctx->paths, event);
             ctx->out.print_both(
                 "Committed " + checkpoint.id,
                 {{"checkpoint", checkpoint.id},

@@ -177,6 +177,7 @@ struct ListArgs {
     std::string plan;
     std::string line;
     std::string status;
+    bool all{false};
 };
 
 struct LocateArgs {
@@ -1058,6 +1059,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     list_cmd->add_option("--plan", list_args->plan, "Filter by plan");
     list_cmd->add_option("--line", list_args->line, "Filter by line");
     list_cmd->add_option("--status", list_args->status, "Filter by status");
+    list_cmd->add_flag("--all", list_args->all, "Include archived tasks");
     list_cmd->callback([&global, &exit_code, list_args]() {
         const auto ctx = make_context(global);
         try {
@@ -1065,6 +1067,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             for (const auto& item : core::store::load_tasks(ctx->paths)) {
                 if (!list_args->plan.empty() && item.plan != list_args->plan) continue;
                 if (!list_args->line.empty() && item.line != list_args->line) continue;
+                if (!list_args->all && item.status == "archived") continue;
                 if (!list_args->status.empty() && item.status != list_args->status) continue;
                 items.push_back({{"id", item.id},
                                  {"uid", item.uid},

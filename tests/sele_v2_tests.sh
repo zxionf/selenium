@@ -516,6 +516,43 @@ test_check_extended() {
     rm -rf "$ROOT"
 }
 
+test_query_options() {
+    setup_git_project
+    echo "b" > "$ROOT/b.txt"
+    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --root "$ROOT" >/dev/null
+    if "$BIN" log --git-commit --root "$ROOT" --output json |
+        jq -e '[.items[] | select(.op == "git.commit")][0].git_commit != null' >/dev/null; then
+        pass "log --git-commit shows the commit"
+    else
+        fail "log --git-commit shows the commit"
+    fi
+    if [ "$("$BIN" log --since "2999-01-01T00:00:00Z" --root "$ROOT" --output json | jq '.items | length')" = "0" ]; then
+        pass "log --since filters future events"
+    else
+        fail "log --since filters future events"
+    fi
+    if "$BIN" log --step S1 --root "$ROOT" --output json | jq -e '.items | length >= 1' >/dev/null; then
+        pass "log --step filters by step"
+    else
+        fail "log --step filters by step"
+    fi
+    if "$BIN" status --with-git --root "$ROOT" --output json | jq -e '.git.head != null' >/dev/null; then
+        pass "status --with-git includes git"
+    else
+        fail "status --with-git includes git"
+    fi
+    "$BIN" step done T1 S1 --root "$ROOT" --line a >/dev/null
+    "$BIN" task done T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" task archive T1 --root "$ROOT" --line a >/dev/null
+    if [ "$("$BIN" task list --root "$ROOT" --line a --output json | jq '.items | length')" = "0" ] &&
+        [ "$("$BIN" task list --root "$ROOT" --line a --all --output json | jq '.items | length')" = "1" ]; then
+        pass "task list hides archived unless --all"
+    else
+        fail "task list hides archived unless --all"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -728,6 +765,7 @@ test_next_i1
 test_p1_commands
 test_depends_uid
 test_check_extended
+test_query_options
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

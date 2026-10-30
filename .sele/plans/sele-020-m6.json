@@ -4,25 +4,25 @@
       "desc": "step move/delete/update 可用",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:16:36Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "全限定引用 plan.line.T1 可用",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:16:36Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "revert --exec 有 clean 与 --yes 保护",
       "id": "PA3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:16:36Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T14:12:04Z",
@@ -44,5 +44,5 @@
       "id": "gitreset"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

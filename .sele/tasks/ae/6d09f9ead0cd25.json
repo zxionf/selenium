@@ -6,7 +6,7 @@
   "created_at": "2026-10-30T14:12:12Z",
   "current_step": null,
   "depends": [],
-  "finished_at": null,
+  "finished_at": "2026-10-30T14:16:36Z",
   "goal": "--full 全限定引用",
   "id": "T1",
   "line": "ref",
@@ -20,8 +20,21 @@
   "plan": "sele-020-m6",
   "review_policy": "mixed",
   "skipped_count": 0,
-  "status": "todo",
-  "steps": [],
+  "status": "done",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "done",
+      "title": "ref"
+    }
+  ],
   "title": "--full 全限定引用",
   "uid": "tsk_01M66JETD2H4FC51T55W6P24Z7"
 }

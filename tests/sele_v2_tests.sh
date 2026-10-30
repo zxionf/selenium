@@ -319,7 +319,7 @@ test_step_update_delete_move() {
     "$BIN" step move T1 S3 --after S1 --root "$ROOT" --line a >/dev/null
     "$BIN" step delete T1 S2 --reason "not needed" --root "$ROOT" --line a >/dev/null
     if "$BIN" step list T1 --root "$ROOT" --line a --output json |
-        jq -e '.items | map(.id) == ["S1", "S3"] and .items[0].title == "design"' >/dev/null; then
+        jq -e '(.items | map(.id)) == ["S1", "S3"] and .items[0].title == "design"' >/dev/null; then
         pass "step update/move/delete work"
     else
         fail "step update/move/delete work"

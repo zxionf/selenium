@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "version": 1,
+  "id": "20261030-v2-core",
+  "type": "feature",
+  "goal": "按 docs/sele-f.md 与 docs/sele-f-d.md 重写 sele 0.20.0：Plan/Line/Task/Step 四层、事件完备、状态机前置",
+  "acceptance": [
+    {
+      "id": "A1",
+      "desc": "四层模型与状态机",
+      "check": "plan/line/task/step 落盘，非法迁移被拒，I1/I2 成立"
+    },
+    {
+      "id": "A2",
+      "desc": "事件完备",
+      "check": "所有状态迁移写 log.jsonl，append-only，可重放"
+    },
+    {
+      "id": "A3",
+      "desc": "CLI 闭环",
+      "check": "plan/line/task/step/next/status/tree/check 可用，tests 通过，版本 0.20.0"
+    }
+  ],
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "epic": null,
+  "created_at": "2026-10-30T13:08:48Z",
+  "created_by": "zxionf",
+  "status": "draft",
+  "frozen": null,
+  "blocked": null,
+  "closed": null,
+  "base_commit": null,
+  "merged": null
+}

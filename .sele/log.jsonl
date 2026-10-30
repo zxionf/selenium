@@ -54,3 +54,4 @@
 {"ts":"2026-10-30T09:39:30Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-epic","acceptance":"A3","evidence":"overview epics、fsck epic_schema/epic_consistency；epic show 统计含归档线"}
 {"ts":"2026-10-30T09:39:30Z","actor":"zxionf","op":"line.done","line":"20261030-epic"}
 {"ts":"2026-10-30T09:39:30Z","actor":"zxionf","op":"line.merge","line":"20261030-epic","commit":"173a011","base":"main"}
+{"ts":"2026-10-30T13:08:48Z","actor":"zxionf","op":"line.new","line":"20261030-v2-core"}

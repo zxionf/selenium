@@ -32,3 +32,4 @@
 {"ts":"2026-10-30T07:38:23Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-commit-i18n","acceptance":"A2","evidence":"config commit.language=zh + scope=module 时 plan 中文、checkpoint feat(auth)"}
 {"ts":"2026-10-30T07:38:23Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-commit-i18n","acceptance":"A3","evidence":"--msg 覆盖测试：提交信息等于 custom message"}
 {"ts":"2026-10-30T07:38:23Z","actor":"zxionf","op":"line.done","line":"20261030-commit-i18n"}
+{"ts":"2026-10-30T07:38:23Z","actor":"zxionf","op":"line.merge","line":"20261030-commit-i18n","commit":"e53c193","base":"main"}

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "version": 1,
+  "id": "20261030-commit-i18n",
+  "type": "feature",
+  "goal": "自动提交信息统一英文前缀 + 可配置中英文 subject",
+  "acceptance": [
+    {
+      "id": "A1",
+      "desc": "en 默认",
+      "check": "git log 断言 plan/checkpoint/done/merge/record 消息"
+    },
+    {
+      "id": "A2",
+      "desc": "zh 与 module",
+      "check": "config language=zh、scope=module 时消息正确"
+    },
+    {
+      "id": "A3",
+      "desc": "--msg 优先",
+      "check": "自定义 msg 完全覆盖且不拼前缀"
+    }
+  ],
+  "modules": [
+    "cli",
+    "build",
+    "docs"
+  ],
+  "created_at": "2026-10-30T07:31:33Z",
+  "created_by": "zxionf",
+  "status": "draft",
+  "frozen": null,
+  "blocked": null,
+  "closed": null,
+  "base_commit": null,
+  "merged": null
+}

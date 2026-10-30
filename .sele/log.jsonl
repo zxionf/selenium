@@ -24,3 +24,4 @@
 {"ts":"2026-10-30T07:13:43Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-drop-legacy","acceptance":"A4","evidence":"tests/sele_tests.sh 61 条通过；ctest 1/1；sele fsck passed；docs/ 与 info.md 未改"}
 {"ts":"2026-10-30T07:13:43Z","actor":"zxionf","op":"line.done","line":"20261030-drop-legacy"}
 {"ts":"2026-10-30T07:13:44Z","actor":"zxionf","op":"line.merge","line":"20261030-drop-legacy","commit":"a17c726","base":"main"}
+{"ts":"2026-10-30T07:31:33Z","actor":"zxionf","op":"line.new","line":"20261030-commit-i18n"}

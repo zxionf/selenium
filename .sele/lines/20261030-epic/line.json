@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": 2,
+  "version": 3,
   "id": "20261030-epic",
   "type": "feature",
   "goal": "实现独立 epic：长期目标容器",
@@ -25,16 +25,23 @@
     "cli",
     "docs"
   ],
+  "epic": null,
   "created_at": "2026-10-30T09:21:08Z",
   "created_by": "zxionf",
-  "status": "active",
+  "status": "done",
   "frozen": {
     "goal_sha256": "976b78f3d9db656c8863303dfe2cfe1961b78b2810c8f201f495bd5cfd90819d",
     "acceptance_sha256": "50e71ccfca7729d0d3e2d887e21bf12401a3217629c3eb75612c4b31ca8bcc9f",
     "at": "2026-10-30T09:21:08Z"
   },
   "blocked": null,
-  "closed": null,
+  "closed": {
+    "at": "2026-10-30T09:39:30Z",
+    "acceptance_summary": {
+      "pass": 3,
+      "fail": 0
+    }
+  },
   "base_commit": "4115366",
   "merged": null
 }

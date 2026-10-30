@@ -2,6 +2,7 @@
 
 #include "core/entity.hpp"
 #include "core/event.hpp"
+#include "core/git.hpp"
 
 #include <sstream>
 
@@ -17,6 +18,12 @@ std::shared_ptr<Context> make_context(const GlobalOptions& options) {
     ctx->paths = core::store::make_paths(options.root);
     ctx->out = util::Output(options.output == "json" ? util::Output::Format::JSON
                                                      : util::Output::Format::TEXT);
+    const auto drift = core::git::detect_drift(ctx->paths);
+    ctx->drift = static_cast<int>(drift.kind);
+    if (drift.kind != core::git::DriftKind::NONE) {
+        ctx->drift_message = core::git::kind_name(drift.kind) + " " + drift.old_head + " -> " +
+                             drift.new_head;
+    }
     return ctx;
 }
 

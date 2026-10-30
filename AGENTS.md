@@ -43,7 +43,7 @@ sele plan done <plan>
 4. I2：单 task 内至多一个 `in_progress` step。
 5. `task done` 要求所有 step 为 `done`/`skipped`；验收未满足 `review_policy` 时转 `pending_review`。
 6. `line done` 要求所有 task 结束且线级验收通过；`plan done` 同理。
-7. 提交代码：M2 完成后统一用 `sele git commit --task <id> --step <id>`；在此之前可直接 `git commit`。
+7. 提交代码统一经 `sele git commit --task <id> --step <id> --message "<msg>" [--files ...]`；不要直接 `git commit`。
 8. 验证：`bash tests/sele_v2_tests.sh build/build/sele` 与 `ctest --test-dir build` 必须通过。
 
 ## 常用查询

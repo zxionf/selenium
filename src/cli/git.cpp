@@ -1,0 +1,197 @@
+#include "cli/common.hpp"
+
+#include "cli/commands.hpp"
+#include "core/checkpoint.hpp"
+#include "core/entity.hpp"
+#include "core/git.hpp"
+#include "core/store.hpp"
+
+#include <nlohmann/json.hpp>
+
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace {
+
+bool load_task(Context& ctx, int& exit_code, const std::string& id, const std::string& plan,
+               const std::string& line, core::model::Task& out) {
+    std::vector<core::model::Task> matches;
+    try {
+        for (const auto& task : core::store::load_tasks(ctx.paths)) {
+            if (task.id != id) continue;
+            if (!plan.empty() && task.plan != plan) continue;
+            if (!line.empty() && task.line != line) continue;
+            matches.push_back(task);
+        }
+    } catch (const std::exception& error) {
+        fail(ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+        return false;
+    }
+    if (matches.empty()) {
+        fail(ctx, exit_code, exit_codes::USAGE_ERROR, "Task not found: " + id);
+        return false;
+    }
+    if (matches.size() > 1) {
+        fail(ctx, exit_code, exit_codes::USAGE_ERROR,
+             "Task id is ambiguous across lines; pass --plan and --line");
+        return false;
+    }
+    out = matches.front();
+    return true;
+}
+
+core::model::Step* find_step(core::model::Task& task, const std::string& id) {
+    for (auto& step : task.steps) {
+        if (step.id == id) return &step;
+    }
+    return nullptr;
+}
+
+struct CommitArgs {
+    std::string task;
+    std::string step;
+    std::string message;
+    std::string plan;
+    std::string line;
+    std::vector<std::string> files;
+};
+
+struct DiffArgs {
+    std::string task;
+    bool stat{false};
+};
+
+struct LogArgs {
+    int limit{20};
+};
+
+} // namespace
+
+void register_git_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
+    auto* git = app.add_subcommand("git", "Git proxy commands");
+    add_global_opts(git, global);
+
+    auto short_flag = std::make_shared<bool>(false);
+    auto* status_cmd = git->add_subcommand("status", "Run git status");
+    add_global_opts(status_cmd, global);
+    status_cmd->add_flag("--short", *short_flag, "Short format");
+    status_cmd->callback([&global, &exit_code, short_flag]() {
+        const auto ctx = make_context(global);
+        std::vector<std::string> args{"status"};
+        if (*short_flag) args.push_back("--short");
+        const auto result = core::git::run(ctx->paths.root, args);
+        ctx->out.print_both(result.output,
+                            {{"command", "git.status"},
+                             {"ok", result.code == 0},
+                             {"output", result.output}});
+        if (result.code != 0) exit_code = exit_codes::ENV_ERROR;
+    });
+
+    auto diff_args = std::make_shared<DiffArgs>();
+    auto* diff_cmd = git->add_subcommand("diff", "Run git diff");
+    add_global_opts(diff_cmd, global);
+    diff_cmd->add_option("--task", diff_args->task, "Task id (label only)");
+    diff_cmd->add_flag("--stat", diff_args->stat, "Show diff stat");
+    diff_cmd->callback([&global, &exit_code, diff_args]() {
+        const auto ctx = make_context(global);
+        std::vector<std::string> args{"diff"};
+        if (diff_args->stat) args.push_back("--stat");
+        const auto result = core::git::run(ctx->paths.root, args);
+        ctx->out.print_both(result.output,
+                            {{"command", "git.diff"},
+                             {"ok", result.code == 0},
+                             {"output", result.output}});
+        if (result.code != 0) exit_code = exit_codes::ENV_ERROR;
+    });
+
+    auto log_args = std::make_shared<LogArgs>();
+    auto* log_cmd = git->add_subcommand("log", "Run git log");
+    add_global_opts(log_cmd, global);
+    log_cmd->add_option("--limit", log_args->limit, "Number of commits")->default_val(20);
+    log_cmd->callback([&global, &exit_code, log_args]() {
+        const auto ctx = make_context(global);
+        const auto result =
+            core::git::run(ctx->paths.root, {"log", "-n", std::to_string(log_args->limit),
+                                             "--oneline"});
+        ctx->out.print_both(result.output,
+                            {{"command", "git.log"},
+                             {"ok", result.code == 0},
+                             {"output", result.output}});
+        if (result.code != 0) exit_code = exit_codes::ENV_ERROR;
+    });
+
+    auto commit_args = std::make_shared<CommitArgs>();
+    auto* commit_cmd = git->add_subcommand("commit", "Commit through sele and create a checkpoint");
+    add_global_opts(commit_cmd, global);
+    commit_cmd->add_option("--task", commit_args->task, "Task id")->required();
+    commit_cmd->add_option("--step", commit_args->step, "Step id")->required();
+    commit_cmd->add_option("--message", commit_args->message, "Commit message")->required();
+    commit_cmd->add_option("--files", commit_args->files, "Files to add (repeatable)")
+        ->delimiter(',');
+    commit_cmd->add_option("--plan", commit_args->plan, "Plan id");
+    commit_cmd->add_option("--line", commit_args->line, "Line id");
+    commit_cmd->callback([&global, &exit_code, commit_args]() {
+        const auto ctx = make_context(global);
+        if (ctx->drift == 2 || ctx->drift == 3) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR,
+                 "Git drift " + ctx->drift_message + "; resolve before committing");
+            return;
+        }
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, commit_args->task, commit_args->plan, commit_args->line,
+                       task)) {
+            return;
+        }
+        if (task.status != "in_progress") {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Task " + task.id + " is " + task.status + ", expected in_progress");
+            return;
+        }
+        auto* step = find_step(task, commit_args->step);
+        if (step == nullptr) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Step not found: " + commit_args->step);
+            return;
+        }
+        if (step->status != "in_progress") {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Step " + step->id + " is " + step->status + ", expected in_progress");
+            return;
+        }
+
+        std::vector<std::string> add{"add"};
+        if (commit_args->files.empty()) {
+            add.push_back("-A");
+        } else {
+            for (const auto& file : commit_args->files) add.push_back(file);
+        }
+        const auto add_result = core::git::run(ctx->paths.root, add);
+        if (add_result.code != 0) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, "git add failed: " + add_result.output);
+            return;
+        }
+        const auto commit_result =
+            core::git::run(ctx->paths.root, {"commit", "-m", commit_args->message});
+        if (commit_result.code != 0) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR,
+                 "git commit failed: " + commit_result.output);
+            return;
+        }
+
+        try {
+            const auto checkpoint = core::checkpoint::create(ctx->paths, task, *step);
+            step->checkpoint = checkpoint.id;
+            core::store::save_task(ctx->paths, task);
+            append_event(ctx->paths, "agent", "git.commit", checkpoint.entity, nullptr,
+                         checkpoint.id, commit_args->message);
+            ctx->out.print_both(
+                "Committed " + checkpoint.id,
+                {{"checkpoint", checkpoint.id},
+                 {"commit", checkpoint.git.value("commit", "")},
+                 {"task", task.id},
+                 {"step", step->id}});
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+        }
+    });
+}

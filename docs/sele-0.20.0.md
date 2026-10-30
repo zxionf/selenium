@@ -116,6 +116,15 @@
 | `log [--plan <p>] [--line <l>] [--task <t>] [--decisions] [--limit <n>]` | 事件日志 |
 | `check [--plan <p>]` | 一致性检查（引用、依赖环、done 一致性、日志可解析） |
 
+### 3.7 Git 代理
+
+| 命令 | 说明 |
+|---|---|
+| `git status [--short]` | 透传 `git status` |
+| `git diff [--stat]` | 透传 `git diff` |
+| `git log [--limit <n>]` | 透传 `git log --oneline` |
+| `git commit --task <t> --step <s> --message <m> [--files a,b]` | 校验状态 → `git add` → `git commit` → 生成 checkpoint → 写 `git.commit` 事件 |
+
 ## 4. 状态机
 
 ### Plan
@@ -189,18 +198,27 @@ todo → in_progress → done
 | 3 | 一致性检查失败 |
 | 4 | 环境/数据错误 |
 
-## 7. 与 sele-f 规范的差异（0.20.0 范围）
+## 7. 与 sele-f 规范的差异（0.20.0 进度）
 
-0.20.0 只实现 M1（账本自洽），以下未实现：
+已实现 **M1（账本）** 与 **M2（Git 代理）**：
 
-- `sele git *` 代理、漂移检测（D1–D6）、`reconcile`；
+- M1：四层模型、状态机、事件、`next/status/tree/log/check`。
+- M2：`sele git status/diff/log` 透传；`sele git commit --task --step --message [--files]`
+  校验 task/step 状态、执行 `git add` + `git commit`、生成 checkpoint JSON
+  （commit/tree/branch/files_changed/diff_stat），并写 `git.commit` 事件。
+- 漂移 D1（HEAD 前进，自动更新指纹 + 写 `git.drift` 事件）、D2（回退阻断）、D3（分叉阻断）；
+  D2/D3 时 `sele git commit` 退 4。
+
+未实现（M3/M4）：
+
+- `reconcile`、D4–D6、checkpoint 的 remap/invalidate；
 - `task revert`（三档回滚）；
-- Checkpoint 的自动生成与 `git` 字段（当前 `step done --checkpoint` 只接受外部 id）；
 - `cache/index.json` 索引（当前直接扫描目录）；
 - `log compact`、`decision record`、`task keep`、`plan switch`、`--full`、`--replay`；
 - task 级跨线依赖（当前 `--depends` 限同 line）；
 - step 依赖、step 锁、`task insert`、`task move`；
-- Plan 的物理归档/恢复（当前只改状态）。
+- Plan 的物理归档/恢复（当前只改状态）；
+- `sele git reset` 与 `--exec` 回滚。
 
 ## 8. 测试
 

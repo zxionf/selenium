@@ -60,6 +60,9 @@ add_executable(sele
     src/cli/task.cpp
     src/cli/step.cpp
     src/cli/query.cpp
+    src/cli/git.cpp
+    src/core/git.cpp
+    src/core/checkpoint.cpp
     src/core/entity.cpp
     src/core/event.cpp
     src/core/fs.cpp

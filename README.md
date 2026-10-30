@@ -83,6 +83,7 @@ sele line   new|activate|switch|status|verify|done|abandon|dep-add|dep-remove|ch
 sele task   add|start|pause|resume|done|approve|fail|retry|block|unblock|verify|archive|revive|list
 sele step   add|start|done|skip|goto|approve|reject|list
 sele next / status / tree / log / check
+sele git    status|diff|log|commit
 sele version
 ```
 

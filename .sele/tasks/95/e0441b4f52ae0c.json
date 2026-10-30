@@ -13,7 +13,7 @@
   "archived_git_head": null,
   "checkpoint_strategy": "per-step",
   "created_at": "2026-10-30T13:28:49Z",
-  "current_step": null,
+  "current_step": "S1",
   "depends": [],
   "finished_at": null,
   "goal": "sele git commit/status/diff + checkpoint",
@@ -29,8 +29,19 @@
   "pause_context": null,
   "plan": "sele-020",
   "review_policy": "mixed",
-  "status": "todo",
-  "steps": [],
+  "status": "in_progress",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "实现 git 代理与 checkpoint"
+    }
+  ],
   "title": "sele git commit/status/diff + checkpoint",
   "uid": "tsk_01M66FZCFYSVHGRJQCNCN58BV6"
 }

@@ -34,6 +34,57 @@ setup_project() {
         --modules core >/dev/null
 }
 
+setup_git_project() {
+    ROOT=$(mktemp -d)
+    git -C "$ROOT" init -q -b main
+    git -C "$ROOT" config user.email t@t
+    git -C "$ROOT" config user.name tester
+    echo "a" > "$ROOT/a.txt"
+    git -C "$ROOT" add -A && git -C "$ROOT" commit -qm init
+    "$BIN" init --root "$ROOT" >/dev/null
+    "$BIN" plan new p --root "$ROOT" --goal "g" --acceptance "pa" --lines a >/dev/null
+    "$BIN" plan submit p --root "$ROOT" >/dev/null
+    "$BIN" plan approve p --root "$ROOT" --by human:alice >/dev/null
+    "$BIN" line new a --root "$ROOT" --plan p --goal "ga" --acceptance "la" --modules core >/dev/null
+    "$BIN" task add "t" --root "$ROOT" --line a --acceptance "ok" >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step add T1 "s" --root "$ROOT" --line a >/dev/null
+    "$BIN" step start T1 S1 --root "$ROOT" --line a >/dev/null
+}
+
+test_git_commit_checkpoint() {
+    setup_git_project
+    echo "b" > "$ROOT/b.txt"
+    if "$BIN" git commit --root "$ROOT" --task T1 --step S1 --message "feat: add b" \
+        --files b.txt --output json | jq -e '.checkpoint | startswith("ck-")' >/dev/null; then
+        pass "git commit creates a checkpoint"
+    else
+        fail "git commit creates a checkpoint"
+    fi
+    if ls "$ROOT/.sele/checkpoints"/*/*.json >/dev/null 2>&1; then
+        pass "checkpoint file is written"
+    else
+        fail "checkpoint file is written"
+    fi
+    "$BIN" status --root "$ROOT" >/dev/null
+    rm -rf "$ROOT"
+}
+
+test_git_drift_d2() {
+    setup_git_project
+    echo "b" > "$ROOT/b.txt"
+    "$BIN" git commit --root "$ROOT" --task T1 --step S1 --message "feat: add b" \
+        --files b.txt >/dev/null
+    "$BIN" status --root "$ROOT" >/dev/null
+    git -C "$ROOT" reset --hard HEAD~1 >/dev/null
+    if expect_code 4 "$BIN" git commit --root "$ROOT" --task T1 --step S1 --message "x"; then
+        pass "git commit is blocked after HEAD rewind (D2)"
+    else
+        fail "git commit is blocked after HEAD rewind (D2)"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -226,6 +277,8 @@ test_task_done_requires_steps
 test_next
 test_check
 test_log_and_tree
+test_git_commit_checkpoint
+test_git_drift_d2
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

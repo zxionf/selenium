@@ -21,6 +21,8 @@ void add_global_opts(CLI::App* app, GlobalOptions& options);
 struct Context {
     core::store::Paths paths;
     util::Output out;
+    int drift{0};
+    std::string drift_message;
 };
 
 std::shared_ptr<Context> make_context(const GlobalOptions& options);
@@ -43,3 +45,4 @@ void register_line_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);
 void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);
 void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);
 void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);
+void register_git_cmds(CLI::App& app, GlobalOptions& global, int& exit_code);

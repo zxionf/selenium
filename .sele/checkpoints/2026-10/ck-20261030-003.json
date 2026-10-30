@@ -1,0 +1,36 @@
+{
+  "entity": {
+    "line": "archive",
+    "plan": "sele-020-m3",
+    "step": "S1",
+    "task": "T1",
+    "task_uid": "tsk_01M66GGHMYAMPQJGW6S021512W",
+    "type": "step"
+  },
+  "git": {
+    "branch": "sele/20261030-v2-core",
+    "commit": "f751ab95ef439a6c35a7bd00a5ed944663d913c6",
+    "diff_stat": " .sele/cache/git-fingerprint.json     |   2 +-\n .sele/lines/sele-020-m3.archive.json |  22 ++++++\n .sele/lines/sele-020-m3.index.json   |  22 ++++++\n .sele/lines/sele-020-m3.revert.json  |  22 ++++++\n .sele/log.jsonl                      |  15 ++++\n .sele/plans/sele-020-m3.json         |  48 ++++++++++++\n .sele/tasks/05/687a372eeea307.json   |  36 +++++++++\n .sele/tasks/0c/f2837d830baacf.json   |  36 +++++++++\n .sele/tasks/44/3aa46bb9f9c0cc.json   |  47 ++++++++++++\n .sele/tasks/68/636d190884851d.json   |  36 +++++++++\n .sele/tasks/b3/65b6949bcdfcef.json   |  36 +++++++++\n src/cli/plan.cpp                     | 142 +++++++++++++++++++++++++++++++----\n tests/sele_v2_tests.sh               |  29 +++++++\n 13 files changed, 479 insertions(+), 14 deletions(-)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/cache/git-fingerprint.json",
+      ".sele/lines/sele-020-m3.archive.json",
+      ".sele/lines/sele-020-m3.index.json",
+      ".sele/lines/sele-020-m3.revert.json",
+      ".sele/log.jsonl",
+      ".sele/plans/sele-020-m3.json",
+      ".sele/tasks/05/687a372eeea307.json",
+      ".sele/tasks/0c/f2837d830baacf.json",
+      ".sele/tasks/44/3aa46bb9f9c0cc.json",
+      ".sele/tasks/68/636d190884851d.json",
+      ".sele/tasks/b3/65b6949bcdfcef.json",
+      "src/cli/plan.cpp",
+      "tests/sele_v2_tests.sh"
+    ],
+    "source": "sele",
+    "tree": "56db12364e41079eefd2ce1916f797aa026a959f"
+  },
+  "id": "ck-20261030-003",
+  "status": "valid",
+  "ts": "2026-10-30T13:40:48Z"
+}

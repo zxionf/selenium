@@ -113,6 +113,23 @@ test_plan_archive_restore() {
     rm -rf "$ROOT"
 }
 
+test_cache_index() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    if "$BIN" cache rebuild --root "$ROOT" --output json | jq -e '.tasks == 1' >/dev/null; then
+        pass "cache rebuild writes the index"
+    else
+        fail "cache rebuild writes the index"
+    fi
+    if "$BIN" task locate T1 --root "$ROOT" --line a --output json |
+        jq -e '.file | startswith("tasks/")' >/dev/null; then
+        pass "task locate returns the task file"
+    else
+        fail "task locate returns the task file"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -308,6 +325,7 @@ test_log_and_tree
 test_git_commit_checkpoint
 test_git_drift_d2
 test_plan_archive_restore
+test_cache_index
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

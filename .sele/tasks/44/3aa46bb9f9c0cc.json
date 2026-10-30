@@ -4,18 +4,18 @@
       "desc": "archive 后文件移入 archive/，restore 可移回",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T13:40:48Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "archived_at": null,
   "archived_git_head": null,
   "checkpoint_strategy": "per-step",
   "created_at": "2026-10-30T13:38:12Z",
-  "current_step": "S1",
+  "current_step": null,
   "depends": [],
-  "finished_at": null,
+  "finished_at": "2026-10-30T13:40:48Z",
   "goal": "Plan 物理归档/恢复 + manifest",
   "id": "T1",
   "line": "archive",
@@ -29,16 +29,16 @@
   "pause_context": null,
   "plan": "sele-020-m3",
   "review_policy": "mixed",
-  "status": "in_progress",
+  "status": "done",
   "steps": [
     {
-      "checkpoint": null,
+      "checkpoint": "ck-20261030-003",
       "desc": "",
       "id": "S1",
       "jump_meta": null,
       "requires_review": false,
       "skipped_reason": null,
-      "status": "in_progress",
+      "status": "done",
       "title": "物理归档与恢复"
     }
   ],

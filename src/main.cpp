@@ -20,6 +20,7 @@ int main(int argc, char** argv) {
     register_step_cmds(app, global, exit_code);
     register_query_cmds(app, global, exit_code);
     register_git_cmds(app, global, exit_code);
+    register_cache_cmds(app, global, exit_code);
 
     app.require_subcommand(1);
     try {

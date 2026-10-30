@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -129,6 +130,12 @@ struct ListArgs {
     std::string plan;
     std::string line;
     std::string status;
+};
+
+struct LocateArgs {
+    std::string id;
+    std::string plan;
+    std::string line;
 };
 
 bool find_line_by_id(Context& ctx, int& exit_code, const std::string& plan,
@@ -552,6 +559,30 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         }
         ctx->out.print_both("Verified " + verify_args->acceptance + " on " + item.id,
                             {{"task", item.id}, {"acceptance", verify_args->acceptance}});
+    });
+
+    auto locate_args = std::make_shared<LocateArgs>();
+    auto* locate_cmd = task->add_subcommand("locate", "Locate a task file");
+    add_global_opts(locate_cmd, global);
+    locate_cmd->add_option("id", locate_args->id, "Task id")->required();
+    locate_cmd->add_option("--plan", locate_args->plan, "Plan id");
+    locate_cmd->add_option("--line", locate_args->line, "Line id");
+    locate_cmd->callback([&global, &exit_code, locate_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task item;
+        if (!find_task(*ctx, exit_code, locate_args->id, locate_args->plan, locate_args->line,
+                       item)) {
+            return;
+        }
+        const auto path = core::store::task_path(ctx->paths, item.uid);
+        const auto relative =
+            std::filesystem::relative(path, ctx->paths.sele).generic_string();
+        ctx->out.print_both(relative,
+                            {{"task", item.id},
+                             {"uid", item.uid},
+                             {"file", relative},
+                             {"plan", item.plan},
+                             {"line", item.line}});
     });
 
     auto list_args = std::make_shared<ListArgs>();

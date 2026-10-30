@@ -3,11 +3,13 @@
 #include "cli/commands.hpp"
 #include "core/checkpoint.hpp"
 #include "core/entity.hpp"
+#include "core/fs.hpp"
 #include "core/git.hpp"
 #include "core/store.hpp"
 
 #include <nlohmann/json.hpp>
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -48,6 +50,23 @@ core::model::Step* find_step(core::model::Task& task, const std::string& id) {
     return nullptr;
 }
 
+std::vector<core::model::Checkpoint> load_checkpoints(const core::store::Paths& paths) {
+    std::vector<core::model::Checkpoint> result;
+    if (!core::fsys::exists(paths.checkpoints)) return result;
+    for (const auto& month : std::filesystem::directory_iterator(paths.checkpoints)) {
+        if (!month.is_directory()) continue;
+        for (const auto& entry : std::filesystem::directory_iterator(month.path())) {
+            if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
+            try {
+                result.push_back(core::model::checkpoint_from_json(
+                    nlohmann::json::parse(core::fsys::read_file(entry.path()))));
+            } catch (...) {
+            }
+        }
+    }
+    return result;
+}
+
 struct CommitArgs {
     std::string task;
     std::string step;
@@ -64,6 +83,11 @@ struct DiffArgs {
 
 struct LogArgs {
     int limit{20};
+};
+
+struct ReconcileArgs {
+    bool check{false};
+    std::string sync_to;
 };
 
 } // namespace
@@ -193,5 +217,86 @@ void register_git_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
         }
+    });
+
+    auto reconcile_args = std::make_shared<ReconcileArgs>();
+    auto* reconcile_cmd = git->add_subcommand("reconcile", "Check or accept git drift");
+    add_global_opts(reconcile_cmd, global);
+    reconcile_cmd->add_flag("--check", reconcile_args->check,
+                            "Revalidate checkpoints (D4/D5)");
+    reconcile_cmd->add_option("--sync-to", reconcile_args->sync_to, "Accept this HEAD");
+    reconcile_cmd->callback([&global, &exit_code, reconcile_args]() {
+        const auto ctx = make_context(global);
+        if (!reconcile_args->sync_to.empty()) {
+            const auto sha = reconcile_args->sync_to;
+            if (core::git::run(ctx->paths.root, {"cat-file", "-e", sha + "^{commit}"}).code != 0) {
+                fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Unknown commit: " + sha);
+                return;
+            }
+            try {
+                core::fsys::write_atomic(
+                    ctx->paths.cache / "git-fingerprint.json",
+                    nlohmann::json({{"head", sha}, {"branch", core::git::branch(ctx->paths)}})
+                            .dump(2) +
+                        "\n");
+                append_event(ctx->paths, "human", "git.reconcile", {{"type", "git"}},
+                             ctx->drift_message.empty() ? nlohmann::json(nullptr)
+                                                        : nlohmann::json(ctx->drift_message),
+                             sha, "sync-to");
+            } catch (const std::exception& error) {
+                fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+                return;
+            }
+            ctx->out.print_both("Accepted HEAD " + sha,
+                                {{"command", "git.reconcile"}, {"head", sha}});
+            return;
+        }
+
+        int valid = 0;
+        int stale = 0;
+        int orphaned = 0;
+        int invalidated = 0;
+        try {
+            for (auto& checkpoint : load_checkpoints(ctx->paths)) {
+                if (checkpoint.status == "invalidated") {
+                    ++invalidated;
+                    continue;
+                }
+                const std::string commit = checkpoint.git.value("commit", "");
+                if (commit.empty() || core::git::run(ctx->paths.root,
+                                                     {"cat-file", "-e",
+                                                      commit + "^{commit}"})
+                                             .code != 0) {
+                    checkpoint.status = "orphaned";
+                    core::store::save_checkpoint(ctx->paths, checkpoint);
+                    ++orphaned;
+                    continue;
+                }
+                const auto tree =
+                    core::git::run(ctx->paths.root, {"rev-parse", commit + "^{tree}"});
+                const std::string expected = checkpoint.git.value("tree", "");
+                if (!expected.empty() && tree.code == 0 && tree.output != expected) {
+                    checkpoint.status = "stale";
+                    core::store::save_checkpoint(ctx->paths, checkpoint);
+                    ++stale;
+                    continue;
+                }
+                ++valid;
+            }
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        nlohmann::json result = {{"command", "git.reconcile"},
+                                 {"valid", valid},
+                                 {"stale", stale},
+                                 {"orphaned", orphaned},
+                                 {"invalidated", invalidated},
+                                 {"drift", ctx->drift_message}};
+        ctx->out.print_both("reconcile: valid=" + std::to_string(valid) +
+                                " stale=" + std::to_string(stale) +
+                                " orphaned=" + std::to_string(orphaned) +
+                                " invalidated=" + std::to_string(invalidated),
+                            result);
     });
 }

@@ -161,6 +161,22 @@ test_task_revert() {
     rm -rf "$ROOT"
 }
 
+test_git_reconcile() {
+    setup_git_project
+    echo "b" > "$ROOT/b.txt"
+    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --files b.txt --root "$ROOT" >/dev/null
+    git -C "$ROOT" reset --hard HEAD~1 >/dev/null
+    git -C "$ROOT" reflog expire --expire=now --all
+    git -C "$ROOT" gc --prune=now --quiet
+    if "$BIN" git reconcile --check --root "$ROOT" --output json |
+        jq -e '.orphaned == 1' >/dev/null; then
+        pass "reconcile marks missing commits orphaned (D4)"
+    else
+        fail "reconcile marks missing commits orphaned (D4)"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -358,6 +374,7 @@ test_git_drift_d2
 test_plan_archive_restore
 test_cache_index
 test_task_revert
+test_git_reconcile
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

@@ -112,6 +112,8 @@ std::string kind_name(DriftKind kind) {
         return "D2";
     case DriftKind::D3:
         return "D3";
+    case DriftKind::D6:
+        return "D6";
     case DriftKind::NONE:
         break;
     }
@@ -127,31 +129,44 @@ Drift detect_drift(const store::Paths& paths) {
 
     const auto fingerprint = paths.cache / "git-fingerprint.json";
     std::string previous;
+    std::string previous_branch;
     if (core::fsys::exists(fingerprint)) {
         try {
-            previous =
-                nlohmann::json::parse(core::fsys::read_file(fingerprint)).value("head", "");
+            const auto value = nlohmann::json::parse(core::fsys::read_file(fingerprint));
+            previous = value.value("head", "");
+            previous_branch = value.value("branch", "");
         } catch (...) {
             previous.clear();
+            previous_branch.clear();
         }
     }
+    const auto current_branch = branch(paths);
+    const auto write_fingerprint = [&]() {
+        if (!core::fsys::exists(paths.cache)) return;
+        core::fsys::write_atomic(
+            fingerprint,
+            nlohmann::json({{"head", now}, {"branch", current_branch}}).dump(2) + "\n");
+    };
     if (previous.empty()) {
-        if (core::fsys::exists(paths.cache)) {
-            core::fsys::write_atomic(fingerprint,
-                                     nlohmann::json({{"head", now}}).dump(2) + "\n");
+        write_fingerprint();
+        return drift;
+    }
+    if (previous == now) {
+        if (!previous_branch.empty() && !current_branch.empty() &&
+            previous_branch != current_branch) {
+            drift.kind = DriftKind::D6;
+            drift.old_head = previous;
+            drift.new_head = now;
+            write_fingerprint();
         }
         return drift;
     }
-    if (previous == now) return drift;
 
     drift.old_head = previous;
     drift.new_head = now;
     if (is_ancestor(paths, previous, now)) {
         drift.kind = DriftKind::D1;
-        if (core::fsys::exists(paths.cache)) {
-            core::fsys::write_atomic(fingerprint,
-                                     nlohmann::json({{"head", now}}).dump(2) + "\n");
-        }
+        write_fingerprint();
         if (core::fsys::exists(paths.log)) {
             model::Event event;
             event.ts = model::now_utc();

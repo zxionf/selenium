@@ -23,7 +23,7 @@ std::string branch(const store::Paths& paths);
 std::vector<std::string> files_changed(const store::Paths& paths);
 std::string diff_stat(const store::Paths& paths);
 
-enum class DriftKind { NONE, D1, D2, D3 };
+enum class DriftKind { NONE, D1, D2, D3, D6 };
 
 struct Drift {
     DriftKind kind{DriftKind::NONE};

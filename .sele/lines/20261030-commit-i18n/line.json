@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": 3,
+  "version": 4,
   "id": "20261030-commit-i18n",
   "type": "feature",
   "goal": "自动提交信息统一英文前缀 + 可配置中英文 subject",
@@ -28,7 +28,7 @@
   ],
   "created_at": "2026-10-30T07:31:33Z",
   "created_by": "zxionf",
-  "status": "done",
+  "status": "merged",
   "frozen": {
     "goal_sha256": "f75c00c538b2587449dcd9053107cf24dd1466b8c4c0f7a60243676fafd6a8d5",
     "acceptance_sha256": "04bab6faf921d72bda320115d65b0210262aa74fd17b97852b239bd5f9cf9b6d",
@@ -43,5 +43,8 @@
     }
   },
   "base_commit": "73d75da",
-  "merged": null
+  "merged": {
+    "at": "2026-10-30T07:38:23Z",
+    "commit": ""
+  }
 }

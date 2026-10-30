@@ -60,6 +60,7 @@ add_executable(sele
     src/cli/acceptance.cpp
     src/cli/overview.cpp
     src/cli/worktree.cpp
+    src/cli/epic.cpp
     src/cli/nextgen.cpp
     src/core/template.cpp
     src/core/commit_msg.cpp

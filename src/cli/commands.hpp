@@ -23,5 +23,6 @@ void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_acceptance(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_overview(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_worktree(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
+void register_epic(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 
 } // namespace cli

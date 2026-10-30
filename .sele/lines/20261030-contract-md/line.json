@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": 6,
+  "version": 7,
   "id": "20261030-contract-md",
   "type": "feature",
   "goal": "sele init 生成 .sele/CONTRACT.md 并在 AGENTS.md 中关联",
@@ -39,6 +39,6 @@
   "base_commit": "1cd3924",
   "merged": {
     "at": "2026-10-30T06:03:55Z",
-    "commit": ""
+    "commit": "f63202f"
   }
 }

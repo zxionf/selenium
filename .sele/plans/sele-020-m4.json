@@ -4,25 +4,25 @@
       "desc": "上下文：plan switch 写入 cache/context.json",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:05:40Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "编排：task insert/move 与跨线依赖",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:05:40Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "审计：decision record 与 log --replay",
       "id": "PA3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:05:40Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T14:01:50Z",
@@ -44,5 +44,5 @@
       "id": "log"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

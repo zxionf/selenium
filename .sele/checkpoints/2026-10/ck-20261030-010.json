@@ -1,0 +1,28 @@
+{
+  "entity": {
+    "line": "log",
+    "plan": "sele-020-m4",
+    "step": "S1",
+    "task": "T1",
+    "task_uid": "tsk_01M66HVTG9956QJZAQNPXS9DVG",
+    "type": "step"
+  },
+  "git": {
+    "branch": "sele/20261030-v2-core",
+    "commit": "e4379699bb94bd43e84e44143c549e90fb5985c4",
+    "diff_stat": " .sele/checkpoints/2026-10/ck-20261030-009.json | 30 ++++++++++++++++++++++++++\n .sele/lines/sele-020-m4.task.json              |  8 +++----\n .sele/log.jsonl                                | 10 +++++++++\n .sele/tasks/02/0a2a8b2913e3a9.json             | 16 +++++++-------\n .sele/tasks/a9/95bab53a50ce82.json             | 17 ++++++++++++---\n 5 files changed, 66 insertions(+), 15 deletions(-)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/checkpoints/2026-10/ck-20261030-009.json",
+      ".sele/lines/sele-020-m4.task.json",
+      ".sele/log.jsonl",
+      ".sele/tasks/02/0a2a8b2913e3a9.json",
+      ".sele/tasks/a9/95bab53a50ce82.json"
+    ],
+    "source": "sele",
+    "tree": "8271b0d148d6e36781e74437752b29bd846fa753"
+  },
+  "id": "ck-20261030-010",
+  "status": "valid",
+  "ts": "2026-10-30T14:05:40Z"
+}

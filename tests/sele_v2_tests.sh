@@ -193,6 +193,68 @@ test_log_compact() {
     rm -rf "$ROOT"
 }
 
+test_decision_replay() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    "$BIN" decision record "选 JWT 而非 session" --root "$ROOT" --plan p --task T1 >/dev/null
+    if "$BIN" log --decisions --root "$ROOT" --output json |
+        jq -e '.items | length == 1' >/dev/null; then
+        pass "decision record writes a decision event"
+    else
+        fail "decision record writes a decision event"
+    fi
+    if "$BIN" log --replay --root "$ROOT" --output json |
+        jq -e '.items | length >= 1' >/dev/null; then
+        pass "log --replay prints the timeline"
+    else
+        fail "log --replay prints the timeline"
+    fi
+    rm -rf "$ROOT"
+}
+
+test_task_insert_move() {
+    setup_project
+    "$BIN" line new b --root "$ROOT" --plan p --goal "gb" --acceptance "lb" --modules core >/dev/null
+    "$BIN" task add "a1" --root "$ROOT" --line a >/dev/null
+    "$BIN" task add "b1" --root "$ROOT" --line b >/dev/null
+    "$BIN" task insert "a0" --root "$ROOT" --line a --after T1 >/dev/null
+    if "$BIN" task list --root "$ROOT" --line a --output json |
+        jq -e '[.items[] | select(.id == "T2")] | length == 1' >/dev/null; then
+        pass "task insert adds a task after an anchor"
+    else
+        fail "task insert adds a task after an anchor"
+    fi
+    "$BIN" task move T2 --root "$ROOT" --to-line b >/dev/null
+    if "$BIN" task list --root "$ROOT" --line b --output json |
+        jq -e '[.items[] | select(.id == "T2")] | length == 1' >/dev/null; then
+        pass "task move changes the owning line"
+    else
+        fail "task move changes the owning line"
+    fi
+    rm -rf "$ROOT"
+}
+
+test_cross_line_dep() {
+    setup_project
+    "$BIN" line new b --root "$ROOT" --plan p --goal "gb" --acceptance "lb" --modules core >/dev/null
+    "$BIN" task add "a1" --root "$ROOT" --line a >/dev/null
+    "$BIN" task add "b1" --root "$ROOT" --line b >/dev/null
+    "$BIN" task add "a2" --root "$ROOT" --line a --depends b.T1 >/dev/null
+    if expect_code 2 "$BIN" task start T2 --root "$ROOT" --line a; then
+        pass "cross-line dependency blocks task start"
+    else
+        fail "cross-line dependency blocks task start"
+    fi
+    "$BIN" task start T1 --root "$ROOT" --line b >/dev/null
+    "$BIN" task done T1 --root "$ROOT" --line b >/dev/null
+    if "$BIN" task start T2 --root "$ROOT" --line a >/dev/null 2>&1; then
+        pass "cross-line dependency unblocks after done"
+    else
+        fail "cross-line dependency unblocks after done"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -392,6 +454,9 @@ test_cache_index
 test_task_revert
 test_git_reconcile
 test_log_compact
+test_decision_replay
+test_task_insert_move
+test_cross_line_dep
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

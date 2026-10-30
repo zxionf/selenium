@@ -4,9 +4,9 @@
       "desc": "计数与 keep 可用",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:10:52Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "created_at": "2026-10-30T14:07:26Z",
@@ -17,5 +17,5 @@
     "cli"
   ],
   "plan": "sele-020-m5",
-  "status": "active"
+  "status": "done"
 }

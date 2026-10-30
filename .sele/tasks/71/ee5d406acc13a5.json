@@ -4,18 +4,18 @@
       "desc": "pause 后含 head/branch/dirty_files",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:10:52Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "archived_at": null,
   "archived_git_head": null,
   "checkpoint_strategy": "per-step",
   "created_at": "2026-10-30T14:07:26Z",
-  "current_step": "S1",
+  "current_step": null,
   "depends": [],
-  "finished_at": null,
+  "finished_at": "2026-10-30T14:10:52Z",
   "goal": "pause_context 加 git_snapshot",
   "id": "T1",
   "line": "pause",
@@ -29,10 +29,10 @@
   "plan": "sele-020-m5",
   "review_policy": "mixed",
   "skipped_count": 0,
-  "status": "in_progress",
+  "status": "done",
   "steps": [
     {
-      "checkpoint": null,
+      "checkpoint": "ck-20261030-011",
       "desc": "",
       "id": "S1",
       "jump_meta": null,
@@ -40,7 +40,7 @@
       "locked": false,
       "requires_review": false,
       "skipped_reason": null,
-      "status": "in_progress",
+      "status": "done",
       "title": "pause 快照"
     }
   ],

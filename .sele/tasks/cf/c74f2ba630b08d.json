@@ -4,9 +4,9 @@
       "desc": "start 未选中 +1，keep 重置",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:10:52Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "archived_at": null,
@@ -15,7 +15,7 @@
   "created_at": "2026-10-30T14:07:26Z",
   "current_step": null,
   "depends": [],
-  "finished_at": null,
+  "finished_at": "2026-10-30T14:10:52Z",
   "goal": "skipped_count 与 task keep",
   "id": "T1",
   "line": "counter",
@@ -28,8 +28,22 @@
   "pause_context": null,
   "plan": "sele-020-m5",
   "review_policy": "mixed",
-  "status": "todo",
-  "steps": [],
+  "skipped_count": 0,
+  "status": "done",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "done",
+      "title": "count"
+    }
+  ],
   "title": "skipped_count 与 task keep",
   "uid": "tsk_01M66J62AHYAX98JFC5GM73X2Z"
 }

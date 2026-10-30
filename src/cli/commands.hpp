@@ -17,11 +17,6 @@ void add_global_opts(CLI::App* sub, GlobalOptions& global_opts);
 namespace cli {
 
 void register_init(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
-void register_new(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
-void register_append_decision(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
-void register_status(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
-void register_lint(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
-void register_close(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_version(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code);
 void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code);

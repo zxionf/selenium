@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(sele VERSION 0.10.2 LANGUAGES CXX)
+project(sele VERSION 0.11.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
@@ -54,11 +54,6 @@ add_executable(sele
     src/main.cpp
     src/cli/commands.cpp
     src/cli/init.cpp
-    src/cli/new.cpp
-    src/cli/append_decision.cpp
-    src/cli/status.cpp
-    src/cli/lint.cpp
-    src/cli/close.cpp
     src/cli/version.cpp
     src/cli/line.cpp
     src/cli/task.cpp
@@ -66,10 +61,7 @@ add_executable(sele
     src/cli/overview.cpp
     src/cli/worktree.cpp
     src/cli/nextgen.cpp
-    src/core/root.cpp
-    src/core/id.cpp
     src/core/template.cpp
-    src/core/git.cpp
     src/core/version.cpp
     src/core/fs.cpp
     src/core/hash.cpp
@@ -130,9 +122,6 @@ if(SELE_SHARED_DEPS)
 endif()
 
 enable_testing()
-if(WIN32)
-    add_test(NAME cli WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND powershell -ExecutionPolicy Bypass -File ${CMAKE_SOURCE_DIR}/tests/cli_tests.ps1 -SeleBin $<TARGET_FILE:sele>)
-else()
-    add_test(NAME cli WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND bash tests/cli_tests.sh $<TARGET_FILE:sele>)
+if(NOT WIN32)
     add_test(NAME sele_ng WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND bash tests/sele_tests.sh $<TARGET_FILE:sele>)
 endif()

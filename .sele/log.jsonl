@@ -11,3 +11,15 @@
 {"ts":"2026-10-30T06:03:55Z","actor":"zxionf","op":"line.done","line":"20261030-contract-md"}
 {"ts":"2026-10-30T06:03:55Z","actor":"zxionf","op":"line.merge","line":"20261030-contract-md","commit":"f63202f","base":"main"}
 {"ts":"2026-10-30T07:04:16Z","actor":"zxionf","op":"line.new","line":"20261030-drop-legacy"}
+{"ts":"2026-10-30T07:04:25Z","actor":"zxionf","op":"line.open","line":"20261030-drop-legacy","frozen":"9cfb8fec8a639ef048649ce8d27b1c7abf9cda8fdc54677745eeef5aeb58bede"}
+{"ts":"2026-10-30T07:05:40Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T1","commit":"851bcfb"}
+{"ts":"2026-10-30T07:07:01Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T2","commit":"34ccfe7"}
+{"ts":"2026-10-30T07:09:37Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T3","commit":"eb91f21"}
+{"ts":"2026-10-30T07:11:56Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T4","commit":"6b83a6a"}
+{"ts":"2026-10-30T07:12:34Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T5","commit":"920c0a5"}
+{"ts":"2026-10-30T07:13:43Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T6","commit":"81e28fa"}
+{"ts":"2026-10-30T07:13:43Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-drop-legacy","acceptance":"A1","evidence":"sele --help 无 new/append-decision/status/lint/close；sele init --legacy 退 1"}
+{"ts":"2026-10-30T07:13:43Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-drop-legacy","acceptance":"A2","evidence":"core/root|id|git 删除；template 仅剩 render_agents_template/render_sele_contract_template；构建通过"}
+{"ts":"2026-10-30T07:13:43Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-drop-legacy","acceptance":"A3","evidence":"只有 .design 的目录 sele init 成功；无 .sele 时只提示 Run sele init"}
+{"ts":"2026-10-30T07:13:43Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-drop-legacy","acceptance":"A4","evidence":"tests/sele_tests.sh 61 条通过；ctest 1/1；sele fsck passed；docs/ 与 info.md 未改"}
+{"ts":"2026-10-30T07:13:43Z","actor":"zxionf","op":"line.done","line":"20261030-drop-legacy"}

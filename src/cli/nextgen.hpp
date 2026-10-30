@@ -85,8 +85,5 @@ void require_active(const Ctx& ctx, const std::string& action);
 void check_graph(const std::vector<core::TaskSpec>& tasks, std::vector<std::string>& errors,
                  std::vector<std::string>& warnings);
 
-// Old commands keep working in .design projects; when a .sele project exists
-// without .design they must refuse with a pointer to the new commands.
-bool legacy_guard(const GlobalOptions& opts, util::Output& out, int& exit_code, const char* command);
 
 } // namespace cli::ng

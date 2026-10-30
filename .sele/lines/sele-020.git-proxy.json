@@ -1,0 +1,22 @@
+{
+  "acceptance": [
+    {
+      "desc": "git commit 生成 checkpoint；D1-D3 生效",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T13:28:49Z",
+  "depends": [],
+  "goal": "Git 代理与漂移检测",
+  "id": "git-proxy",
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "plan": "sele-020",
+  "status": "active"
+}

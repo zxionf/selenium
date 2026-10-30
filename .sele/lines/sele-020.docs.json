@@ -1,0 +1,21 @@
+{
+  "acceptance": [
+    {
+      "desc": "README/AGENTS/docs 一致",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T13:28:49Z",
+  "depends": [],
+  "goal": "文档与旧文档清理",
+  "id": "docs",
+  "modules": [
+    "docs"
+  ],
+  "plan": "sele-020",
+  "status": "active"
+}

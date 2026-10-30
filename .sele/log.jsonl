@@ -1,0 +1,10 @@
+{"actor":"agent","after":"draft","before":null,"context":{},"entity":{"plan":"sele-020","type":"plan"},"op":"plan.new","reason":"create plan","ts":"2026-10-30T13:28:49Z"}
+{"actor":"agent","after":"pending_approval","before":"draft","context":{},"entity":{"plan":"sele-020","type":"plan"},"op":"plan.submit","reason":"submit for approval","ts":"2026-10-30T13:28:49Z"}
+{"actor":"human:zxionf","after":"active","before":"pending_approval","context":{},"entity":{"plan":"sele-020","type":"plan"},"op":"plan.approve","reason":"approve plan","ts":"2026-10-30T13:28:49Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"docs","plan":"sele-020","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T13:28:49Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"git-proxy","plan":"sele-020","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T13:28:49Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"docs","plan":"sele-020","task":"T1","type":"task","uid":"tsk_01M66FZCFWWY398KNCD4P5VTZX"},"op":"task.add","reason":"create task","ts":"2026-10-30T13:28:49Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"git-proxy","plan":"sele-020","task":"T1","type":"task","uid":"tsk_01M66FZCFYSVHGRJQCNCN58BV6"},"op":"task.add","reason":"create task","ts":"2026-10-30T13:28:49Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"git-proxy","plan":"sele-020","task":"T2","type":"task","uid":"tsk_01M66FZCG0Y2ZNWVH2KHDYSRQQ"},"op":"task.add","reason":"create task","ts":"2026-10-30T13:28:49Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"git-proxy","plan":"sele-020","task":"T3","type":"task","uid":"tsk_01M66FZCG3GXKCH55J4A7Y3W7E"},"op":"task.add","reason":"create task","ts":"2026-10-30T13:28:49Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"docs","plan":"sele-020","task":"T1","type":"task","uid":"tsk_01M66FZCFWWY398KNCD4P5VTZX"},"op":"task.start","reason":"start task","ts":"2026-10-30T13:28:58Z"}

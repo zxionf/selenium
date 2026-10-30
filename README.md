@@ -1,26 +1,24 @@
 # selenium
 
-> [!NOTE]
-> 不允许ai修改此文件
+`sele` 是一个面向 AI agent 的 C++20 命令行工具，用「计划（Plan）→ 线（Line）→ 任务（Task）→ 步骤（Step）」组织开发工作。
 
-`sele` 是一个面向 AI agent 协作的 C++20 命令行工具，用「线（line）→ 任务（task）→ 验收（acceptance）→ 合并（merge）」组织开发工作。
+它只做三件事：**记录意图、记录进度、留下证据**。所有状态存放在工具私有目录 `.sele/`（类比 `.git/`），只能通过 `sele` 命令读写。
 
-它把「什么算完成、什么时候提交、失败怎么回滚」编码成命令，让人类和 agent 遵循同一套规则；所有状态存放在工具私有目录 `.sele/`（类比 `.git/`），只能通过 `sele` 命令读写。
+> 当前版本 **0.20.0**。0.20 不兼容 0.12 及更早版本，旧命令与旧 `.sele` 结构已移除。
 
 ## 特性
 
-- **一条线一个目标**：goal + 验收标准 + 独立 git 分支。
-- **task 即提交**：`task checkpoint` 是唯一的自动代码提交点。
-- **验收只记账**：`acceptance pass/fail`，工具不替人执行命令。
-- **多线并行**：独立分支 + 可选 worktree，会话指针互不干扰。
-- **线内并行**：显式 `--group` 并行组与 join 点。
-- **完整生命周期**：open → checkpoint → done → merge → archive，另有 revert / rebase。
-- **可审计**：append-only 日志，`fsck` 校验 `.sele` 一致性。
-- **可脚本化**：所有命令支持 `--output json`，退出码固定。
+- **四层结构**：Plan 带验收与审批，Line 是执行线，Task 是功能节点，Step 是内嵌待办。
+- **三个不变量**：全局至多一个进行中 Task（I1）；单 Task 至多一个进行中 Step（I2）；每次迁移都写事件（I3）。
+- **显式状态机**：迁移前置条件集中校验，非法迁移直接拒绝。
+- **暂停是一等状态**：`pause_context` 保存步骤、git 快照、恢复提示，恢复时不依赖记忆。
+- **审核分层**：`strict` / `lenient` / `mixed`，未满足时自动转 `pending_review`。
+- **可审计**：`log.jsonl` append-only，`sele log` 可查。
+- **可脚本化**：所有命令支持 `--root` 与 `--output text|json`，退出码固定。
 
 ## 安装
 
-依赖：C++20 编译器、CMake 3.20+；CLI11 与 nlohmann/json 由 CMake FetchContent 自动拉取。
+依赖：C++20 编译器、CMake 3.20+；CLI11 与 nlohmann/json 由 CMake FetchContent 拉取。
 
 ```bash
 cmake -B build -S .
@@ -35,100 +33,81 @@ sele version
 ## 快速开始
 
 ```bash
-# 项目需要 git 和至少一个提交
-git init -b main
-git add -A && git commit -m "init"
-
-# 初始化 .sele/
 sele init
 
-# 建线（draft）：一个目标 + 验收 + 模块
-sele line new fix-login \
-  --goal "登录失败时给出可操作错误" \
-  --acceptance "错误密码返回 401::pytest tests/test_login.py::test_wrong_pwd" \
-  --modules auth --type fix
+# 计划：目标 + 计划级验收 + 声明的线
+sele plan new demo --goal "用户能登录" --acceptance "端到端可用" --lines auth
+sele plan submit demo
+sele plan approve demo --by human:you
 
-# 挂任务
-sele task add "复现 401 分支" --modules auth
-sele task add "实现错误提示" --modules auth
+# 线：在 active plan 下创建
+sele line new auth --plan demo --goal "提供认证能力" --acceptance "登录接口可用" --modules core
 
-# 开线：冻结验收、创建 sele/<id> 分支
-sele line open <id>
+# 任务与步骤
+sele task add "实现登录接口" --line auth --acceptance "登录成功返回 token"
+sele task start T1 --line auth
+sele step add T1 "设计 schema" --line auth
+sele step add T1 "实现接口" --line auth
+sele step start T1 S1 --line auth
+sele step done T1 S1 --line auth
+sele step start T1 S2 --line auth
+sele step done T1 S2 --line auth
 
-# 推进任务
-sele task start T1
-# ... 修改代码 ...
-sele task checkpoint T1
-sele task done T1
-
-# 记账验收
-sele acceptance pass A1 --evidence "pytest 12 passed"
-
-# 收线、合并、归档
-sele line done <id>
-sele line merge <id> --confirm
-sele line archive <id>
+# 验收与完成
+sele task verify T1 A1 --line auth --by human:you
+sele task done T1 --line auth
+sele line verify auth A1 --plan demo --by human:you
+sele line done auth --plan demo
+sele plan verify demo PA1 --by human:you
+sele plan done demo
 ```
 
 ## 核心概念
 
 | 概念 | 含义 |
 |---|---|
-| line | 一个带验收的目标，对应分支 `sele/<id>` |
-| task | 线上的工作单元，完成时产生一次 checkpoint |
-| checkpoint | 一次 git commit（代码 + `.sele` 元数据） |
-| acceptance | 线级验收项，由人或 agent 记账 |
-| session | 当前会话指向的线，多 agent 用 `--session` 隔离 |
-| worktree | 把一条线检出到独立目录，用于并行写代码 |
-| merged / archived | 已合并 / 已归档，只读 |
+| plan | 计划：目标、计划级验收、审批状态 |
+| line | 执行线：一个目标 + 线级验收 + 允许的模块 |
+| task | 功能节点：内嵌多个 step 与验收点 |
+| step | 待办事项：顺序执行，可跳过、可跳转 |
+| checkpoint | 某一时刻的完整凭据（M2 起由 `sele git commit` 生成） |
+| event | `log.jsonl` 中的一条迁移记录，append-only |
+| paused / blocked / pending_review | 暂停 / 阻塞 / 待人工审核 |
 
 ## 命令
 
 ```text
-sele init                     初始化 .sele/
-sele line new|list|show|check|open|switch|done|merge|archive|...
-sele task add|list|start|checkpoint|done|fail|retry|block|unblock|revert
-sele acceptance pass|fail     记账验收
-sele overview                 全局概览
-sele log [--events]           审计日志
-sele fsck                     一致性检查
-sele worktree add|list|remove 多线工作树
-sele version                  版本信息
+sele init                      初始化 .sele/
+sele plan   new|submit|approve|reject|done|verify|status|show|archive|restore|list
+sele line   new|activate|switch|status|verify|done|abandon|dep-add|dep-remove|check|list
+sele task   add|start|pause|resume|done|approve|fail|retry|block|unblock|verify|archive|revive|list
+sele step   add|start|done|skip|goto|approve|reject|list
+sele next / status / tree / log / check
+sele version
 ```
 
-每个命令都支持 `--root <dir>`、`--output text|json`、`--session <id>`；完整参数见 `sele <命令> --help`。
-
-## 配置
-
-配置文件为 `.sele/config.json`，可控制：
-
-- 提交信息的语言（英文 / 中文）与 scope；
-- 模块白名单；
-- checkpoint 策略；
-- 操作者身份来源。
-
-详见 [`docs/sele-config.md`](docs/sele-config.md)。
+完整参数见 `sele <命令> --help`；实现说明见 [`docs/sele-0.20.0.md`](docs/sele-0.20.0.md)。
 
 ## 文档
 
 | 文档 | 内容 |
 |---|---|
-| [`docs/sele-user-guide.md`](docs/sele-user-guide.md) | 人类使用指南：安装、工作流、命令速查、FAQ |
-| [`docs/sele-config.md`](docs/sele-config.md) | 配置字段、环境变量、提交信息规则 |
-| [`docs/sele-v1-spec.md`](docs/sele-v1-spec.md) | 实现规格：状态机、数据模型、并发、审计 |
-| [`docs/sele-git.md`](docs/sele-git.md) | 与 git 的协作：提交时刻表、干净判定、冲突 |
-| [`docs/README.md`](docs/README.md) | 文档索引（含面向 agent 的操作手册入口） |
+| [`docs/sele-f.md`](docs/sele-f.md) | 接口契约：命令、字段、状态、目录 |
+| [`docs/sele-f-d.md`](docs/sele-f-d.md) | 概念模型：为什么这样设计、边界 |
+| [`docs/sele-0.20.0.md`](docs/sele-0.20.0.md) | 0.20.0 实际实现、状态机、范围裁剪 |
+| [`docs/README.md`](docs/README.md) | 文档索引 |
 
 ## 开发
 
 ```bash
 cmake -B build -S .
 cmake --build build
+bash tests/sele_v2_tests.sh build/build/sele
 ctest --test-dir build --output-on-failure
 ```
 
-- 源码：`src/cli/`（子命令）、`src/core/`（领域逻辑）、`src/util/`（输出与退出码）。
-- 测试：`tests/sele_tests.sh`（端到端，基于临时 git 仓库）。
+- 源码：`src/cli/`（子命令）、`src/core/`（实体、存储、事件、状态机）、`src/util/`（输出与退出码）。
+- 测试：`tests/sele_v2_tests.sh`（端到端，临时目录 + JSON 断言）。
 - 构建开启 `-Wall -Wextra -Wpedantic -Werror`，警告即错误。
 
-本仓库用于探索人类与ai-agent协作开发的范式，并尝试实现有助于此目的的cli工具。
+本仓库用于探索人类与 AI agent 协作开发的范式，并尝试实现有助于此目的的 CLI 工具。

@@ -1,0 +1,49 @@
+{
+  "acceptance": [
+    {
+      "desc": "手册命令与实现一致",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "archived_at": null,
+  "archived_git_head": null,
+  "checkpoint_strategy": "per-step",
+  "created_at": "2026-10-30T15:00:13Z",
+  "current_step": "S1",
+  "depends": [],
+  "finished_at": null,
+  "goal": "docs/sele-0.20.0-agent.md",
+  "id": "T1",
+  "line": "agent-doc",
+  "locked": {
+    "locked": false
+  },
+  "modules": [
+    "docs"
+  ],
+  "pause_context": null,
+  "plan": "sele-020-doc",
+  "review_policy": "mixed",
+  "skipped_count": 0,
+  "status": "in_progress",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "doc"
+    }
+  ],
+  "title": "docs/sele-0.20.0-agent.md",
+  "uid": "tsk_01M66N6QX6QB85D68BK5P1S2TB"
+}

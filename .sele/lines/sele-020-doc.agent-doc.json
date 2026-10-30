@@ -1,0 +1,21 @@
+{
+  "acceptance": [
+    {
+      "desc": "手册可用",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T15:00:13Z",
+  "depends": [],
+  "goal": "agent 手册",
+  "id": "agent-doc",
+  "modules": [
+    "docs"
+  ],
+  "plan": "sele-020-doc",
+  "status": "active"
+}

@@ -4,9 +4,9 @@
       "desc": "命令可用",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:29:47Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "archived_at": null,
@@ -15,7 +15,7 @@
   "created_at": "2026-10-30T14:27:07Z",
   "current_step": null,
   "depends": [],
-  "finished_at": null,
+  "finished_at": "2026-10-30T14:29:47Z",
   "goal": "task reject/update/status",
   "id": "T1",
   "line": "task",
@@ -29,8 +29,21 @@
   "plan": "sele-020-p1",
   "review_policy": "mixed",
   "skipped_count": 0,
-  "status": "todo",
-  "steps": [],
+  "status": "done",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "done",
+      "title": "task"
+    }
+  ],
   "title": "task reject/update/status",
   "uid": "tsk_01M66KA3VC9HWG320GCD18HD5Y"
 }

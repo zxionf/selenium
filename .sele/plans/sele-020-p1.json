@@ -4,33 +4,33 @@
       "desc": "Plan abort 可用",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:29:47Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "Line block/unblock 可用",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:29:47Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "Task reject/update/status 可用",
       "id": "PA3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:29:47Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "Step fail/block/unblock 可用",
       "id": "PA4",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:29:47Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T14:26:54Z",
@@ -56,5 +56,5 @@
       "id": "step"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

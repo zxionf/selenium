@@ -41,6 +41,7 @@ project-name
 
 ## 入口
 
+- **agent 契约：`.sele/CONTRACT.md`（不可违反清单，优先阅读）**。
 - 首次使用：`sele init`（创建 `.sele/`；若本文件缺失会一并生成）。
 - 当前状态：`sele overview --output json`。
 - `.sele/` 是工具私有目录，只通过 `sele` 命令读写；不要用编辑器直接修改。

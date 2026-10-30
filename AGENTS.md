@@ -6,10 +6,11 @@
 
 ## 入口
 
-1. 命令、状态机、JSON 契约与常见错误：`docs/sele-v0.10.0.md`。
-2. 当前状态：`sele overview --output json`。
-3. `.sele/` 是工具私有目录，只通过 `sele` 命令读写；不要用编辑器直接修改。
-4. `.design/` 与 `.agent/` 是旧体系（legacy），仅作历史参考；新工作不要往里写。
+1. **agent 契约：`.sele/CONTRACT.md`（不可违反清单，优先阅读）**。
+2. 命令、状态机、JSON 契约与常见错误：`docs/sele-v0.10.0.md`。
+3. 当前状态：`sele overview --output json`。
+4. `.sele/` 是工具私有目录，只通过 `sele` 命令读写；不要用编辑器直接修改。
+5. `.design/` 与 `.agent/` 是旧体系（legacy），仅作历史参考；新工作不要往里写。
 
 ## 体系最小闭环
 

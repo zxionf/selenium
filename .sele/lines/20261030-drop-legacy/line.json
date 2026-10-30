@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": 4,
+  "version": 5,
   "id": "20261030-drop-legacy",
   "type": "refactor",
   "goal": "移除 .design/.agent 旧体系兼容，sele 只支持 .sele",
@@ -50,6 +50,6 @@
   "base_commit": "29d1e0b",
   "merged": {
     "at": "2026-10-30T07:13:44Z",
-    "commit": ""
+    "commit": "a17c726"
   }
 }

@@ -1,6 +1,6 @@
 # sele 人类使用指南
 
-> 适用版本：0.11.1（`sele version` 可查）。
+> 适用版本：0.11.1（`sele version` 可查）。  
 > 面向人类阅读；agent 的操作手册见 `docs/sele-v0.10.0.md`，实现细节见 `docs/sele-v1-spec.md`。
 
 ---

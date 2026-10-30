@@ -358,7 +358,7 @@ sele version
 #### `sele init [--legacy]`
 
 - 默认创建 `.sele/`：目录、`config.json`、`log.jsonl`（空文件）、`.gitignore`（内容 `runtime/`）、`runtime/` 子目录；若目标目录没有 `AGENTS.md`，一并写入内置的 agent 入口模板（已有则**不覆盖**）；若 `.sele/CONTRACT.md` 缺失，写入内置契约模板（已有则不覆盖）。
-- 目标已存在 `.sele/` → 退 2。已有 `.design/` 或 `.agent/` 时**允许**创建 `.sele/`，旧目录保留不动，输出 `legacy_present:true`；两者共存时旧命令仍可用（§10.1）。
+- 目标已存在 `.sele/` 时：若缺 `AGENTS.md` / `.sele/CONTRACT.md` / config / log / gitignore 等初始化文件，进入补齐模式（`mode:"repair"`），只补缺失文件；全部齐全才退 2。已有 `.design/` 或 `.agent/` 时**允许**创建 `.sele/`，旧目录保留不动，输出 `legacy_present:true`；两者共存时旧命令仍可用（§10.1）。
 - `--legacy`：保持 v0.2 行为，创建 `.design/` + `.agent/` 与模板。
 - 不自动 `git init`；非 git 仓库也可 init，但 `line open` 与 `task checkpoint` 需要 git。
 
@@ -643,7 +643,7 @@ next: ["sele line list", "sele line show 20261029-fix-login"]
 
 ## 11. 测试计划
 
-单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 60 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝、`log --events` 合并、fork/join 并行与组约束、`archive` 移动/只读/幂等/前置拒绝、`init` 生成 AGENTS.md 与不覆盖已有文件、与 `.design/.agent` 共存初始化、`init` 生成 `.sele/CONTRACT.md` 并在 AGENTS 中关联。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
+单二进制，Linux 上 `tests/sele_tests.sh` 当前实现 61 条：下表计划集已全部覆盖，另增 `task fail/retry`、`task block/unblock`、`line block/unblock`、`line abandon`、dirty 工作树下 `open/switch` 的拒绝、done line 拒绝新任务、`check --strict` 跨线冲突、`line merge` 成功/冲突回滚/删除分支、`line revert` 回退与拒绝已合并线、`task revert` 中间/根任务与前置检查、`line rebase` 成功/冲突 abort/冲突 continue、`worktree` 增删查与前置拒绝、`log --events` 合并、fork/join 并行与组约束、`archive` 移动/只读/幂等/前置拒绝、`init` 生成 AGENTS.md 与不覆盖已有文件、与 `.design/.agent` 共存初始化、`init` 生成 `.sele/CONTRACT.md` 并在 AGENTS 中关联。Windows 的 ps1 新体系脚本暂未提供（旧 cli 测试仍双平台）。
 
 | # | 用例 | 断言 |
 |---|---|---|

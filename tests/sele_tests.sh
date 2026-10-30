@@ -988,6 +988,18 @@ test_init_creates_contract() {
     rm -rf "$proj"
 }
 
+test_init_repairs_missing_files() {
+    local proj
+    proj=$(mktemp -d)
+    "$BIN" --root "$proj" init >/dev/null
+    rm "$proj/.sele/CONTRACT.md"
+    "$BIN" --root "$proj" init --output json | \
+        jq -e '.mode == "repair" and .contract_written == true' >/dev/null
+    [[ -f "$proj/.sele/CONTRACT.md" ]]
+    expect_code 2 "$BIN" --root "$proj" init
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init --legacy creates .design/.agent" test_init_legacy
 run_test "line new creates draft and session pointer" test_line_new
@@ -1048,5 +1060,6 @@ run_test "archive refuses a line with a worktree" test_archive_rejects_worktree
 run_test "init writes AGENTS.md without overwriting" test_init_creates_agents
 run_test "init adds .sele next to legacy directories" test_init_next_to_legacy
 run_test "init writes .sele/CONTRACT.md and links it from AGENTS" test_init_creates_contract
+run_test "init repairs missing AGENTS/CONTRACT" test_init_repairs_missing_files
 
 echo "=== All sele tests passed! ==="

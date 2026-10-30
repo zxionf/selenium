@@ -13,6 +13,7 @@
 
 #include "cli/nextgen.hpp"
 #include "core/fs.hpp"
+#include "core/commit_msg.hpp"
 #include "core/gitrt.hpp"
 #include "core/model.hpp"
 #include "core/sele.hpp"
@@ -555,8 +556,10 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
 
             const std::string branch = branch_for(ctx.line_id);
             if (core::gitrt::current_branch(ctx.lay.root).rfind("sele/", 0) != 0) {
-                core::gitrt::commit_all(ctx.lay.root,
-                                        "chore(sele): plan " + ctx.line_id);
+                core::gitrt::commit_all(
+                    ctx.lay.root,
+                    core::commit::message(
+                        {core::commit::Kind::Plan, ctx.line_id, ctx.line.type}, ctx.conf));
             }
             ctx.line.base_commit = core::gitrt::head_short(ctx.lay.root);
             if (core::gitrt::branch_exists(ctx.lay.root, branch)) {
@@ -691,7 +694,10 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             if (!done_args->no_commit && core::gitrt::is_repo(ctx.lay.root)) {
                 if (core::gitrt::current_branch(ctx.lay.root) == branch_for(ctx.line_id)) {
                     committed = core::gitrt::commit_all(
-                        ctx.lay.root, "chore(sele): line " + ctx.line_id + " done");
+                        ctx.lay.root,
+                        core::commit::message(
+                            {core::commit::Kind::Done, ctx.line_id, ctx.line.type},
+                            ctx.conf));
                 }
             }
 
@@ -1081,12 +1087,18 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             ctx.line.merged_at = core::sele::utc_now();
             ctx.line.merge_commit.clear();
             ng::save_line(ctx);
-            core::gitrt::commit_all(ctx.lay.root,
-                                    "chore(sele): mark " + ctx.line_id + " merged");
+            core::gitrt::commit_all(
+                ctx.lay.root,
+                core::commit::message(
+                    {core::commit::Kind::MarkMerged, ctx.line_id, ctx.line.type}, ctx.conf));
 
             core::gitrt::switch_branch(ctx.lay.root, merge_args->onto);
             const auto merge = core::gitrt::run(
-                ctx.lay.root, {"merge", "--no-ff", "-m", "sele: merge " + ctx.line_id, branch});
+                ctx.lay.root,
+                {"merge", "--no-ff", "-m",
+                 core::commit::message(
+                     {core::commit::Kind::MergeCommit, ctx.line_id, ctx.line.type}, ctx.conf),
+                 branch});
             if (merge.code != 0) {
                 const auto conflicts =
                     core::gitrt::run(ctx.lay.root, {"diff", "--name-only", "--diff-filter=U"});
@@ -1098,8 +1110,11 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 ctx.line.merged_at.clear();
                 ctx.line.merge_commit.clear();
                 ng::save_line(ctx);
-                core::gitrt::commit_all(ctx.lay.root,
-                                        "chore(sele): unmark " + ctx.line_id + " merged");
+                core::gitrt::commit_all(
+                    ctx.lay.root,
+                    core::commit::message(
+                        {core::commit::Kind::UnmarkMerged, ctx.line_id, ctx.line.type},
+                        ctx.conf));
 
                 const std::string detail = trim_text(conflicts.out);
                 fail(exit_codes::STATE_CONFLICT,
@@ -1113,8 +1128,10 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             ng::append_log(ctx, "line.merge",
                            {{"commit", ctx.line.merge_commit}, {"base", merge_args->onto}});
             ng::save_line(ctx);
-            core::gitrt::commit_all(ctx.lay.root,
-                                    "chore(sele): record merge " + ctx.line_id);
+            core::gitrt::commit_all(
+                ctx.lay.root,
+                core::commit::message(
+                    {core::commit::Kind::RecordMerge, ctx.line_id, ctx.line.type}, ctx.conf));
 
             if (merge_args->delete_branch) {
                 core::gitrt::run(ctx.lay.root, {"branch", "-d", branch});
@@ -1346,7 +1363,10 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
                 ng::save_line(ctx);
                 ng::append_log(ctx, "line.rebase",
                                {{"base", onto}, {"commit", ctx.line.base_commit}});
-                core::gitrt::commit_all(root.lay.root, "chore(sele): rebase " + line_id);
+                core::gitrt::commit_all(
+                    root.lay.root,
+                    core::commit::message(
+                        {core::commit::Kind::Rebase, line_id, ctx.line.type}, ctx.conf));
 
                 nlohmann::json result_json;
                 result_json["command"] = "line.rebase";
@@ -1414,7 +1434,10 @@ void register_line(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             ng::save_line(after);
             ng::append_log(after, "line.rebase",
                            {{"base", rebase_args->onto}, {"commit", after.line.base_commit}});
-            core::gitrt::commit_all(root.lay.root, "chore(sele): rebase " + line_id);
+            core::gitrt::commit_all(
+                root.lay.root,
+                core::commit::message(
+                    {core::commit::Kind::Rebase, line_id, after.line.type}, ctx.conf));
 
             nlohmann::json result_json;
             result_json["command"] = "line.rebase";

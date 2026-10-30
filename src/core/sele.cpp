@@ -91,6 +91,29 @@ Config load_config(const Layout& layout) {
             config.allow_empty = checkpoint["allow_empty"].get<bool>();
         }
     }
+    if (root.contains("commit") && root["commit"].is_object()) {
+        const auto& commit = root["commit"];
+        if (commit.contains("language") && commit["language"].is_string()) {
+            config.commit_language = commit["language"].get<std::string>();
+        }
+        if (commit.contains("scope") && commit["scope"].is_string()) {
+            config.commit_scope = commit["scope"].get<std::string>();
+        }
+        if (commit.contains("task_type") && commit["task_type"].is_string()) {
+            config.commit_task_type = commit["task_type"].get<std::string>();
+        }
+    }
+    if (config.commit_language != "en" && config.commit_language != "zh") {
+        throw std::runtime_error("Unsupported commit.language: " + config.commit_language);
+    }
+    if (config.commit_scope.empty()) {
+        throw std::runtime_error("commit.scope must not be empty");
+    }
+    if (config.commit_task_type != "auto" && config.commit_task_type != "chore" &&
+        config.commit_task_type != "feat" && config.commit_task_type != "fix" &&
+        config.commit_task_type != "refactor") {
+        throw std::runtime_error("Unsupported commit.task_type: " + config.commit_task_type);
+    }
     if (config.checkpoint_strategy != "git-commit") {
         throw std::runtime_error("Unsupported checkpoint strategy: " + config.checkpoint_strategy);
     }

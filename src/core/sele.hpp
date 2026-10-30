@@ -28,6 +28,9 @@ struct Config {
     std::vector<std::string> modules_allow;
     std::string checkpoint_strategy = "git-commit";
     bool allow_empty = false;
+    std::string commit_language = "en";
+    std::string commit_scope = "sele";
+    std::string commit_task_type = "auto";
 };
 
 std::optional<std::filesystem::path> find_root(const std::filesystem::path& start);

@@ -10,6 +10,7 @@
 
 #include "cli/nextgen.hpp"
 #include "core/fs.hpp"
+#include "core/commit_msg.hpp"
 #include "core/gitrt.hpp"
 #include "core/model.hpp"
 #include "core/sele.hpp"
@@ -316,7 +317,10 @@ void register_task(CLI::App& app, GlobalOptions& global_opts, int& exit_code) {
             const auto* spec = ctx.task(checkpoint_args->task);
             const std::string message =
                 checkpoint_args->msg.empty()
-                    ? ctx.line_id + ": " + spec->id + " " + spec->title
+                    ? core::commit::message({core::commit::Kind::TaskCheckpoint, ctx.line_id,
+                                             ctx.line.type, spec->id, spec->title,
+                                             spec->modules},
+                                            ctx.conf)
                     : checkpoint_args->msg;
             const bool committed = core::gitrt::commit_all(ctx.lay.root, message);
             auto& state = ctx.task_state(checkpoint_args->task);

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(sele VERSION 0.11.0 LANGUAGES CXX)
+project(sele VERSION 0.11.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
@@ -62,6 +62,7 @@ add_executable(sele
     src/cli/worktree.cpp
     src/cli/nextgen.cpp
     src/core/template.cpp
+    src/core/commit_msg.cpp
     src/core/version.cpp
     src/core/fs.cpp
     src/core/hash.cpp

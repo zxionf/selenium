@@ -37,6 +37,10 @@ void init_next(const fs::path& target, util::Output& output, int& exit_code) {
     config["checkpoint"] = core::sele::json::object();
     config["checkpoint"]["strategy"] = "git-commit";
     config["checkpoint"]["allow_empty"] = false;
+    config["commit"] = core::sele::json::object();
+    config["commit"]["language"] = "en";
+    config["commit"]["scope"] = "sele";
+    config["commit"]["task_type"] = "auto";
 
     core::fsys::ensure_dir(layout.lines);
     core::fsys::ensure_dir(layout.state);

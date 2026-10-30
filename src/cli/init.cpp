@@ -1,6 +1,7 @@
 #include "cli/common.hpp"
 
 #include "cli/commands.hpp"
+#include "core/config.hpp"
 #include "core/entity.hpp"
 #include "core/event.hpp"
 #include "core/fs.hpp"
@@ -18,6 +19,7 @@ void register_init_cmd(CLI::App& app, GlobalOptions& global, int& exit_code) {
         const auto ctx = make_context(global);
         try {
             core::store::ensure_layout(ctx->paths);
+            core::config::save(ctx->paths, core::config::load(ctx->paths));
             const bool has_log = core::fsys::exists(ctx->paths.log);
             nlohmann::json result = {{"ok", true},
                                      {"root", ctx->paths.root.string()},

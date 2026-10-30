@@ -2,6 +2,7 @@
 
 #include "cli/commands.hpp"
 #include "core/checkpoint.hpp"
+#include "core/config.hpp"
 #include "core/entity.hpp"
 #include "core/event.hpp"
 #include "core/fs.hpp"
@@ -185,6 +186,35 @@ void register_git_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             return;
         }
 
+        const auto config = core::config::load(ctx->paths);
+        std::string message = commit_args->message;
+        if (config.message_convention == "sele") {
+            message = "sele(" + task.id + "/" + step->id + "): " + message;
+        }
+        if (config.module_scope != "off" && !commit_args->files.empty()) {
+            std::vector<std::string> outside;
+            for (const auto& file : commit_args->files) {
+                bool inside = false;
+                for (const auto& module : task.modules) {
+                    if (file.find(module) != std::string::npos) {
+                        inside = true;
+                        break;
+                    }
+                }
+                if (!inside) outside.push_back(file);
+            }
+            if (!outside.empty()) {
+                std::string joined;
+                for (const auto& file : outside) joined += (joined.empty() ? "" : ",") + file;
+                if (config.module_scope == "block") {
+                    fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                         "Files outside task modules: " + joined);
+                    return;
+                }
+                ctx->out.print_text("Warning: files outside task modules: " + joined);
+            }
+        }
+
         std::vector<std::string> add{"add"};
         if (commit_args->files.empty()) {
             add.push_back("-A");
@@ -197,7 +227,7 @@ void register_git_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             return;
         }
         const auto commit_result =
-            core::git::run(ctx->paths.root, {"commit", "-m", commit_args->message});
+            core::git::run(ctx->paths.root, {"commit", "-m", message});
         if (commit_result.code != 0) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR,
                  "git commit failed: " + commit_result.output);
@@ -214,7 +244,7 @@ void register_git_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             event.op = "git.commit";
             event.entity = checkpoint.entity;
             event.after = checkpoint.id;
-            event.reason = commit_args->message;
+            event.reason = message;
             event.checkpoint = checkpoint.id;
             core::event::append(ctx->paths, event);
             ctx->out.print_both(

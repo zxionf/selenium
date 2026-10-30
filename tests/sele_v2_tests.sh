@@ -542,13 +542,40 @@ test_query_options() {
         fail "status --with-git includes git"
     fi
     "$BIN" step done T1 S1 --root "$ROOT" --line a >/dev/null
-    "$BIN" task done T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" task approve T1 --root "$ROOT" --line a >/dev/null
     "$BIN" task archive T1 --root "$ROOT" --line a >/dev/null
     if [ "$("$BIN" task list --root "$ROOT" --line a --output json | jq '.items | length')" = "0" ] &&
         [ "$("$BIN" task list --root "$ROOT" --line a --all --output json | jq '.items | length')" = "1" ]; then
         pass "task list hides archived unless --all"
     else
         fail "task list hides archived unless --all"
+    fi
+    rm -rf "$ROOT"
+}
+
+test_config() {
+    setup_git_project
+    if "$BIN" config --root "$ROOT" --output json |
+        jq -e '.module_scope == "warn"' >/dev/null; then
+        pass "config show returns defaults"
+    else
+        fail "config show returns defaults"
+    fi
+    jq '.module_scope="block"' "$ROOT/.sele/config.json" > "$ROOT/.sele/config.json.tmp" &&
+        mv "$ROOT/.sele/config.json.tmp" "$ROOT/.sele/config.json"
+    echo "b" > "$ROOT/b.txt"
+    if expect_code 2 "$BIN" git commit --task T1 --step S1 --line a --message x --files b.txt --root "$ROOT"; then
+        pass "module_scope block rejects out-of-scope files"
+    else
+        fail "module_scope block rejects out-of-scope files"
+    fi
+    jq '.module_scope="warn" | .message_convention="sele"' "$ROOT/.sele/config.json" > "$ROOT/.sele/config.json.tmp" &&
+        mv "$ROOT/.sele/config.json.tmp" "$ROOT/.sele/config.json"
+    "$BIN" git commit --task T1 --step S1 --line a --message c1 --root "$ROOT" >/dev/null
+    if git -C "$ROOT" log -1 --pretty=%s | grep -q '^sele(T1/S1):'; then
+        pass "message_convention sele prefixes the commit"
+    else
+        fail "message_convention sele prefixes the commit"
     fi
     rm -rf "$ROOT"
 }
@@ -766,6 +793,7 @@ test_p1_commands
 test_depends_uid
 test_check_extended
 test_query_options
+test_config
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

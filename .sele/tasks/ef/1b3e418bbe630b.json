@@ -4,18 +4,18 @@
       "desc": "选项可用",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T14:42:22Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "archived_at": null,
   "archived_git_head": null,
   "checkpoint_strategy": "per-step",
   "created_at": "2026-10-30T14:39:56Z",
-  "current_step": "S1",
+  "current_step": null,
   "depends": [],
-  "finished_at": null,
+  "finished_at": "2026-10-30T14:42:22Z",
   "goal": "log since/step/git-commit、status --with-git、task list --all",
   "id": "T1",
   "line": "query",
@@ -29,10 +29,10 @@
   "plan": "sele-020-p2b",
   "review_policy": "mixed",
   "skipped_count": 0,
-  "status": "in_progress",
+  "status": "done",
   "steps": [
     {
-      "checkpoint": null,
+      "checkpoint": "ck-20261030-018",
       "desc": "",
       "id": "S1",
       "jump_meta": null,
@@ -40,7 +40,7 @@
       "locked": false,
       "requires_review": false,
       "skipped_reason": null,
-      "status": "in_progress",
+      "status": "done",
       "title": "query"
     }
   ],

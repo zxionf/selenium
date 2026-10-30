@@ -1,0 +1,33 @@
+{
+  "entity": {
+    "line": "query",
+    "plan": "sele-020-p2b",
+    "step": "S1",
+    "task": "T1",
+    "task_uid": "tsk_01M66M1K39A64W00DTKAHC0XTE",
+    "type": "step"
+  },
+  "git": {
+    "branch": "sele/20261030-v2-core",
+    "commit": "c18a72167ce7813f411789c4460c40146fb96daf",
+    "diff_stat": " .sele/lines/sele-020-p2b.config.json | 22 ++++++++++++++++\n .sele/lines/sele-020-p2b.query.json  | 21 ++++++++++++++++\n .sele/log.jsonl                      | 11 ++++++++\n .sele/plans/sele-020-p2b.json        | 36 ++++++++++++++++++++++++++\n .sele/tasks/1c/7fdc9c6d5f4c16.json   | 37 +++++++++++++++++++++++++++\n .sele/tasks/ef/1b3e418bbe630b.json   | 49 ++++++++++++++++++++++++++++++++++++\n src/cli/git.cpp                      | 12 +++++++--\n src/cli/query.cpp                    | 45 +++++++++++++++++++++++++++++++--\n src/cli/task.cpp                     |  3 +++\n tests/sele_v2_tests.sh               | 38 ++++++++++++++++++++++++++++\n 10 files changed, 270 insertions(+), 4 deletions(-)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/lines/sele-020-p2b.config.json",
+      ".sele/lines/sele-020-p2b.query.json",
+      ".sele/log.jsonl",
+      ".sele/plans/sele-020-p2b.json",
+      ".sele/tasks/1c/7fdc9c6d5f4c16.json",
+      ".sele/tasks/ef/1b3e418bbe630b.json",
+      "src/cli/git.cpp",
+      "src/cli/query.cpp",
+      "src/cli/task.cpp",
+      "tests/sele_v2_tests.sh"
+    ],
+    "source": "sele",
+    "tree": "ec52138b52c20453a2d5e0162f5dd8f8a1acdc66"
+  },
+  "id": "ck-20261030-018",
+  "status": "valid",
+  "ts": "2026-10-30T14:42:22Z"
+}

@@ -62,8 +62,10 @@ add_executable(sele
     src/cli/query.cpp
     src/cli/git.cpp
     src/cli/cache.cpp
+    src/cli/config.cpp
     src/core/git.cpp
     src/core/checkpoint.cpp
+    src/core/config.cpp
     src/core/entity.cpp
     src/core/event.cpp
     src/core/fs.cpp

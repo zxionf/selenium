@@ -3,6 +3,7 @@
 #include "cli/commands.hpp"
 #include "core/entity.hpp"
 #include "core/event.hpp"
+#include "core/config.hpp"
 #include "core/fs.hpp"
 #include "core/git.hpp"
 #include "core/id.hpp"
@@ -256,6 +257,20 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 if (task.status == "in_progress") current = task.id;
             }
 
+            const auto config = core::config::load(ctx->paths);
+            nlohmann::json warnings = nlohmann::json::array();
+            for (const auto& task : tasks) {
+                if (!plan_id.empty() && task.plan != plan_id) continue;
+                if (task.status != "paused") continue;
+                if (task.skipped_count >= config.escalate_after_skips) {
+                    warnings.push_back(task.id + " skipped " +
+                                       std::to_string(task.skipped_count) + " times (escalate)");
+                } else if (task.skipped_count >= config.warn_after_skips) {
+                    warnings.push_back(task.id + " skipped " +
+                                       std::to_string(task.skipped_count) + " times (warn)");
+                }
+            }
+
             std::ostringstream text;
             text << "Plan: " << (plan_id.empty() ? "<none>" : plan_id);
             text << "\nLines: " << line_items.size();
@@ -268,6 +283,9 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 text << " " << item.key() << "=" << item.value().get<int>();
             }
             text << "\nCurrent: " << (current.empty() ? "<none>" : current);
+            for (const auto& warning : warnings) {
+                text << "\nWarning: " << warning.get<std::string>();
+            }
 
             nlohmann::json git = nlohmann::json::object();
             if (status_args->with_git && core::git::present(ctx->paths.root)) {
@@ -286,6 +304,7 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                                      {"plans", plan_items},
                                      {"lines", line_items},
                                      {"tasks", task_counts},
+                                     {"warnings", warnings},
                                      {"git", git}};
             result["current"] =
                 current.empty() ? nlohmann::json(nullptr) : nlohmann::json(current);

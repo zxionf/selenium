@@ -1,0 +1,21 @@
+{
+  "acceptance": [
+    {
+      "desc": "start/resume/approve 可带 reason",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T14:23:31Z",
+  "depends": [],
+  "goal": "迁移 reason",
+  "id": "reason",
+  "modules": [
+    "cli"
+  ],
+  "plan": "sele-020-p0",
+  "status": "active"
+}

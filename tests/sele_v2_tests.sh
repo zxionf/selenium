@@ -367,6 +367,25 @@ test_revert_exec_guard() {
     rm -rf "$ROOT"
 }
 
+test_next_i1() {
+    setup_project
+    "$BIN" task add "t1" --root "$ROOT" --line a >/dev/null
+    "$BIN" task add "t2" --root "$ROOT" --line a >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    if "$BIN" next --root "$ROOT" --output json | jq -e '.items | length == 0' >/dev/null; then
+        pass "next is empty while a task is in_progress (I1)"
+    else
+        fail "next is empty while a task is in_progress (I1)"
+    fi
+    "$BIN" task done T1 --root "$ROOT" --line a >/dev/null
+    if "$BIN" next --root "$ROOT" --output json | jq -e '.items | length >= 1' >/dev/null; then
+        pass "next lists ready tasks after the current task is done"
+    else
+        fail "next lists ready tasks after the current task is done"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -575,6 +594,7 @@ test_step_lock
 test_step_update_delete_move
 test_full_ref
 test_revert_exec_guard
+test_next_i1
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

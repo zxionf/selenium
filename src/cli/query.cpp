@@ -34,6 +34,9 @@ bool task_ready(const core::model::Task& task, const std::vector<core::model::Pl
                 const std::vector<core::model::Line>& lines,
                 const std::vector<core::model::Task>& tasks) {
     if (task.status != "todo" && task.status != "paused") return false;
+    for (const auto& candidate : tasks) {
+        if (candidate.status == "in_progress") return false;
+    }
     bool plan_ok = false;
     for (const auto& plan : plans) {
         if (plan.id == task.plan && plan.status == "active") plan_ok = true;
@@ -158,6 +161,13 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                                      return left.status == "paused" && right.status != "paused";
                                  });
             }
+            std::stable_sort(ready.begin(), ready.end(),
+                             [](const core::model::Task& left, const core::model::Task& right) {
+                                 if (left.created_at != right.created_at) {
+                                     return left.created_at < right.created_at;
+                                 }
+                                 return left.uid < right.uid;
+                             });
             ready = order_tasks(ready);
 
             nlohmann::json items = nlohmann::json::array();

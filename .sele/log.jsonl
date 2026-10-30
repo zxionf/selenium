@@ -222,3 +222,16 @@
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-020-m6","type":"plan"},"op":"plan.verify","reason":"PA2","ts":"2026-10-30T14:16:36Z"}
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-020-m6","type":"plan"},"op":"plan.verify","reason":"PA3","ts":"2026-10-30T14:16:36Z"}
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-020-m6","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-30T14:16:36Z"}
+{"actor":"sele","after":"a1524c1ef0cbaa283a2e0e9d64694a2181c858d0","before":"f0371ee3d51217505e459bb495c111ddfe0e211e","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"draft","before":null,"context":{},"entity":{"plan":"sele-020-p0","type":"plan"},"op":"plan.new","reason":"create plan","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"pending_approval","before":"draft","context":{},"entity":{"plan":"sele-020-p0","type":"plan"},"op":"plan.submit","reason":"submit for approval","ts":"2026-10-30T14:23:31Z"}
+{"actor":"human:zxionf","after":"active","before":"pending_approval","context":{},"entity":{"plan":"sele-020-p0","type":"plan"},"op":"plan.approve","reason":"approve plan","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"checkpoint","plan":"sele-020-p0","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"next","plan":"sele-020-p0","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"reason","plan":"sele-020-p0","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"checkpoint","plan":"sele-020-p0","task":"T1","type":"task","uid":"tsk_01M66K3HE5QVC2GE2M9E3HJEQP"},"op":"task.add","reason":"create task","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"next","plan":"sele-020-p0","task":"T1","type":"task","uid":"tsk_01M66K3HEE0CK50RSQ6M5C3V3Y"},"op":"task.add","reason":"create task","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"reason","plan":"sele-020-p0","task":"T1","type":"task","uid":"tsk_01M66K3HEPWMKJ1TJH1Z2XTNKG"},"op":"task.add","reason":"create task","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"checkpoint","plan":"sele-020-p0","task":"T1","type":"task","uid":"tsk_01M66K3HE5QVC2GE2M9E3HJEQP"},"op":"task.start","reason":"start task","ts":"2026-10-30T14:23:31Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"checkpoint","plan":"sele-020-p0","step":"S1","task":"T1","type":"step"},"op":"step.add","reason":"create step","ts":"2026-10-30T14:25:27Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"checkpoint","plan":"sele-020-p0","step":"S1","task":"T1","type":"step"},"op":"step.start","reason":"start step","ts":"2026-10-30T14:25:27Z"}

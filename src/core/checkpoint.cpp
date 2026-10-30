@@ -62,4 +62,25 @@ model::Checkpoint create(const store::Paths& paths, const model::Task& task,
     return checkpoint;
 }
 
+model::Checkpoint create_task(const store::Paths& paths, const model::Task& task) {
+    model::Checkpoint checkpoint;
+    checkpoint.ts = model::now_utc();
+    checkpoint.id = next_id(paths, checkpoint.ts);
+    checkpoint.status = "valid";
+    checkpoint.entity = {{"type", "task"},
+                         {"plan", task.plan},
+                         {"line", task.line},
+                         {"task", task.id},
+                         {"task_uid", task.uid}};
+    checkpoint.git = {{"commit", core::git::head(paths)},
+                      {"tree", core::git::tree(paths)},
+                      {"branch", core::git::branch(paths)},
+                      {"dirty", false},
+                      {"files_changed", core::git::files_changed(paths)},
+                      {"diff_stat", core::git::diff_stat(paths)},
+                      {"source", "sele"}};
+    store::save_checkpoint(paths, checkpoint);
+    return checkpoint;
+}
+
 } // namespace core::checkpoint

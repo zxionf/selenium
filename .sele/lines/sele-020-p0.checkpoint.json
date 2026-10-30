@@ -1,0 +1,22 @@
+{
+  "acceptance": [
+    {
+      "desc": "task done 自动或显式产生 checkpoint",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T14:23:31Z",
+  "depends": [],
+  "goal": "checkpoint 强制",
+  "id": "checkpoint",
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "plan": "sele-020-p0",
+  "status": "active"
+}

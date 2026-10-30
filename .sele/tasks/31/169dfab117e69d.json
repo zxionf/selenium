@@ -1,0 +1,50 @@
+{
+  "acceptance": [
+    {
+      "desc": "done 后存在 checkpoint",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "archived_at": null,
+  "archived_git_head": null,
+  "checkpoint_strategy": "per-step",
+  "created_at": "2026-10-30T14:23:31Z",
+  "current_step": "S1",
+  "depends": [],
+  "finished_at": null,
+  "goal": "task done 产生 checkpoint",
+  "id": "T1",
+  "line": "checkpoint",
+  "locked": {
+    "locked": false
+  },
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "pause_context": null,
+  "plan": "sele-020-p0",
+  "review_policy": "mixed",
+  "skipped_count": 0,
+  "status": "in_progress",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "checkpoint"
+    }
+  ],
+  "title": "task done 产生 checkpoint",
+  "uid": "tsk_01M66K3HE5QVC2GE2M9E3HJEQP"
+}

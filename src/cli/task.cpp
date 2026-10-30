@@ -1,6 +1,7 @@
 #include "cli/common.hpp"
 
 #include "cli/commands.hpp"
+#include "core/checkpoint.hpp"
 #include "core/entity.hpp"
 #include "core/fs.hpp"
 #include "core/git.hpp"
@@ -601,6 +602,22 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             if (step.status != "done" && step.status != "skipped") {
                 fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
                      "Step " + step.id + " is " + step.status);
+                return;
+            }
+        }
+        bool has_checkpoint = false;
+        for (const auto& checkpoint : load_checkpoints(ctx->paths)) {
+            if (checkpoint.entity.value("task", "") != item.id) continue;
+            has_checkpoint = true;
+            break;
+        }
+        if (!has_checkpoint) {
+            try {
+                const auto checkpoint = core::checkpoint::create_task(ctx->paths, item);
+                append_event(ctx->paths, "agent", "checkpoint.create", checkpoint.entity,
+                             nullptr, checkpoint.id, "auto checkpoint on done");
+            } catch (const std::exception& error) {
+                fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
                 return;
             }
         }

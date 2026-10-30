@@ -53,6 +53,7 @@ ojson to_json(const Line& line) {
     }
     value["acceptance"] = acceptance;
     value["modules"] = string_array(line.modules);
+    value["epic"] = line.epic.empty() ? ojson(nullptr) : ojson(line.epic);
     value["created_at"] = line.created_at;
     value["created_by"] = line.created_by;
     value["status"] = line.status;
@@ -111,6 +112,7 @@ Line line_from_json(const ojson& value) {
     line.created_by = str(value, "created_by");
     line.status = str(value, "status", "draft");
     line.modules = strings(value, "modules");
+    line.epic = str(value, "epic");
 
     if (value.contains("acceptance") && value["acceptance"].is_array()) {
         for (const auto& item : value["acceptance"]) {

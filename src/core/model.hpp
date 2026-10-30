@@ -24,6 +24,7 @@ struct Line {
     std::string goal;
     std::vector<Acceptance> acceptance;
     std::vector<std::string> modules;
+    std::string epic;
     std::string created_at;
     std::string created_by;
     std::string status = "draft";

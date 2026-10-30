@@ -13,6 +13,8 @@
 - `merged` / `abandoned` / archived 的 line 只读。
 - 结构（状态、depends、group、勾选）只由命令写；散文（goal/desc/title）可自由写。
 - 本工具只支持 `.sele/`；`.design/` 与 `.agent/` 不再被识别。
+- 任何情况下不允许创建和使用python和nodejs脚本。
+- 强制：pi中使用中文思考链；改文件用 edit/write 工具;校验脚本经 stdin 就地执行。
 
 ## 完成定义
 

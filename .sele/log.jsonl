@@ -42,3 +42,4 @@
 {"ts":"2026-10-30T07:46:21Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-user-docs","acceptance":"A3","evidence":"docs/README.md 已登记 user-guide 与 config 两行"}
 {"ts":"2026-10-30T07:46:21Z","actor":"zxionf","op":"line.done","line":"20261030-user-docs"}
 {"ts":"2026-10-30T07:46:21Z","actor":"zxionf","op":"line.merge","line":"20261030-user-docs","commit":"53ccf7e","base":"main"}
+{"ts":"2026-10-30T09:21:08Z","actor":"zxionf","op":"line.new","line":"20261030-epic"}

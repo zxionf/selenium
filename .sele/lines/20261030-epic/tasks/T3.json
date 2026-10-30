@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "T3",
+  "title": "line 关联：new/amend --epic、list --epic、show",
+  "depends": [
+    "T2"
+  ],
+  "modules": [
+    "cli"
+  ],
+  "group": null,
+  "created_at": "2026-10-30T09:21:08Z",
+  "created_by": "zxionf"
+}

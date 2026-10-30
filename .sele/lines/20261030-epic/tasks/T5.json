@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "T5",
+  "title": "文档、版本 0.12.0 与验收",
+  "depends": [
+    "T4"
+  ],
+  "modules": [
+    "docs"
+  ],
+  "group": null,
+  "created_at": "2026-10-30T09:21:08Z",
+  "created_by": "zxionf"
+}

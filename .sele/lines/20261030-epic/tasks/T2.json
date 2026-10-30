@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "T2",
+  "title": "epic 命令组 new/list/show/amend/close/reopen/abandon",
+  "depends": [
+    "T1"
+  ],
+  "modules": [
+    "cli"
+  ],
+  "group": null,
+  "created_at": "2026-10-30T09:21:08Z",
+  "created_by": "zxionf"
+}

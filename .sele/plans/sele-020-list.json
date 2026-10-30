@@ -4,9 +4,9 @@
       "desc": "plan/line/task list 的 text 输出含逐项",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T15:19:01Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-30T15:16:59Z",
@@ -20,5 +20,5 @@
       "id": "list"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

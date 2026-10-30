@@ -62,6 +62,7 @@ add_executable(sele
     src/cli/worktree.cpp
     src/cli/nextgen.cpp
     src/core/template.cpp
+    src/core/commit_msg.cpp
     src/core/version.cpp
     src/core/fs.cpp
     src/core/hash.cpp

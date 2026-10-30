@@ -1000,6 +1000,59 @@ test_init_repairs_missing_files() {
     rm -rf "$proj"
 }
 
+test_commit_message_en() {
+    local proj id
+    proj=$(setup_running_line)
+    id=$(line_id "$proj")
+    git -C "$proj" log --format=%s | grep "^chore(sele): plan $id$" >/dev/null
+
+    echo one >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T1 >/dev/null
+    git -C "$proj" log -1 --format=%s | grep -q "^feat(sele): T1 "
+
+    echo two >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T1 --msg "custom message" >/dev/null
+    [[ "$(git -C "$proj" log -1 --format=%s)" == "custom message" ]]
+
+    "$BIN" --root "$proj" task done T1 >/dev/null
+    "$BIN" --root "$proj" acceptance pass A1 --evidence ok >/dev/null
+    "$BIN" --root "$proj" line done >/dev/null
+    git -C "$proj" log --format=%s | grep "^chore(sele): line $id done$" >/dev/null
+
+    "$BIN" --root "$proj" line merge "$id" --confirm >/dev/null
+    git -C "$proj" log --format=%s | grep "^chore(sele): merge $id$" >/dev/null
+    git -C "$proj" log --format=%s | grep "^chore(sele): record merge $id$" >/dev/null
+    rm -rf "$proj"
+}
+
+test_commit_message_zh_module() {
+    local proj id
+    proj=$(setup_next)
+    new_line "$proj" >/dev/null
+    id=$(line_id "$proj")
+    jq '.commit = {"language":"zh","scope":"module","task_type":"auto"}' \
+        "$proj/.sele/config.json" > "$proj/.sele/config.json.tmp"
+    mv "$proj/.sele/config.json.tmp" "$proj/.sele/config.json"
+
+    "$BIN" --root "$proj" task add "任务一" --modules auth >/dev/null
+    "$BIN" --root "$proj" line open "$id" >/dev/null
+    git -C "$proj" log -1 --format=%s | grep -q "^chore(sele): 规划 $id$"
+
+    "$BIN" --root "$proj" task start T1 >/dev/null
+    echo x >> "$proj/seed.txt"
+    "$BIN" --root "$proj" task checkpoint T1 >/dev/null
+    git -C "$proj" log -1 --format=%s | grep -q "^feat(auth): T1 任务一$"
+
+    # 旧配置（无 commit 段）回退 en
+    jq 'del(.commit)' "$proj/.sele/config.json" > "$proj/.sele/config.json.tmp"
+    mv "$proj/.sele/config.json.tmp" "$proj/.sele/config.json"
+    "$BIN" --root "$proj" task done T1 >/dev/null
+    "$BIN" --root "$proj" acceptance pass A1 --evidence ok >/dev/null
+    "$BIN" --root "$proj" line done >/dev/null
+    git -C "$proj" log -1 --format=%s | grep -q "^chore(sele): line $id done$"
+    rm -rf "$proj"
+}
+
 run_test "init creates .sele" test_init_creates_sele
 run_test "init rejects --legacy" test_init_rejects_legacy_flag
 run_test "line new creates draft and session pointer" test_line_new
@@ -1061,5 +1114,7 @@ run_test "init writes AGENTS.md without overwriting" test_init_creates_agents
 run_test "init adds .sele next to legacy directories" test_init_next_to_legacy
 run_test "init writes .sele/CONTRACT.md and links it from AGENTS" test_init_creates_contract
 run_test "init repairs missing AGENTS/CONTRACT" test_init_repairs_missing_files
+run_test "commit messages: en defaults and --msg override" test_commit_message_en
+run_test "commit messages: zh subject with module scope" test_commit_message_zh_module
 
 echo "=== All sele tests passed! ==="

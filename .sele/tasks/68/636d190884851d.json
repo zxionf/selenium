@@ -13,7 +13,7 @@
   "archived_git_head": null,
   "checkpoint_strategy": "per-step",
   "created_at": "2026-10-30T13:38:12Z",
-  "current_step": null,
+  "current_step": "S1",
   "depends": [],
   "finished_at": null,
   "goal": "task revert（sele-only）与 checkpoint invalidated",
@@ -29,8 +29,19 @@
   "pause_context": null,
   "plan": "sele-020-m3",
   "review_policy": "mixed",
-  "status": "todo",
-  "steps": [],
+  "status": "in_progress",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "task revert"
+    }
+  ],
   "title": "task revert（sele-only）与 checkpoint invalidated",
   "uid": "tsk_01M66GGHN6HWZYAFYD5ZP7G43S"
 }

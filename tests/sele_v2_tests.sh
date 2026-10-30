@@ -130,6 +130,37 @@ test_cache_index() {
     rm -rf "$ROOT"
 }
 
+test_task_revert() {
+    setup_git_project
+    "$BIN" step add T1 "s2" --root "$ROOT" --line a >/dev/null
+    echo "b" > "$ROOT/b.txt"
+    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --files b.txt --root "$ROOT" >/dev/null
+    "$BIN" step done T1 S1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step start T1 S2 --root "$ROOT" --line a >/dev/null
+    echo "c" > "$ROOT/c.txt"
+    "$BIN" git commit --task T1 --step S2 --line a --message "c2" --files c.txt --root "$ROOT" >/dev/null
+    "$BIN" step done T1 S2 --root "$ROOT" --line a >/dev/null
+    "$BIN" task revert T1 --to ck-20261030-001 --line a --root "$ROOT" >/dev/null
+    if "$BIN" step list T1 --root "$ROOT" --line a --output json |
+        jq -e '[.items[] | select(.id == "S2")][0].status == "todo"' >/dev/null; then
+        pass "task revert moves later steps back to todo"
+    else
+        fail "task revert moves later steps back to todo"
+    fi
+    local invalidated=0
+    for file in "$ROOT"/.sele/checkpoints/*/*.json; do
+        if jq -e '.status == "invalidated"' "$file" >/dev/null 2>&1; then
+            invalidated=1
+        fi
+    done
+    if [ "$invalidated" -eq 1 ]; then
+        pass "task revert invalidates later checkpoints"
+    else
+        fail "task revert invalidates later checkpoints"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -326,6 +357,7 @@ test_git_commit_checkpoint
 test_git_drift_d2
 test_plan_archive_restore
 test_cache_index
+test_task_revert
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

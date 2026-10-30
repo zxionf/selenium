@@ -4,18 +4,18 @@
       "desc": "索引可重建，locate 返回路径",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-30T13:42:18Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "archived_at": null,
   "archived_git_head": null,
   "checkpoint_strategy": "per-step",
   "created_at": "2026-10-30T13:38:12Z",
-  "current_step": "S1",
+  "current_step": null,
   "depends": [],
-  "finished_at": null,
+  "finished_at": "2026-10-30T13:42:18Z",
   "goal": "cache rebuild 与 task locate",
   "id": "T1",
   "line": "index",
@@ -29,16 +29,16 @@
   "pause_context": null,
   "plan": "sele-020-m3",
   "review_policy": "mixed",
-  "status": "in_progress",
+  "status": "done",
   "steps": [
     {
-      "checkpoint": null,
+      "checkpoint": "ck-20261030-004",
       "desc": "",
       "id": "S1",
       "jump_meta": null,
       "requires_review": false,
       "skipped_reason": null,
-      "status": "in_progress",
+      "status": "done",
       "title": "索引与 locate"
     }
   ],

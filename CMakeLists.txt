@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(sele VERSION 0.12.0 LANGUAGES CXX)
+project(sele VERSION 0.20.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
@@ -52,26 +52,17 @@ endif()
 
 add_executable(sele
     src/main.cpp
-    src/cli/commands.cpp
+    src/cli/common.cpp
     src/cli/init.cpp
     src/cli/version.cpp
-    src/cli/line.cpp
-    src/cli/task.cpp
-    src/cli/acceptance.cpp
-    src/cli/overview.cpp
-    src/cli/worktree.cpp
-    src/cli/epic.cpp
-    src/cli/nextgen.cpp
-    src/core/template.cpp
-    src/core/commit_msg.cpp
-    src/core/version.cpp
+    src/cli/plan.cpp
+    src/core/entity.cpp
+    src/core/event.cpp
     src/core/fs.cpp
     src/core/hash.cpp
-    src/core/gitrt.cpp
-    src/core/journal.cpp
-    src/core/model.cpp
-    src/core/sele.cpp
-    src/core/session.cpp
+    src/core/id.cpp
+    src/core/state.cpp
+    src/core/store.cpp
     src/util/output.cpp
 )
 
@@ -124,6 +115,6 @@ if(SELE_SHARED_DEPS)
 endif()
 
 enable_testing()
-if(NOT WIN32)
-    add_test(NAME sele_ng WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND bash tests/sele_tests.sh $<TARGET_FILE:sele>)
+if(NOT WIN32 AND EXISTS ${CMAKE_SOURCE_DIR}/tests/sele_v2_tests.sh)
+    add_test(NAME sele_v2 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} COMMAND bash tests/sele_v2_tests.sh $<TARGET_FILE:sele>)
 endif()

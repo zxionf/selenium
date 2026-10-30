@@ -1,0 +1,47 @@
+{
+  "acceptance": [
+    {
+      "desc": "archive 后文件移入 archive/，restore 可移回",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "archived_at": null,
+  "archived_git_head": null,
+  "checkpoint_strategy": "per-step",
+  "created_at": "2026-10-30T13:38:12Z",
+  "current_step": "S1",
+  "depends": [],
+  "finished_at": null,
+  "goal": "Plan 物理归档/恢复 + manifest",
+  "id": "T1",
+  "line": "archive",
+  "locked": {
+    "locked": false
+  },
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "pause_context": null,
+  "plan": "sele-020-m3",
+  "review_policy": "mixed",
+  "status": "in_progress",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "物理归档与恢复"
+    }
+  ],
+  "title": "Plan 物理归档/恢复 + manifest",
+  "uid": "tsk_01M66GGHMYAMPQJGW6S021512W"
+}

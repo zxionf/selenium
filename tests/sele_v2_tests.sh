@@ -85,6 +85,34 @@ test_git_drift_d2() {
     rm -rf "$ROOT"
 }
 
+test_plan_archive_restore() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" task done T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" line verify a A1 --root "$ROOT" --plan p --by human:alice >/dev/null
+    "$BIN" line done a --root "$ROOT" --plan p >/dev/null
+    "$BIN" plan verify p PA1 --root "$ROOT" --by human:alice >/dev/null
+    "$BIN" plan done p --root "$ROOT" >/dev/null
+    if "$BIN" plan archive p --root "$ROOT" --output json | jq -e '.files >= 1' >/dev/null; then
+        pass "plan archive moves files"
+    else
+        fail "plan archive moves files"
+    fi
+    if ls "$ROOT/.sele/archive/"*/_manifest.json >/dev/null 2>&1; then
+        pass "archive manifest is written"
+    else
+        fail "archive manifest is written"
+    fi
+    "$BIN" plan restore p --root "$ROOT" >/dev/null
+    if "$BIN" plan show p --root "$ROOT" --output json | jq -e '.status == "active"' >/dev/null; then
+        pass "plan restore brings files back"
+    else
+        fail "plan restore brings files back"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -279,6 +307,7 @@ test_check
 test_log_and_tree
 test_git_commit_checkpoint
 test_git_drift_d2
+test_plan_archive_restore
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

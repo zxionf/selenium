@@ -9,6 +9,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,6 +19,71 @@ namespace {
 
 nlohmann::json plan_entity(const core::model::Plan& plan) {
     return {{"type", "plan"}, {"plan", plan.id}};
+}
+
+std::string archive_stamp() {
+    const auto now = core::model::now_utc();
+    std::string stamp;
+    for (const char character : now) {
+        if (character >= '0' && character <= '9') stamp += character;
+    }
+    return stamp;
+}
+
+std::vector<std::filesystem::path> collect_plan_files(const core::store::Paths& paths,
+                                                      const std::string& plan_id) {
+    std::vector<std::filesystem::path> files;
+    files.push_back(core::store::plan_path(paths, plan_id));
+
+    if (core::fsys::exists(paths.lines)) {
+        for (const auto& entry : std::filesystem::directory_iterator(paths.lines)) {
+            if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
+            if (entry.path().filename().string().rfind(plan_id + ".", 0) != 0) continue;
+            files.push_back(entry.path());
+        }
+    }
+    if (core::fsys::exists(paths.tasks)) {
+        for (const auto& bucket : std::filesystem::directory_iterator(paths.tasks)) {
+            if (!bucket.is_directory()) continue;
+            for (const auto& entry : std::filesystem::directory_iterator(bucket.path())) {
+                if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
+                try {
+                    const auto task = core::model::task_from_json(
+                        nlohmann::json::parse(core::fsys::read_file(entry.path())));
+                    if (task.plan == plan_id) files.push_back(entry.path());
+                } catch (...) {
+                }
+            }
+        }
+    }
+    if (core::fsys::exists(paths.checkpoints)) {
+        for (const auto& month : std::filesystem::directory_iterator(paths.checkpoints)) {
+            if (!month.is_directory()) continue;
+            for (const auto& entry : std::filesystem::directory_iterator(month.path())) {
+                if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
+                try {
+                    const auto checkpoint = core::model::checkpoint_from_json(
+                        nlohmann::json::parse(core::fsys::read_file(entry.path())));
+                    if (checkpoint.entity.value("plan", "") == plan_id) files.push_back(entry.path());
+                } catch (...) {
+                }
+            }
+        }
+    }
+    return files;
+}
+
+std::filesystem::path latest_archive(const core::store::Paths& paths,
+                                     const std::string& plan_id) {
+    std::filesystem::path best;
+    if (!core::fsys::exists(paths.archive)) return best;
+    for (const auto& entry : std::filesystem::directory_iterator(paths.archive)) {
+        if (!entry.is_directory()) continue;
+        const auto name = entry.path().filename().string();
+        if (name.rfind(plan_id + "-", 0) != 0) continue;
+        if (best.empty() || name > best.filename().string()) best = entry.path();
+    }
+    return best;
 }
 
 bool load_plan(Context& ctx, int& exit_code, const std::string& id, core::model::Plan& out) {
@@ -92,6 +159,7 @@ struct ArchiveArgs {
 
 struct RestoreArgs {
     std::string id;
+    std::string from;
     std::string reason{"restore plan"};
 };
 
@@ -365,37 +433,85 @@ void register_plan_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         item.status = "archived";
         try {
             core::store::save_plan(ctx->paths, item);
+            const auto files = collect_plan_files(ctx->paths, item.id);
+            const auto target = ctx->paths.archive / (item.id + "-" + archive_stamp());
+            core::fsys::ensure_dir(target);
+            nlohmann::json manifest = {{"plan", item.id},
+                                       {"ts", archive_stamp()},
+                                       {"files", nlohmann::json::array()}};
+            for (const auto& file : files) {
+                if (!core::fsys::exists(file)) continue;
+                const auto relative = std::filesystem::relative(file, ctx->paths.sele);
+                const auto destination = target / relative;
+                core::fsys::ensure_dir(destination.parent_path());
+                std::filesystem::rename(file, destination);
+                manifest["files"].push_back({{"path", relative.generic_string()}});
+            }
+            core::fsys::write_atomic(target / "_manifest.json", manifest.dump(2) + "\n");
             append_event(ctx->paths, "human", "plan.archive", plan_entity(item), "done",
                          item.status, archive_args->reason);
+            ctx->out.print_both("Archived plan " + item.id + " to " + target.string(),
+                                {{"plan", item.id},
+                                 {"status", item.status},
+                                 {"archive", target.string()},
+                                 {"files", manifest["files"].size()}});
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
-            return;
         }
-        ctx->out.print_both("Archived plan " + item.id,
-                            {{"plan", item.id}, {"status", item.status}});
     });
 
     auto restore_args = std::make_shared<RestoreArgs>();
     auto* restore_cmd = plan->add_subcommand("restore", "Restore an archived plan to active");
     add_global_opts(restore_cmd, global);
     restore_cmd->add_option("id", restore_args->id, "Plan id")->required();
+    restore_cmd->add_option("--from", restore_args->from, "Archive timestamp");
     restore_cmd->add_option("--reason", restore_args->reason, "Decision reason");
     restore_cmd->callback([&global, &exit_code, restore_args]() {
         const auto ctx = make_context(global);
-        core::model::Plan item;
-        if (!load_plan(*ctx, exit_code, restore_args->id, item)) return;
-        if (!transition_plan(*ctx, exit_code, item, "active")) return;
-        item.status = "active";
-        try {
-            core::store::save_plan(ctx->paths, item);
-            append_event(ctx->paths, "human", "plan.restore", plan_entity(item), "archived",
-                         item.status, restore_args->reason);
-        } catch (const std::exception& error) {
-            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+        std::filesystem::path source = restore_args->from.empty()
+                                           ? latest_archive(ctx->paths, restore_args->id)
+                                           : ctx->paths.archive /
+                                                 (restore_args->id + "-" + restore_args->from);
+        if (source.empty() || !core::fsys::exists(source)) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Archive not found for plan: " + restore_args->id);
             return;
         }
-        ctx->out.print_both("Restored plan " + item.id,
-                            {{"plan", item.id}, {"status", item.status}});
+        try {
+            const auto manifest_path = source / "_manifest.json";
+            if (!core::fsys::exists(manifest_path)) {
+                fail(*ctx, exit_code, exit_codes::ENV_ERROR,
+                     "Missing manifest in " + source.string());
+                return;
+            }
+            const auto manifest = nlohmann::json::parse(core::fsys::read_file(manifest_path));
+            std::size_t restored = 0;
+            for (const auto& entry : manifest.value("files", nlohmann::json::array())) {
+                const auto relative = entry.value("path", "");
+                if (relative.empty()) continue;
+                const auto from = source / relative;
+                const auto to = ctx->paths.sele / relative;
+                if (!core::fsys::exists(from)) continue;
+                core::fsys::ensure_dir(to.parent_path());
+                std::filesystem::rename(from, to);
+                ++restored;
+            }
+            const auto plan_file = core::store::plan_path(ctx->paths, restore_args->id);
+            if (core::fsys::exists(plan_file)) {
+                auto plan = core::model::plan_from_json(
+                    nlohmann::json::parse(core::fsys::read_file(plan_file)));
+                plan.status = "active";
+                core::store::save_plan(ctx->paths, plan);
+                append_event(ctx->paths, "human", "plan.restore", plan_entity(plan),
+                             "archived", plan.status, restore_args->reason);
+            }
+            ctx->out.print_both("Restored plan " + restore_args->id,
+                                {{"plan", restore_args->id},
+                                 {"status", "active"},
+                                 {"files", restored}});
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+        }
     });
 
     auto verify_args = std::make_shared<VerifyArgs>();

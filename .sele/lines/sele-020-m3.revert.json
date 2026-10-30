@@ -1,0 +1,22 @@
+{
+  "acceptance": [
+    {
+      "desc": "revert 与 reconcile 可用",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T13:38:12Z",
+  "depends": [],
+  "goal": "回滚与协调",
+  "id": "revert",
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "plan": "sele-020-m3",
+  "status": "active"
+}

@@ -1,0 +1,22 @@
+{
+  "acceptance": [
+    {
+      "desc": "archive/restore 可逆",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T13:38:12Z",
+  "depends": [],
+  "goal": "Plan 物理归档与恢复",
+  "id": "archive",
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "plan": "sele-020-m3",
+  "status": "active"
+}

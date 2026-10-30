@@ -1,0 +1,21 @@
+{
+  "acceptance": [
+    {
+      "desc": "提示词含当前任务与规则",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T14:52:17Z",
+  "depends": [],
+  "goal": "agent 注入",
+  "id": "agent",
+  "modules": [
+    "cli"
+  ],
+  "plan": "sele-020-p3b",
+  "status": "active"
+}

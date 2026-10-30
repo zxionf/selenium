@@ -622,6 +622,41 @@ test_git_helpers() {
     rm -rf "$ROOT"
 }
 
+test_agent_prompt() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    if "$BIN" agent --root "$ROOT" --plan p --line a --output json |
+        jq -e '.prompt | contains("T1")' >/dev/null; then
+        pass "agent prompt includes the current task"
+    else
+        fail "agent prompt includes the current task"
+    fi
+    rm -rf "$ROOT"
+}
+
+test_reconcile_actions() {
+    setup_git_project
+    echo "b" > "$ROOT/b.txt"
+    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --root "$ROOT" >/dev/null
+    local ckfile ck commit
+    ckfile=$(ls "$ROOT"/.sele/checkpoints/*/*.json | head -1)
+    ck=$(basename "$ckfile" .json)
+    commit=$(jq -r '.git.commit' "$ckfile")
+    if "$BIN" git reconcile --remap "$ck" --to "$commit" --root "$ROOT" >/dev/null 2>&1; then
+        pass "reconcile remap accepts a matching tree"
+    else
+        fail "reconcile remap accepts a matching tree"
+    fi
+    if "$BIN" git reconcile --keep-audit "$ck" --root "$ROOT" >/dev/null 2>&1 &&
+        jq -e '.status == "invalidated"' "$ckfile" >/dev/null; then
+        pass "reconcile keep-audit marks invalidated"
+    else
+        fail "reconcile keep-audit marks invalidated"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -838,6 +873,8 @@ test_query_options
 test_config
 test_checkpoint_strategy
 test_git_helpers
+test_agent_prompt
+test_reconcile_actions
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

@@ -22,6 +22,7 @@ int main(int argc, char** argv) {
     register_git_cmds(app, global, exit_code);
     register_cache_cmds(app, global, exit_code);
     register_config_cmds(app, global, exit_code);
+    register_agent_cmd(app, global, exit_code);
 
     app.require_subcommand(1);
     try {

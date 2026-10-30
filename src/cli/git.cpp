@@ -71,6 +71,16 @@ std::vector<core::model::Checkpoint> load_checkpoints(const core::store::Paths& 
     return result;
 }
 
+bool find_checkpoint(const core::store::Paths& paths, const std::string& id,
+                     core::model::Checkpoint& out) {
+    for (const auto& checkpoint : load_checkpoints(paths)) {
+        if (checkpoint.id != id) continue;
+        out = checkpoint;
+        return true;
+    }
+    return false;
+}
+
 struct CommitArgs {
     std::string task;
     std::string step;
@@ -92,6 +102,9 @@ struct LogArgs {
 struct ReconcileArgs {
     bool check{false};
     std::string sync_to;
+    std::string remap;
+    std::string to;
+    std::string keep_audit;
 };
 
 struct StashArgs {
@@ -375,8 +388,81 @@ void register_git_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     reconcile_cmd->add_flag("--check", reconcile_args->check,
                             "Revalidate checkpoints (D4/D5)");
     reconcile_cmd->add_option("--sync-to", reconcile_args->sync_to, "Accept this HEAD");
+    reconcile_cmd->add_option("--remap", reconcile_args->remap, "Remap a checkpoint");
+    reconcile_cmd->add_option("--to", reconcile_args->to, "Target commit for --remap");
+    reconcile_cmd->add_option("--keep-audit", reconcile_args->keep_audit,
+                              "Keep a checkpoint for audit only");
     reconcile_cmd->callback([&global, &exit_code, reconcile_args]() {
         const auto ctx = make_context(global);
+        if (!reconcile_args->remap.empty()) {
+            core::model::Checkpoint target;
+            if (!find_checkpoint(ctx->paths, reconcile_args->remap, target)) {
+                fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                     "Checkpoint not found: " + reconcile_args->remap);
+                return;
+            }
+            if (reconcile_args->to.empty()) {
+                fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Pass --to <commit>");
+                return;
+            }
+            const auto tree = core::git::run(
+                ctx->paths.root, {"rev-parse", reconcile_args->to + "^{tree}"});
+            if (tree.code != 0) {
+                fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                     "Unknown commit: " + reconcile_args->to);
+                return;
+            }
+            const std::string expected = target.git.value("tree", "");
+            if (!expected.empty() && tree.output != expected) {
+                fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                     "Tree mismatch; cannot remap " + target.id);
+                return;
+            }
+            try {
+                target.git["commit"] = reconcile_args->to;
+                target.status = "valid";
+                core::store::save_checkpoint(ctx->paths, target);
+                core::model::Event event;
+                event.ts = core::model::now_utc();
+                event.actor = "human";
+                event.op = "git.reconcile";
+                event.entity = {{"type", "checkpoint"}, {"checkpoint", target.id}};
+                event.after = reconcile_args->to;
+                event.reason = "remap";
+                core::event::append(ctx->paths, event);
+            } catch (const std::exception& error) {
+                fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+                return;
+            }
+            ctx->out.print_both("Remapped " + target.id + " to " + reconcile_args->to,
+                                {{"checkpoint", target.id}, {"commit", reconcile_args->to}});
+            return;
+        }
+        if (!reconcile_args->keep_audit.empty()) {
+            core::model::Checkpoint target;
+            if (!find_checkpoint(ctx->paths, reconcile_args->keep_audit, target)) {
+                fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                     "Checkpoint not found: " + reconcile_args->keep_audit);
+                return;
+            }
+            try {
+                target.status = "invalidated";
+                core::store::save_checkpoint(ctx->paths, target);
+                core::model::Event event;
+                event.ts = core::model::now_utc();
+                event.actor = "human";
+                event.op = "git.reconcile";
+                event.entity = {{"type", "checkpoint"}, {"checkpoint", target.id}};
+                event.reason = "keep-audit";
+                core::event::append(ctx->paths, event);
+            } catch (const std::exception& error) {
+                fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+                return;
+            }
+            ctx->out.print_both("Kept " + target.id + " for audit",
+                                {{"checkpoint", target.id}, {"status", target.status}});
+            return;
+        }
         if (!reconcile_args->sync_to.empty()) {
             const auto sha = reconcile_args->sync_to;
             if (core::git::run(ctx->paths.root, {"cat-file", "-e", sha + "^{commit}"}).code != 0) {

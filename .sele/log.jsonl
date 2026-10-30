@@ -7,3 +7,5 @@
 {"ts":"2026-10-30T06:01:19Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-contract-md","acceptance":"A2","evidence":"AGENTS.md / .init-template/AGENTS.md / 内置模板均指向 .sele/CONTRACT.md"}
 {"ts":"2026-10-30T06:01:19Z","actor":"zxionf","op":"line.done","line":"20261030-contract-md"}
 {"ts":"2026-10-30T06:01:45Z","actor":"zxionf","op":"line.reopen","line":"20261030-contract-md","reason":"补齐根仓库 CONTRACT：init 需支持已存在 .sele 时的幂等补齐"}
+{"ts":"2026-10-30T06:03:55Z","actor":"zxionf","op":"task.done","line":"20261030-contract-md","task":"T4","commit":"8b7509d"}
+{"ts":"2026-10-30T06:03:55Z","actor":"zxionf","op":"line.done","line":"20261030-contract-md"}

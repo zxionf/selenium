@@ -2,3 +2,7 @@
 {"ts":"2026-10-30T05:58:30Z","actor":"zxionf","op":"line.open","line":"20261030-contract-md","frozen":"6d0737c4faa5f07065ed3887c23c6d6e1550f9a0baa79d7058c753fc019521b3"}
 {"ts":"2026-10-30T05:59:43Z","actor":"zxionf","op":"task.done","line":"20261030-contract-md","task":"T1","commit":"d9a3169"}
 {"ts":"2026-10-30T06:00:25Z","actor":"zxionf","op":"task.done","line":"20261030-contract-md","task":"T2","commit":"ff2d1fe"}
+{"ts":"2026-10-30T06:01:19Z","actor":"zxionf","op":"task.done","line":"20261030-contract-md","task":"T3","commit":"8363914"}
+{"ts":"2026-10-30T06:01:19Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-contract-md","acceptance":"A1","evidence":"init 生成 .sele/CONTRACT.md；tests/sele_tests.sh 60 条通过"}
+{"ts":"2026-10-30T06:01:19Z","actor":"zxionf","op":"acceptance.pass","line":"20261030-contract-md","acceptance":"A2","evidence":"AGENTS.md / .init-template/AGENTS.md / 内置模板均指向 .sele/CONTRACT.md"}
+{"ts":"2026-10-30T06:01:19Z","actor":"zxionf","op":"line.done","line":"20261030-contract-md"}

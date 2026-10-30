@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": 4,
+  "version": 5,
   "id": "20261030-epic",
   "type": "feature",
   "goal": "实现独立 epic：长期目标容器",
@@ -45,6 +45,6 @@
   "base_commit": "4115366",
   "merged": {
     "at": "2026-10-30T09:39:30Z",
-    "commit": ""
+    "commit": "173a011"
   }
 }

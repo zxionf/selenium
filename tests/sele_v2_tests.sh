@@ -386,6 +386,61 @@ test_next_i1() {
     rm -rf "$ROOT"
 }
 
+test_p1_commands() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a --acceptance "ok" >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" task done T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" task reject T1 --root "$ROOT" --line a --reason "redo" >/dev/null
+    if "$BIN" task status T1 --root "$ROOT" --line a --output json |
+        jq -e '.status == "in_progress"' >/dev/null; then
+        pass "task reject returns to in_progress"
+    else
+        fail "task reject returns to in_progress"
+    fi
+    "$BIN" task update T1 --root "$ROOT" --line a --modules x,y --review-policy strict >/dev/null
+    if "$BIN" task status T1 --root "$ROOT" --line a --output json |
+        jq -e '.modules == ["x", "y"] and .review_policy == "strict"' >/dev/null; then
+        pass "task update changes modules and review policy"
+    else
+        fail "task update changes modules and review policy"
+    fi
+    "$BIN" line block a --root "$ROOT" --plan p --reason "wait" >/dev/null
+    "$BIN" line unblock a --root "$ROOT" --plan p >/dev/null
+    if "$BIN" line list --root "$ROOT" --plan p --output json |
+        jq -e '[.items[] | select(.id == "a")][0].status == "active"' >/dev/null; then
+        pass "line block/unblock round-trips"
+    else
+        fail "line block/unblock round-trips"
+    fi
+    "$BIN" step add T1 S1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step start T1 S1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step fail T1 S1 --root "$ROOT" --line a --reason "boom" >/dev/null
+    if "$BIN" step list T1 --root "$ROOT" --line a --output json |
+        jq -e '[.items[] | select(.id == "S1")][0].status == "failed"' >/dev/null; then
+        pass "step fail"
+    else
+        fail "step fail"
+    fi
+    "$BIN" step add T1 S2 --root "$ROOT" --line a >/dev/null
+    "$BIN" step start T1 S2 --root "$ROOT" --line a >/dev/null
+    "$BIN" step block T1 S2 --root "$ROOT" --line a --reason "wait" >/dev/null
+    "$BIN" step unblock T1 S2 --root "$ROOT" --line a >/dev/null
+    if "$BIN" step list T1 --root "$ROOT" --line a --output json |
+        jq -e '[.items[] | select(.id == "S2")][0].status == "in_progress"' >/dev/null; then
+        pass "step block/unblock round-trips"
+    else
+        fail "step block/unblock round-trips"
+    fi
+    "$BIN" plan abort p --root "$ROOT" --reason "cancel" >/dev/null
+    if "$BIN" plan show p --root "$ROOT" --output json | jq -e '.status == "aborted"' >/dev/null; then
+        pass "plan abort"
+    else
+        fail "plan abort"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -595,6 +650,7 @@ test_step_update_delete_move
 test_full_ref
 test_revert_exec_guard
 test_next_i1
+test_p1_commands
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

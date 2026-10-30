@@ -23,6 +23,8 @@ bool plan_transition(const std::string& from, const std::string& to) {
                     {"pending_approval", "draft"},
                     {"active", "done"},
                     {"active", "aborted"},
+                    {"draft", "aborted"},
+                    {"pending_approval", "aborted"},
                     {"done", "archived"},
                     {"archived", "active"}},
                    from, to);

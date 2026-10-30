@@ -467,6 +467,121 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                             {{"task", task.id}, {"step", item->id}, {"locked", false}});
     });
 
+    auto fail_step_args = std::make_shared<SkipArgs>();
+    auto* fail_step_cmd = step->add_subcommand("fail", "Mark a step failed");
+    add_global_opts(fail_step_cmd, global);
+    fail_step_cmd->add_option("task", fail_step_args->task, "Task id")->required();
+    fail_step_cmd->add_option("step", fail_step_args->step, "Step id")->required();
+    fail_step_cmd->add_option("--plan", fail_step_args->plan, "Plan id");
+    fail_step_cmd->add_option("--line", fail_step_args->line, "Line id");
+    fail_step_cmd->add_option("--reason", fail_step_args->reason, "Failure reason")->required();
+    fail_step_cmd->callback([&global, &exit_code, fail_step_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, fail_step_args->task, fail_step_args->plan,
+                       fail_step_args->line, task)) {
+            return;
+        }
+        auto* item = find_step(task, fail_step_args->step);
+        if (item == nullptr) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Step not found: " + fail_step_args->step);
+            return;
+        }
+        if (item->locked) {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Step " + item->id + " is locked: " + item->lock_reason);
+            return;
+        }
+        if (!transition_step(*ctx, exit_code, *item, "failed")) return;
+        item->status = "failed";
+        if (!save_task(*ctx, exit_code, task)) return;
+        try {
+            append_event(ctx->paths, "agent", "step.fail", step_entity(task, *item),
+                         "in_progress", item->status, fail_step_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Failed " + item->id + " in " + task.id,
+                            {{"task", task.id}, {"step", item->id}, {"status", item->status}});
+    });
+
+    auto block_step_args = std::make_shared<SkipArgs>();
+    auto* block_step_cmd = step->add_subcommand("block", "Block a step");
+    add_global_opts(block_step_cmd, global);
+    block_step_cmd->add_option("task", block_step_args->task, "Task id")->required();
+    block_step_cmd->add_option("step", block_step_args->step, "Step id")->required();
+    block_step_cmd->add_option("--plan", block_step_args->plan, "Plan id");
+    block_step_cmd->add_option("--line", block_step_args->line, "Line id");
+    block_step_cmd->add_option("--reason", block_step_args->reason, "Block reason")->required();
+    block_step_cmd->callback([&global, &exit_code, block_step_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, block_step_args->task, block_step_args->plan,
+                       block_step_args->line, task)) {
+            return;
+        }
+        auto* item = find_step(task, block_step_args->step);
+        if (item == nullptr) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Step not found: " + block_step_args->step);
+            return;
+        }
+        if (item->locked) {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Step " + item->id + " is locked: " + item->lock_reason);
+            return;
+        }
+        if (!transition_step(*ctx, exit_code, *item, "blocked")) return;
+        item->status = "blocked";
+        if (!save_task(*ctx, exit_code, task)) return;
+        try {
+            append_event(ctx->paths, "agent", "step.block", step_entity(task, *item),
+                         "in_progress", item->status, block_step_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Blocked " + item->id + " in " + task.id,
+                            {{"task", task.id}, {"step", item->id}, {"status", item->status}});
+    });
+
+    auto unblock_step_args = std::make_shared<StepArgs>();
+    auto* unblock_step_cmd = step->add_subcommand("unblock", "Unblock a step");
+    add_global_opts(unblock_step_cmd, global);
+    unblock_step_cmd->add_option("task", unblock_step_args->task, "Task id")->required();
+    unblock_step_cmd->add_option("step", unblock_step_args->step, "Step id")->required();
+    unblock_step_cmd->add_option("--plan", unblock_step_args->plan, "Plan id");
+    unblock_step_cmd->add_option("--line", unblock_step_args->line, "Line id");
+    unblock_step_cmd->callback([&global, &exit_code, unblock_step_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, unblock_step_args->task, unblock_step_args->plan,
+                       unblock_step_args->line, task)) {
+            return;
+        }
+        auto* item = find_step(task, unblock_step_args->step);
+        if (item == nullptr) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Step not found: " + unblock_step_args->step);
+            return;
+        }
+        if (!transition_step(*ctx, exit_code, *item, "in_progress")) return;
+        item->status = "in_progress";
+        task.current_step = item->id;
+        if (!save_task(*ctx, exit_code, task)) return;
+        try {
+            append_event(ctx->paths, "human", "step.unblock", step_entity(task, *item),
+                         "blocked", item->status, "unblock step");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Unblocked " + item->id + " in " + task.id,
+                            {{"task", task.id}, {"step", item->id}, {"status", item->status}});
+    });
+
     auto approve_args = std::make_shared<StepArgs>();
     auto* approve_cmd = step->add_subcommand("approve", "Approve a pending step");
     add_global_opts(approve_cmd, global);

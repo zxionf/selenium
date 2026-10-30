@@ -213,6 +213,14 @@ struct MoveArgs {
     std::string to_line;
 };
 
+struct UpdateTaskArgs {
+    std::string id;
+    std::string plan;
+    std::string line;
+    std::vector<std::string> modules;
+    std::string review_policy;
+};
+
 bool find_line_by_id(Context& ctx, int& exit_code, const std::string& plan,
                      const std::string& line_id, core::model::Line& out) {
     std::vector<core::model::Line> matches;
@@ -951,6 +959,84 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                              {"checkpoint", target.id},
                              {"status", item.status},
                              {"step", step_id}});
+    });
+
+    auto reject_args = std::make_shared<FailArgs>();
+    auto* reject_cmd = task->add_subcommand("reject", "Reject a pending task");
+    add_global_opts(reject_cmd, global);
+    reject_cmd->add_option("id", reject_args->id, "Task id")->required();
+    reject_cmd->add_option("--plan", reject_args->plan, "Plan id");
+    reject_cmd->add_option("--line", reject_args->line, "Line id");
+    reject_cmd->add_option("--reason", reject_args->reason, "Reject reason")->required();
+    reject_cmd->callback([&global, &exit_code, reject_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task item;
+        if (!find_task(*ctx, exit_code, reject_args->id, reject_args->plan, reject_args->line,
+                       item)) {
+            return;
+        }
+        if (!transition_task(*ctx, exit_code, item, "in_progress")) return;
+        item.status = "in_progress";
+        try {
+            core::store::save_task(ctx->paths, item);
+            append_event(ctx->paths, "human", "task.reject", task_entity(item),
+                         "pending_review", item.status, reject_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Rejected " + item.id,
+                            {{"task", item.id}, {"status", item.status}});
+    });
+
+    auto update_args = std::make_shared<UpdateTaskArgs>();
+    auto* update_cmd = task->add_subcommand("update", "Update task metadata");
+    add_global_opts(update_cmd, global);
+    update_cmd->add_option("id", update_args->id, "Task id")->required();
+    update_cmd->add_option("--plan", update_args->plan, "Plan id");
+    update_cmd->add_option("--line", update_args->line, "Line id");
+    update_cmd->add_option("--modules", update_args->modules, "Allowed modules")
+        ->delimiter(',');
+    update_cmd->add_option("--review-policy", update_args->review_policy, "strict|lenient|mixed")
+        ->check(CLI::IsMember({"strict", "lenient", "mixed"}));
+    update_cmd->callback([&global, &exit_code, update_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task item;
+        if (!find_task(*ctx, exit_code, update_args->id, update_args->plan, update_args->line,
+                       item)) {
+            return;
+        }
+        if (!update_args->modules.empty()) item.modules = update_args->modules;
+        if (!update_args->review_policy.empty()) item.review_policy = update_args->review_policy;
+        try {
+            core::store::save_task(ctx->paths, item);
+            append_event(ctx->paths, "human", "task.update", task_entity(item), nullptr,
+                         item.review_policy, "update task");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Updated " + item.id,
+                            {{"task", item.id},
+                             {"modules", item.modules},
+                             {"review_policy", item.review_policy}});
+    });
+
+    auto status_args = std::make_shared<SelectArgs>();
+    auto* status_cmd = task->add_subcommand("status", "Show a task");
+    add_global_opts(status_cmd, global);
+    status_cmd->add_option("id", status_args->id, "Task id")->required();
+    status_cmd->add_option("--plan", status_args->plan, "Plan id");
+    status_cmd->add_option("--line", status_args->line, "Line id");
+    status_cmd->callback([&global, &exit_code, status_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task item;
+        if (!find_task(*ctx, exit_code, status_args->id, status_args->plan, status_args->line,
+                       item)) {
+            return;
+        }
+        ctx->out.print_both("Task " + item.id + " [" + item.status + "] " + item.title,
+                            core::model::to_json(item));
     });
 
     auto list_args = std::make_shared<ListArgs>();

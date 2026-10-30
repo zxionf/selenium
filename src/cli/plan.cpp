@@ -161,6 +161,11 @@ struct ArchiveArgs {
     std::string reason{"archive plan"};
 };
 
+struct AbortArgs {
+    std::string id;
+    std::string reason{"abort plan"};
+};
+
 struct RestoreArgs {
     std::string id;
     std::string from;
@@ -449,6 +454,29 @@ void register_plan_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                              {"status", item.status},
                              {"lines", counts},
                              {"acceptance", item.acceptance.size()}});
+    });
+
+    auto abort_args = std::make_shared<AbortArgs>();
+    auto* abort_cmd = plan->add_subcommand("abort", "Abort a plan");
+    add_global_opts(abort_cmd, global);
+    abort_cmd->add_option("id", abort_args->id, "Plan id")->required();
+    abort_cmd->add_option("--reason", abort_args->reason, "Abort reason");
+    abort_cmd->callback([&global, &exit_code, abort_args]() {
+        const auto ctx = make_context(global);
+        core::model::Plan item;
+        if (!load_plan(*ctx, exit_code, abort_args->id, item)) return;
+        if (!transition_plan(*ctx, exit_code, item, "aborted")) return;
+        item.status = "aborted";
+        try {
+            core::store::save_plan(ctx->paths, item);
+            append_event(ctx->paths, "human", "plan.abort", plan_entity(item), item.status,
+                         "aborted", abort_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Aborted plan " + item.id,
+                            {{"plan", item.id}, {"status", item.status}});
     });
 
     auto archive_args = std::make_shared<ArchiveArgs>();

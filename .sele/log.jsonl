@@ -264,3 +264,18 @@
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-020-p0","type":"plan"},"op":"plan.verify","reason":"PA2","ts":"2026-10-30T14:26:21Z"}
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-020-p0","type":"plan"},"op":"plan.verify","reason":"PA3","ts":"2026-10-30T14:26:21Z"}
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-020-p0","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-30T14:26:21Z"}
+{"actor":"sele","after":"98dd5c09ee973ae199fa7c0dccc06dde1fbd423c","before":"12bb944bdb385d4db36f275579e097d587614897","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-30T14:26:54Z"}
+{"actor":"agent","after":"draft","before":null,"context":{},"entity":{"plan":"sele-020-p1","type":"plan"},"op":"plan.new","reason":"create plan","ts":"2026-10-30T14:26:54Z"}
+{"actor":"agent","after":"pending_approval","before":"draft","context":{},"entity":{"plan":"sele-020-p1","type":"plan"},"op":"plan.submit","reason":"submit for approval","ts":"2026-10-30T14:26:54Z"}
+{"actor":"human:zxionf","after":"active","before":"pending_approval","context":{},"entity":{"plan":"sele-020-p1","type":"plan"},"op":"plan.approve","reason":"approve plan","ts":"2026-10-30T14:26:54Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"plan","plan":"sele-020-p1","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T14:26:54Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"line","plan":"sele-020-p1","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T14:26:54Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"task","plan":"sele-020-p1","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T14:26:54Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"step","plan":"sele-020-p1","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T14:26:54Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"plan","plan":"sele-020-p1","task":"T1","type":"task","uid":"tsk_01M66K9QBD9H5K177PGMF3NMG7"},"op":"task.add","reason":"create task","ts":"2026-10-30T14:26:54Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"line","plan":"sele-020-p1","task":"T1","type":"task","uid":"tsk_01M66K9QBNEATCJWS0QJ5DZ45M"},"op":"task.add","reason":"create task","ts":"2026-10-30T14:26:54Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"task","plan":"sele-020-p1","task":"T1","type":"task","uid":"tsk_01M66KA3VC9HWG320GCD18HD5Y"},"op":"task.add","reason":"create task","ts":"2026-10-30T14:27:07Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"step","plan":"sele-020-p1","task":"T1","type":"task","uid":"tsk_01M66KA3VNR0DVS22W8V383RHV"},"op":"task.add","reason":"create task","ts":"2026-10-30T14:27:07Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"plan","plan":"sele-020-p1","task":"T1","type":"task","uid":"tsk_01M66K9QBD9H5K177PGMF3NMG7"},"op":"task.start","reason":"start task","ts":"2026-10-30T14:27:07Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"plan","plan":"sele-020-p1","step":"S1","task":"T1","type":"step"},"op":"step.add","reason":"create step","ts":"2026-10-30T14:29:33Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"plan","plan":"sele-020-p1","step":"S1","task":"T1","type":"step"},"op":"step.start","reason":"start step","ts":"2026-10-30T14:29:47Z"}

@@ -112,6 +112,12 @@ struct AbandonArgs {
     std::string reason;
 };
 
+struct BlockArgs {
+    std::string id;
+    std::string plan;
+    std::string reason;
+};
+
 struct ListArgs {
     std::string plan;
     std::string status;
@@ -352,6 +358,53 @@ void register_line_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             return;
         }
         ctx->out.print_both("Closed line " + item.plan + "." + item.id,
+                            {{"line", item.id}, {"status", item.status}});
+    });
+
+    auto block_args = std::make_shared<BlockArgs>();
+    auto* block_cmd = line->add_subcommand("block", "Block a line");
+    add_global_opts(block_cmd, global);
+    block_cmd->add_option("id", block_args->id, "Line id")->required();
+    block_cmd->add_option("--plan", block_args->plan, "Plan id")->required();
+    block_cmd->add_option("--reason", block_args->reason, "Block reason")->required();
+    block_cmd->callback([&global, &exit_code, block_args]() {
+        const auto ctx = make_context(global);
+        core::model::Line item;
+        if (!load_line(*ctx, exit_code, block_args->plan, block_args->id, item)) return;
+        if (!transition_line(*ctx, exit_code, item, "blocked")) return;
+        item.status = "blocked";
+        try {
+            core::store::save_line(ctx->paths, item);
+            append_event(ctx->paths, "human", "line.block", line_entity(item), "active",
+                         item.status, block_args->reason);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Blocked line " + item.plan + "." + item.id,
+                            {{"line", item.id}, {"status", item.status}});
+    });
+
+    auto unblock_args = std::make_shared<SwitchArgs>();
+    auto* unblock_cmd = line->add_subcommand("unblock", "Unblock a line");
+    add_global_opts(unblock_cmd, global);
+    unblock_cmd->add_option("id", unblock_args->id, "Line id")->required();
+    unblock_cmd->add_option("--plan", unblock_args->plan, "Plan id")->required();
+    unblock_cmd->callback([&global, &exit_code, unblock_args]() {
+        const auto ctx = make_context(global);
+        core::model::Line item;
+        if (!load_line(*ctx, exit_code, unblock_args->plan, unblock_args->id, item)) return;
+        if (!transition_line(*ctx, exit_code, item, "active")) return;
+        item.status = "active";
+        try {
+            core::store::save_line(ctx->paths, item);
+            append_event(ctx->paths, "human", "line.unblock", line_entity(item), "blocked",
+                         item.status, "unblock");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Unblocked line " + item.plan + "." + item.id,
                             {{"line", item.id}, {"status", item.status}});
     });
 

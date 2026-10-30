@@ -7,6 +7,7 @@
 #include "core/event.hpp"
 #include "core/fs.hpp"
 #include "core/git.hpp"
+#include "core/id.hpp"
 #include "core/store.hpp"
 
 #include <nlohmann/json.hpp>
@@ -91,6 +92,17 @@ struct LogArgs {
 struct ReconcileArgs {
     bool check{false};
     std::string sync_to;
+};
+
+struct StashArgs {
+    std::string task;
+    std::string plan;
+    std::string line;
+    std::string message;
+};
+
+struct BranchArgs {
+    std::string name;
 };
 
 } // namespace
@@ -256,6 +268,105 @@ void register_git_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
         }
+    });
+
+    auto stash_args = std::make_shared<StashArgs>();
+    auto* stash_cmd = git->add_subcommand("stash", "Stash changes for a task");
+    add_global_opts(stash_cmd, global);
+    stash_cmd->add_option("--task", stash_args->task, "Task id");
+    stash_cmd->add_option("--plan", stash_args->plan, "Plan id");
+    stash_cmd->add_option("--line", stash_args->line, "Line id");
+    stash_cmd->add_option("--message", stash_args->message, "Stash message");
+    stash_cmd->callback([&global, &exit_code, stash_args, stash_cmd]() {
+        if (stash_cmd->got_subcommand("pop")) return;
+        const auto ctx = make_context(global);
+        if (stash_args->task.empty()) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Pass --task");
+            return;
+        }
+        core::model::Task task;
+        if (!load_task(*ctx, exit_code, stash_args->task, stash_args->plan, stash_args->line,
+                       task)) {
+            return;
+        }
+        std::string message = "sele:" + task.id;
+        if (!stash_args->message.empty()) message += " " + stash_args->message;
+        const auto result = core::git::run(
+            ctx->paths.root, {"stash", "push", "-m", message, "--", ".", ":(exclude).sele"});
+        if (result.code != 0) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, "git stash failed: " + result.output);
+            return;
+        }
+        ctx->out.print_both("Stashed for " + task.id,
+                            {{"task", task.id}, {"message", message}});
+    });
+
+    auto* stash_pop_cmd = stash_cmd->add_subcommand("pop", "Pop the latest stash");
+    add_global_opts(stash_pop_cmd, global);
+    stash_pop_cmd->callback([&global, &exit_code]() {
+        const auto ctx = make_context(global);
+        const auto result = core::git::run(ctx->paths.root, {"stash", "pop"});
+        if (result.code != 0) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, "git stash pop failed: " + result.output);
+            return;
+        }
+        ctx->out.print_both("Popped stash", {{"command", "git.stash.pop"}});
+    });
+
+    auto* branch_cmd = git->add_subcommand("branch", "Branch operations");
+    add_global_opts(branch_cmd, global);
+    auto create_branch_args = std::make_shared<BranchArgs>();
+    auto* create_branch_cmd = branch_cmd->add_subcommand("create", "Create a branch");
+    add_global_opts(create_branch_cmd, global);
+    create_branch_cmd->add_option("name", create_branch_args->name, "Branch name")->required();
+    create_branch_cmd->callback([&global, &exit_code, create_branch_args]() {
+        const auto ctx = make_context(global);
+        if (!core::id::valid_name(create_branch_args->name)) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "Invalid branch name: " + create_branch_args->name);
+            return;
+        }
+        const auto result = core::git::run(ctx->paths.root, {"branch", create_branch_args->name});
+        if (result.code != 0) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, "git branch failed: " + result.output);
+            return;
+        }
+        ctx->out.print_both("Created branch " + create_branch_args->name,
+                            {{"branch", create_branch_args->name}});
+    });
+
+    auto switch_branch_args = std::make_shared<BranchArgs>();
+    auto* switch_branch_cmd = branch_cmd->add_subcommand("switch", "Switch branches");
+    add_global_opts(switch_branch_cmd, global);
+    switch_branch_cmd->add_option("name", switch_branch_args->name, "Branch name")->required();
+    switch_branch_cmd->callback([&global, &exit_code, switch_branch_args]() {
+        const auto ctx = make_context(global);
+        const auto result = core::git::run(ctx->paths.root, {"switch", switch_branch_args->name});
+        if (result.code != 0) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, "git switch failed: " + result.output);
+            return;
+        }
+        ctx->out.print_both("Switched to " + switch_branch_args->name,
+                            {{"branch", switch_branch_args->name}});
+    });
+
+    auto* health_cmd = git->add_subcommand("health", "Show git and checkpoint health");
+    add_global_opts(health_cmd, global);
+    health_cmd->callback([&global, &exit_code]() {
+        const auto ctx = make_context(global);
+        nlohmann::json git = {{"head", core::git::head(ctx->paths)},
+                              {"branch", core::git::branch(ctx->paths)}};
+        const auto status = core::git::run(ctx->paths.root, {"status", "--porcelain"});
+        git["dirty"] = !status.output.empty();
+        nlohmann::json counts = {{"valid", 0}, {"stale", 0}, {"orphaned", 0}, {"invalidated", 0}};
+        for (const auto& checkpoint : load_checkpoints(ctx->paths)) {
+            counts[checkpoint.status] = counts.value(checkpoint.status, 0) + 1;
+        }
+        ctx->out.print_both(
+            "Git " + git["branch"].get<std::string>() + " " +
+                git["head"].get<std::string>() +
+                (git["dirty"].get<bool>() ? " (dirty)" : " (clean)"),
+            {{"command", "git.health"}, {"git", git}, {"checkpoints", counts}});
     });
 
     auto reconcile_args = std::make_shared<ReconcileArgs>();

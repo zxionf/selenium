@@ -580,6 +580,48 @@ test_config() {
     rm -rf "$ROOT"
 }
 
+test_checkpoint_strategy() {
+    setup_git_project
+    "$BIN" task update T1 --root "$ROOT" --line a --checkpoint-strategy per-task >/dev/null
+    echo "b" > "$ROOT/b.txt"
+    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --root "$ROOT" >/dev/null
+    "$BIN" step done T1 S1 --root "$ROOT" --line a >/dev/null
+    "$BIN" task done T1 --root "$ROOT" --line a >/dev/null
+    local count
+    count=$(find "$ROOT/.sele/checkpoints" -type f | wc -l)
+    if [ "$count" -ge 2 ]; then
+        pass "per-task strategy adds a task checkpoint"
+    else
+        fail "per-task strategy adds a task checkpoint"
+    fi
+    rm -rf "$ROOT"
+}
+
+test_git_helpers() {
+    setup_git_project
+    git -C "$ROOT" add -A && git -C "$ROOT" commit -qm state
+    echo "change" >> "$ROOT/a.txt"
+    if "$BIN" git stash --task T1 --root "$ROOT" >/dev/null 2>&1; then
+        pass "git stash --task works"
+    else
+        fail "git stash --task works"
+    fi
+    if "$BIN" git stash pop --root "$ROOT" >/dev/null 2>&1; then
+        pass "git stash pop works"
+    else
+        fail "git stash pop works"
+    fi
+    "$BIN" git branch create dev --root "$ROOT" >/dev/null
+    "$BIN" git branch switch main --root "$ROOT" >/dev/null
+    if "$BIN" git health --root "$ROOT" --output json |
+        jq -e '.git.branch == "main"' >/dev/null; then
+        pass "git branch/health works"
+    else
+        fail "git branch/health works"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -794,6 +836,8 @@ test_depends_uid
 test_check_extended
 test_query_options
 test_config
+test_checkpoint_strategy
+test_git_helpers
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

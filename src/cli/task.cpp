@@ -140,6 +140,7 @@ struct AddArgs {
     std::vector<std::string> depends;
     std::vector<std::string> acceptance;
     std::string review_policy{"mixed"};
+    std::string checkpoint_strategy{"per-step"};
     std::string actor{"agent"};
 };
 
@@ -220,6 +221,7 @@ struct UpdateTaskArgs {
     std::string line;
     std::vector<std::string> modules;
     std::string review_policy;
+    std::string checkpoint_strategy;
 };
 
 bool find_line_by_id(Context& ctx, int& exit_code, const std::string& plan,
@@ -267,6 +269,10 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     add_cmd->add_option("--review-policy", add_args->review_policy, "strict|lenient|mixed")
         ->default_val("mixed")
         ->check(CLI::IsMember({"strict", "lenient", "mixed"}));
+    add_cmd->add_option("--checkpoint-strategy", add_args->checkpoint_strategy,
+                        "per-step|per-task")
+        ->default_val("per-step")
+        ->check(CLI::IsMember({"per-step", "per-task"}));
     add_cmd->add_option("--actor", add_args->actor, "Actor recorded in the event log")
         ->default_val("agent");
     add_cmd->callback([&global, &exit_code, add_args]() {
@@ -287,6 +293,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         result.goal = add_args->title;
         result.status = "todo";
         result.review_policy = add_args->review_policy;
+        result.checkpoint_strategy = add_args->checkpoint_strategy;
         result.created_at = core::model::now_utc();
         result.modules = add_args->modules.empty() ? line.modules : add_args->modules;
 
@@ -632,13 +639,14 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 return;
             }
         }
+        const bool per_task = item.checkpoint_strategy == "per-task";
         bool has_checkpoint = false;
         for (const auto& checkpoint : load_checkpoints(ctx->paths)) {
             if (checkpoint.entity.value("task", "") != item.id) continue;
             has_checkpoint = true;
             break;
         }
-        if (!has_checkpoint) {
+        if (per_task || !has_checkpoint) {
             try {
                 const auto checkpoint = core::checkpoint::create_task(ctx->paths, item);
                 append_event(ctx->paths, "agent", "checkpoint.create", checkpoint.entity,
@@ -1013,6 +1021,9 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         ->delimiter(',');
     update_cmd->add_option("--review-policy", update_args->review_policy, "strict|lenient|mixed")
         ->check(CLI::IsMember({"strict", "lenient", "mixed"}));
+    update_cmd->add_option("--checkpoint-strategy", update_args->checkpoint_strategy,
+                           "per-step|per-task")
+        ->check(CLI::IsMember({"per-step", "per-task"}));
     update_cmd->callback([&global, &exit_code, update_args]() {
         const auto ctx = make_context(global);
         core::model::Task item;
@@ -1022,6 +1033,9 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         }
         if (!update_args->modules.empty()) item.modules = update_args->modules;
         if (!update_args->review_policy.empty()) item.review_policy = update_args->review_policy;
+        if (!update_args->checkpoint_strategy.empty()) {
+            item.checkpoint_strategy = update_args->checkpoint_strategy;
+        }
         try {
             core::store::save_task(ctx->paths, item);
             append_event(ctx->paths, "human", "task.update", task_entity(item), nullptr,

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": 1,
+  "version": 2,
   "id": "20261030-user-docs",
   "type": "chore",
   "goal": "导出 sele 人类使用文档与配置文档",
@@ -26,10 +26,14 @@
   ],
   "created_at": "2026-10-30T07:43:02Z",
   "created_by": "zxionf",
-  "status": "draft",
-  "frozen": null,
+  "status": "active",
+  "frozen": {
+    "goal_sha256": "ee9b7b36b36430b18192d9ee26c2b3613d4ae0d553f4221e138d93641f4e958d",
+    "acceptance_sha256": "3ee912a859e827ca563ad5f53c84b0fff3c88468d96184094c251b481337279d",
+    "at": "2026-10-30T07:43:02Z"
+  },
   "blocked": null,
   "closed": null,
-  "base_commit": null,
+  "base_commit": "6b2e2a8",
   "merged": null
 }

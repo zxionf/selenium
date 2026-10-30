@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "version": 1,
+  "version": 2,
   "id": "20261030-drop-legacy",
   "type": "refactor",
   "goal": "移除 .design/.agent 旧体系兼容，sele 只支持 .sele",
@@ -33,10 +33,14 @@
   ],
   "created_at": "2026-10-30T07:04:16Z",
   "created_by": "zxionf",
-  "status": "draft",
-  "frozen": null,
+  "status": "active",
+  "frozen": {
+    "goal_sha256": "93c8992d15f054c2cfbbdbec58b7d03eba1adf7950d71f6d3068477e84cf3b28",
+    "acceptance_sha256": "9cfb8fec8a639ef048649ce8d27b1c7abf9cda8fdc54677745eeef5aeb58bede",
+    "at": "2026-10-30T07:04:25Z"
+  },
   "blocked": null,
   "closed": null,
-  "base_commit": null,
+  "base_commit": "29d1e0b",
   "merged": null
 }

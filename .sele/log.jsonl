@@ -10,3 +10,4 @@
 {"ts":"2026-10-30T06:03:55Z","actor":"zxionf","op":"task.done","line":"20261030-contract-md","task":"T4","commit":"8b7509d"}
 {"ts":"2026-10-30T06:03:55Z","actor":"zxionf","op":"line.done","line":"20261030-contract-md"}
 {"ts":"2026-10-30T06:03:55Z","actor":"zxionf","op":"line.merge","line":"20261030-contract-md","commit":"f63202f","base":"main"}
+{"ts":"2026-10-30T07:04:16Z","actor":"zxionf","op":"line.new","line":"20261030-drop-legacy"}

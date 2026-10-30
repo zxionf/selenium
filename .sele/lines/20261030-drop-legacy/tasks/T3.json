@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "id": "T3",
+  "title": "收紧 init 与根发现",
+  "depends": [
+    "T2"
+  ],
+  "modules": [
+    "cli"
+  ],
+  "group": null,
+  "created_at": "2026-10-30T07:04:25Z",
+  "created_by": "zxionf"
+}

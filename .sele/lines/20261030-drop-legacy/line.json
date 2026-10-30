@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "version": 1,
+  "id": "20261030-drop-legacy",
+  "type": "refactor",
+  "goal": "移除 .design/.agent 旧体系兼容，sele 只支持 .sele",
+  "acceptance": [
+    {
+      "id": "A1",
+      "desc": "旧命令与 --legacy 移除",
+      "check": "sele --help 无旧命令；sele init --legacy 退 1"
+    },
+    {
+      "id": "A2",
+      "desc": "旧 core 与模板移除",
+      "check": "core/root|id|git 删除；template 仅剩 .sele 模板"
+    },
+    {
+      "id": "A3",
+      "desc": "只认 .sele",
+      "check": "无 .sele 时提示 sele init；只有 .design 的目录 init 可建 .sele"
+    },
+    {
+      "id": "A4",
+      "desc": "测试与构建",
+      "check": "ctest 全过；fsck 通过；docs/ 与 info.md 未改"
+    }
+  ],
+  "modules": [
+    "cli",
+    "build",
+    "docs"
+  ],
+  "created_at": "2026-10-30T07:04:16Z",
+  "created_by": "zxionf",
+  "status": "draft",
+  "frozen": null,
+  "blocked": null,
+  "closed": null,
+  "base_commit": null,
+  "merged": null
+}

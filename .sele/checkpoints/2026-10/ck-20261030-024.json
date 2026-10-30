@@ -1,0 +1,29 @@
+{
+  "entity": {
+    "line": "docs",
+    "plan": "sele-020-contract",
+    "step": "S1",
+    "task": "T1",
+    "task_uid": "tsk_01M66PY1VRNMCFGRSE9HKMD64G",
+    "type": "step"
+  },
+  "git": {
+    "branch": "main",
+    "commit": "0185dcef86a7d56c79b8f20a277e84884809b9b0",
+    "diff_stat": " .sele/CONTRACT.md                       | 73 ++++++++++++++++++++++++---------\n .sele/lines/sele-020-contract.docs.json | 21 ++++++++++\n .sele/log.jsonl                         |  9 ++++\n .sele/plans/sele-020-contract.json      | 24 +++++++++++\n .sele/tasks/74/82571750502fe2.json      | 49 ++++++++++++++++++++++\n .template/AGENTS.md                     | 57 +++++++++++++++++++++++++\n 6 files changed, 214 insertions(+), 19 deletions(-)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/CONTRACT.md",
+      ".sele/lines/sele-020-contract.docs.json",
+      ".sele/log.jsonl",
+      ".sele/plans/sele-020-contract.json",
+      ".sele/tasks/74/82571750502fe2.json",
+      ".template/AGENTS.md"
+    ],
+    "source": "sele",
+    "tree": "c51e307faa7814122881487c76eb57e7df242ced"
+  },
+  "id": "ck-20261030-024",
+  "status": "valid",
+  "ts": "2026-10-30T15:30:26Z"
+}

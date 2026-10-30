@@ -1,0 +1,32 @@
+{
+  "entity": {
+    "line": "revert",
+    "plan": "sele-020-m3",
+    "step": "S1",
+    "task": "T2",
+    "task_uid": "tsk_01M66GGHNBJV2K992BJ02MH2N9",
+    "type": "step"
+  },
+  "git": {
+    "branch": "sele/20261030-v2-core",
+    "commit": "a48cb9d50ec7eeb75299579a06553f3401a42a3f",
+    "diff_stat": " .sele/cache/git-fingerprint.json               |   2 +-\n .sele/checkpoints/2026-10/ck-20261030-005.json |  31 ++++++++\n .sele/log.jsonl                                |   8 ++\n .sele/tasks/05/687a372eeea307.json             |  17 +++-\n .sele/tasks/68/636d190884851d.json             |  16 ++--\n src/cli/git.cpp                                | 105 +++++++++++++++++++++++++\n src/core/git.cpp                               |  35 ++++++---\n src/core/git.hpp                               |   2 +-\n tests/sele_v2_tests.sh                         |  17 ++++\n 9 files changed, 210 insertions(+), 23 deletions(-)",
+    "dirty": false,
+    "files_changed": [
+      ".sele/cache/git-fingerprint.json",
+      ".sele/checkpoints/2026-10/ck-20261030-005.json",
+      ".sele/log.jsonl",
+      ".sele/tasks/05/687a372eeea307.json",
+      ".sele/tasks/68/636d190884851d.json",
+      "src/cli/git.cpp",
+      "src/core/git.cpp",
+      "src/core/git.hpp",
+      "tests/sele_v2_tests.sh"
+    ],
+    "source": "sele",
+    "tree": "80c54ca367f9b159a86c628f453f5b217bd58c62"
+  },
+  "id": "ck-20261030-006",
+  "status": "valid",
+  "ts": "2026-10-30T13:47:09Z"
+}

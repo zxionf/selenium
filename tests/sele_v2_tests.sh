@@ -177,6 +177,22 @@ test_git_reconcile() {
     rm -rf "$ROOT"
 }
 
+test_log_compact() {
+    setup_project
+    if "$BIN" log compact --root "$ROOT" --output json |
+        jq -e '.command == "log.compact"' >/dev/null; then
+        pass "log compact archives the event log"
+    else
+        fail "log compact archives the event log"
+    fi
+    if ls "$ROOT/.sele/archive/"log-*.jsonl >/dev/null 2>&1; then
+        pass "log compact writes an archive file"
+    else
+        fail "log compact writes an archive file"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -375,6 +391,7 @@ test_plan_archive_restore
 test_cache_index
 test_task_revert
 test_git_reconcile
+test_log_compact
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

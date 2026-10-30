@@ -111,6 +111,14 @@ struct CheckArgs {
     std::string plan;
 };
 
+std::string compact_stamp() {
+    std::string stamp;
+    for (const char character : core::model::now_utc()) {
+        if (character >= '0' && character <= '9') stamp += character;
+    }
+    return stamp;
+}
+
 } // namespace
 
 void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
@@ -319,6 +327,27 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                      << event.entity.value("task", "") << "  " << event.reason << "\n";
             }
             ctx->out.print_both(text.str(), {{"command", "log"}, {"items", items}});
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+        }
+    });
+
+    auto* compact_cmd = log_cmd->add_subcommand("compact", "Move the event log to archive/");
+    add_global_opts(compact_cmd, global);
+    compact_cmd->callback([&global, &exit_code]() {
+        const auto ctx = make_context(global);
+        try {
+            const auto content = core::fsys::read_file(ctx->paths.log);
+            const auto target =
+                ctx->paths.archive / ("log-" + compact_stamp() + ".jsonl");
+            core::fsys::ensure_dir(ctx->paths.archive);
+            core::fsys::write_atomic(target, content);
+            core::fsys::write_atomic(ctx->paths.log, "");
+            append_event(ctx->paths, "human", "log.compact", {{"type", "log"}}, nullptr,
+                         target.filename().string(), "compact log");
+            ctx->out.print_both("Compacted log to " + target.string(),
+                                {{"command", "log.compact"},
+                                 {"archive", target.string()}});
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
         }

@@ -15,3 +15,4 @@
 {"ts":"2026-10-30T07:05:40Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T1","commit":"851bcfb"}
 {"ts":"2026-10-30T07:07:01Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T2","commit":"34ccfe7"}
 {"ts":"2026-10-30T07:09:37Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T3","commit":"eb91f21"}
+{"ts":"2026-10-30T07:11:56Z","actor":"zxionf","op":"task.done","line":"20261030-drop-legacy","task":"T4","commit":"6b83a6a"}

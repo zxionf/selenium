@@ -12,6 +12,7 @@
 - 多 agent 并行时用 `--session` 或 `worktree` 隔离，不要共用会话指针。
 - `merged` / `abandoned` / archived 的 line 只读。
 - 结构（状态、depends、group、勾选）只由命令写；散文（goal/desc/title）可自由写。
+- 本工具只支持 `.sele/`；`.design/` 与 `.agent/` 不再被识别。
 
 ## 完成定义
 

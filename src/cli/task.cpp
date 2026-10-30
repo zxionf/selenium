@@ -174,6 +174,23 @@ struct RevertArgs {
     bool with_git{false};
 };
 
+struct InsertArgs {
+    std::string title;
+    std::string line;
+    std::string plan;
+    std::string after;
+    std::string before;
+    std::vector<std::string> acceptance;
+    bool pause_current{false};
+};
+
+struct MoveArgs {
+    std::string id;
+    std::string plan;
+    std::string line;
+    std::string to_line;
+};
+
 bool find_line_by_id(Context& ctx, int& exit_code, const std::string& plan,
                      const std::string& line_id, core::model::Line& out) {
     std::vector<core::model::Line> matches;
@@ -250,8 +267,15 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             result.acceptance.push_back(item);
         }
         for (const auto& dep : add_args->depends) {
+            std::string dep_line = line.id;
+            std::string dep_id = dep;
+            const auto dot = dep.find('.');
+            if (dot != std::string::npos) {
+                dep_line = dep.substr(0, dot);
+                dep_id = dep.substr(dot + 1);
+            }
             result.depends.push_back(
-                {{"type", "task"}, {"plan", line.plan}, {"line", line.id}, {"id", dep}});
+                {{"type", "task"}, {"plan", line.plan}, {"line", dep_line}, {"id", dep_id}});
         }
 
         try {
@@ -265,6 +289,119 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         }
         ctx->out.print_both("Added " + result.id + " to " + line.plan + "." + line.id,
                             {{"task", result.id}, {"uid", result.uid}, {"status", result.status}});
+    });
+
+    auto insert_args = std::make_shared<InsertArgs>();
+    auto* insert_cmd = task->add_subcommand("insert", "Insert a task relative to another task");
+    add_global_opts(insert_cmd, global);
+    insert_cmd->add_option("title", insert_args->title, "Task title")->required();
+    insert_cmd->add_option("--line", insert_args->line, "Line id")->required();
+    insert_cmd->add_option("--plan", insert_args->plan, "Plan id");
+    insert_cmd->add_option("--after", insert_args->after, "Insert after this task id");
+    insert_cmd->add_option("--before", insert_args->before, "Insert before this task id");
+    insert_cmd->add_option("--acceptance", insert_args->acceptance,
+                           "Acceptance description (repeatable)");
+    insert_cmd->add_flag("--pause-current", insert_args->pause_current,
+                         "Pause the current in-progress task");
+    insert_cmd->callback([&global, &exit_code, insert_args]() {
+        const auto ctx = make_context(global);
+        core::model::Line line;
+        if (!find_line_by_id(*ctx, exit_code, insert_args->plan, insert_args->line, line)) return;
+        if (line.status != "active") {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Line " + line.id + " is " + line.status + ", expected active");
+            return;
+        }
+        if (insert_args->after.empty() && insert_args->before.empty()) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Pass --after or --before");
+            return;
+        }
+
+        std::vector<core::model::Task> all;
+        try {
+            all = core::store::load_tasks(ctx->paths);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        if (!insert_args->before.empty()) {
+            bool found = false;
+            for (const auto& candidate : all) {
+                if (candidate.id == insert_args->before && candidate.plan == line.plan &&
+                    candidate.line == line.id) {
+                    found = true;
+                }
+            }
+            if (!found) {
+                fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                     "Anchor task not found: " + insert_args->before);
+                return;
+            }
+        }
+
+        core::model::Task inserted;
+        inserted.uid = core::id::new_task_uid();
+        inserted.plan = line.plan;
+        inserted.line = line.id;
+        inserted.title = insert_args->title;
+        inserted.goal = insert_args->title;
+        inserted.status = "todo";
+        inserted.created_at = core::model::now_utc();
+        inserted.modules = line.modules;
+        int index = 0;
+        for (const auto& desc : insert_args->acceptance) {
+            core::model::Acceptance item;
+            item.id = "A" + std::to_string(++index);
+            item.desc = desc;
+            inserted.acceptance.push_back(item);
+        }
+        if (!insert_args->after.empty()) {
+            inserted.depends.push_back({{"type", "task"},
+                                        {"plan", line.plan},
+                                        {"line", line.id},
+                                        {"id", insert_args->after}});
+        }
+
+        try {
+            inserted.id = next_task_id(ctx->paths, line.plan, line.id);
+            core::store::save_task(ctx->paths, inserted);
+            if (!insert_args->before.empty()) {
+                for (auto& candidate : core::store::load_tasks(ctx->paths)) {
+                    if (candidate.id != insert_args->before) continue;
+                    if (candidate.plan != line.plan || candidate.line != line.id) continue;
+                    candidate.depends.push_back({{"type", "task"},
+                                                 {"plan", line.plan},
+                                                 {"line", line.id},
+                                                 {"id", inserted.id}});
+                    core::store::save_task(ctx->paths, candidate);
+                }
+            }
+            if (insert_args->pause_current) {
+                for (auto& candidate : core::store::load_tasks(ctx->paths)) {
+                    if (candidate.status != "in_progress") continue;
+                    if (!core::state::task_transition(candidate.status, "paused")) continue;
+                    candidate.status = "paused";
+                    candidate.pause_context = {{"at", core::model::now_utc()},
+                                               {"reason", "inserted " + inserted.id},
+                                               {"current_step", candidate.current_step.empty()
+                                                                    ? nlohmann::json(nullptr)
+                                                                    : nlohmann::json(candidate.current_step)},
+                                               {"resume_hint", ""}};
+                    core::store::save_task(ctx->paths, candidate);
+                    append_event(ctx->paths, "agent", "task.pause", task_entity(candidate),
+                                 "in_progress", "paused", "pause on insert");
+                }
+            }
+            append_event(ctx->paths, "agent", "task.insert", task_entity(inserted), nullptr,
+                         inserted.status, "insert task");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Inserted " + inserted.id + " into " + line.plan + "." + line.id,
+                            {{"task", inserted.id},
+                             {"uid", inserted.uid},
+                             {"status", inserted.status}});
     });
 
     auto start_args = std::make_shared<SelectArgs>();
@@ -285,10 +422,12 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             for (const auto& dep : item.depends) {
                 if (dep.value("type", "") != "task") continue;
                 const std::string dep_id = dep.value("id", "");
+                const std::string dep_plan = dep.value("plan", item.plan);
+                const std::string dep_line = dep.value("line", item.line);
                 std::vector<core::model::Task> matches;
                 for (const auto& candidate : core::store::load_tasks(ctx->paths)) {
-                    if (candidate.id == dep_id && candidate.plan == item.plan &&
-                        candidate.line == item.line) {
+                    if (candidate.id == dep_id && candidate.plan == dep_plan &&
+                        candidate.line == dep_line) {
                         matches.push_back(candidate);
                     }
                 }
@@ -726,6 +865,53 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
         }
+    });
+
+    auto move_args = std::make_shared<MoveArgs>();
+    auto* move_cmd = task->add_subcommand("move", "Move a task to another line");
+    add_global_opts(move_cmd, global);
+    move_cmd->add_option("id", move_args->id, "Task id")->required();
+    move_cmd->add_option("--to-line", move_args->to_line, "Target line id")->required();
+    move_cmd->add_option("--plan", move_args->plan, "Target plan id");
+    move_cmd->add_option("--line", move_args->line, "Source line id");
+    move_cmd->callback([&global, &exit_code, move_args]() {
+        const auto ctx = make_context(global);
+        core::model::Task item;
+        if (!find_task(*ctx, exit_code, move_args->id, "", move_args->line, item)) return;
+        const std::string target_plan = move_args->plan.empty() ? item.plan : move_args->plan;
+        core::model::Line target;
+        if (!find_line_by_id(*ctx, exit_code, target_plan, move_args->to_line, target)) return;
+        if (target.status != "active") {
+            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                 "Target line " + target.id + " is " + target.status + ", expected active");
+            return;
+        }
+        if (target.plan == item.plan && target.id == item.line) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR, "Task is already in that line");
+            return;
+        }
+        try {
+            for (const auto& candidate : core::store::load_tasks(ctx->paths)) {
+                if (candidate.plan == target.plan && candidate.line == target.id &&
+                    candidate.id == item.id) {
+                    fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
+                         "Task id already exists in target line: " + item.id);
+                    return;
+                }
+            }
+            item.plan = target.plan;
+            item.line = target.id;
+            core::store::save_task(ctx->paths, item);
+            append_event(ctx->paths, "human", "task.move", task_entity(item), nullptr,
+                         item.plan + "." + item.line, "move task");
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Moved " + item.id + " to " + item.plan + "." + item.line,
+                            {{"task", item.id},
+                             {"plan", item.plan},
+                             {"line", item.line}});
     });
 
     auto archive_args = std::make_shared<SelectArgs>();

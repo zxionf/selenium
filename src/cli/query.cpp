@@ -49,9 +49,11 @@ bool task_ready(const core::model::Task& task, const std::vector<core::model::Pl
     for (const auto& dep : task.depends) {
         if (dep.value("type", "") != "task") continue;
         const std::string dep_id = dep.value("id", "");
+        const std::string dep_plan = dep.value("plan", task.plan);
+        const std::string dep_line = dep.value("line", task.line);
         bool done = false;
         for (const auto& candidate : tasks) {
-            if (candidate.plan == task.plan && candidate.line == task.line &&
+            if (candidate.plan == dep_plan && candidate.line == dep_line &&
                 candidate.id == dep_id &&
                 (candidate.status == "done" || candidate.status == "archived")) {
                 done = true;
@@ -104,11 +106,20 @@ struct LogArgs {
     std::string line;
     std::string task;
     bool decisions{false};
+    bool replay{false};
     int limit{20};
 };
 
 struct CheckArgs {
     std::string plan;
+};
+
+struct DecisionArgs {
+    std::string content;
+    std::string plan;
+    std::string line;
+    std::string task;
+    std::string step;
 };
 
 std::string compact_stamp() {
@@ -294,6 +305,7 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     log_cmd->add_option("--line", log_args->line, "Filter by line");
     log_cmd->add_option("--task", log_args->task, "Filter by task id");
     log_cmd->add_flag("--decisions", log_args->decisions, "Only decision events");
+    log_cmd->add_flag("--replay", log_args->replay, "Print the full timeline");
     log_cmd->add_option("--limit", log_args->limit, "Maximum events")->default_val(20);
     log_cmd->callback([&global, &exit_code, log_args, log_cmd]() {
         if (log_cmd->got_subcommand("compact")) return;
@@ -314,7 +326,10 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 }
                 filtered.push_back(event);
             }
-            const std::size_t limit = log_args->limit < 0 ? 0 : static_cast<std::size_t>(log_args->limit);
+            const std::size_t limit =
+                log_args->replay
+                    ? filtered.size()
+                    : (log_args->limit < 0 ? 0 : static_cast<std::size_t>(log_args->limit));
             if (filtered.size() > limit) {
                 filtered.erase(filtered.begin(), filtered.end() - static_cast<std::ptrdiff_t>(limit));
             }
@@ -326,6 +341,10 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                      << event.entity.value("plan", "") << "/"
                      << event.entity.value("line", "") << "/"
                      << event.entity.value("task", "") << "  " << event.reason << "\n";
+                if (log_args->replay) {
+                    text << "    " << event.before.dump() << " -> " << event.after.dump()
+                         << "\n";
+                }
             }
             ctx->out.print_both(text.str(), {{"command", "log"}, {"items", items}});
         } catch (const std::exception& error) {
@@ -352,6 +371,34 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
         }
+    });
+
+    auto decision_args = std::make_shared<DecisionArgs>();
+    auto* decision_cmd = app.add_subcommand("decision", "Record decisions");
+    add_global_opts(decision_cmd, global);
+    auto* record_cmd = decision_cmd->add_subcommand("record", "Record a decision event");
+    add_global_opts(record_cmd, global);
+    record_cmd->add_option("content", decision_args->content, "Decision content")->required();
+    record_cmd->add_option("--plan", decision_args->plan, "Plan id");
+    record_cmd->add_option("--line", decision_args->line, "Line id");
+    record_cmd->add_option("--task", decision_args->task, "Task id");
+    record_cmd->add_option("--step", decision_args->step, "Step id");
+    record_cmd->callback([&global, &exit_code, decision_args]() {
+        const auto ctx = make_context(global);
+        nlohmann::json entity = {{"type", "decision"}};
+        if (!decision_args->plan.empty()) entity["plan"] = decision_args->plan;
+        if (!decision_args->line.empty()) entity["line"] = decision_args->line;
+        if (!decision_args->task.empty()) entity["task"] = decision_args->task;
+        if (!decision_args->step.empty()) entity["step"] = decision_args->step;
+        try {
+            append_event(ctx->paths, "human", "decision", entity, nullptr, nullptr,
+                         decision_args->content);
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        ctx->out.print_both("Recorded decision",
+                            {{"command", "decision.record"}, {"entity", entity}});
     });
 
     auto check_args = std::make_shared<CheckArgs>();
@@ -392,7 +439,8 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 }
                 for (const auto& dep : task.depends) {
                     if (dep.value("type", "") != "task") continue;
-                    const auto key = task.plan + "." + task.line + "." + dep.value("id", "");
+                    const auto key = dep.value("plan", task.plan) + "." +
+                                     dep.value("line", task.line) + "." + dep.value("id", "");
                     if (task_index.find(key) == task_index.end()) {
                         problems.push_back("task " + task.id + " depends on missing " +
                                            dep.value("id", ""));

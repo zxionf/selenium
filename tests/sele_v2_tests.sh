@@ -657,6 +657,27 @@ test_reconcile_actions() {
     rm -rf "$ROOT"
 }
 
+test_list_text() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    if "$BIN" plan list --root "$ROOT" | grep -q 'p  goal'; then
+        pass "plan list text includes entries"
+    else
+        fail "plan list text includes entries"
+    fi
+    if "$BIN" line list --root "$ROOT" --plan p | grep -q 'p.a'; then
+        pass "line list text includes entries"
+    else
+        fail "line list text includes entries"
+    fi
+    if "$BIN" task list --root "$ROOT" --line a | grep -q 'T1'; then
+        pass "task list text includes entries"
+    else
+        fail "task list text includes entries"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -875,6 +896,7 @@ test_checkpoint_strategy
 test_git_helpers
 test_agent_prompt
 test_reconcile_actions
+test_list_text
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

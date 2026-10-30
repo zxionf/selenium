@@ -1,0 +1,21 @@
+{
+  "acceptance": [
+    {
+      "desc": "text 含明细",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T15:16:59Z",
+  "depends": [],
+  "goal": "list 输出",
+  "id": "list",
+  "modules": [
+    "cli"
+  ],
+  "plan": "sele-020-list",
+  "status": "active"
+}

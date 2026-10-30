@@ -459,3 +459,12 @@
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"line":"agent-doc","plan":"sele-020-doc","type":"line"},"op":"line.done","reason":"line complete","ts":"2026-10-30T15:00:13Z"}
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-020-doc","type":"plan"},"op":"plan.verify","reason":"PA1","ts":"2026-10-30T15:00:13Z"}
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-020-doc","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-30T15:00:13Z"}
+{"actor":"sele","after":"facd9e7a4f0727331e44b0485ef6bbe3f9c12fce","before":"ed821cc994a0aa2b192a89ea19c9440c7b2aa255","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-30T15:05:31Z"}
+{"actor":"agent","after":"draft","before":null,"context":{},"entity":{"plan":"sele-020-list","type":"plan"},"op":"plan.new","reason":"create plan","ts":"2026-10-30T15:16:59Z"}
+{"actor":"agent","after":"pending_approval","before":"draft","context":{},"entity":{"plan":"sele-020-list","type":"plan"},"op":"plan.submit","reason":"submit for approval","ts":"2026-10-30T15:16:59Z"}
+{"actor":"human:zxionf","after":"active","before":"pending_approval","context":{},"entity":{"plan":"sele-020-list","type":"plan"},"op":"plan.approve","reason":"approve plan","ts":"2026-10-30T15:16:59Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"list","plan":"sele-020-list","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-30T15:16:59Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"list","plan":"sele-020-list","task":"T1","type":"task","uid":"tsk_01M66P5DXSPEKP2VT6RC2SBTZ1"},"op":"task.add","reason":"create task","ts":"2026-10-30T15:16:59Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"list","plan":"sele-020-list","task":"T1","type":"task","uid":"tsk_01M66P5DXSPEKP2VT6RC2SBTZ1"},"op":"task.start","reason":"start task","ts":"2026-10-30T15:16:59Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"list","plan":"sele-020-list","step":"S1","task":"T1","type":"step"},"op":"step.add","reason":"create step","ts":"2026-10-30T15:19:01Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"list","plan":"sele-020-list","step":"S1","task":"T1","type":"step"},"op":"step.start","reason":"start step","ts":"2026-10-30T15:19:01Z"}

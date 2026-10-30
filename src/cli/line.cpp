@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -449,8 +450,15 @@ void register_line_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                                  {"status", item.status},
                                  {"goal", item.goal}});
             }
-            ctx->out.print_both("Lines: " + std::to_string(items.size()),
-                                {{"command", "line.list"}, {"items", items}});
+            std::ostringstream text;
+            text << "Lines: " << items.size();
+            for (const auto& item : items) {
+                text << "\n  " << item["status"].get<std::string>() << "  "
+                     << item["plan"].get<std::string>() << "."
+                     << item["id"].get<std::string>() << "  "
+                     << item["goal"].get<std::string>();
+            }
+            ctx->out.print_both(text.str(), {{"command", "line.list"}, {"items", items}});
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
         }

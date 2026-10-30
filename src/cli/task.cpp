@@ -1092,8 +1092,19 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                                  {"skipped_count", item.skipped_count},
                                  {"steps", item.steps.size()}});
             }
-            ctx->out.print_both("Tasks: " + std::to_string(items.size()),
-                                {{"command", "task.list"}, {"items", items}});
+            std::ostringstream text;
+            text << "Tasks: " << items.size();
+            for (const auto& item : items) {
+                text << "\n  " << item["status"].get<std::string>() << "  "
+                     << item["plan"].get<std::string>() << "."
+                     << item["line"].get<std::string>() << "."
+                     << item["id"].get<std::string>() << "  "
+                     << item["title"].get<std::string>();
+                if (item["skipped_count"].get<int>() > 0) {
+                    text << "  (skipped " << item["skipped_count"].get<int>() << ")";
+                }
+            }
+            ctx->out.print_both(text.str(), {{"command", "task.list"}, {"items", items}});
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
         }

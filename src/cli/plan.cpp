@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -256,8 +257,15 @@ void register_plan_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                                  {"goal", item.goal},
                                  {"lines", item.lines.size()}});
             }
-            ctx->out.print_both("Plans: " + std::to_string(items.size()),
-                                {{"command", "plan.list"}, {"items", items}});
+            std::ostringstream text;
+            text << "Plans: " << items.size();
+            for (const auto& item : items) {
+                text << "\n  " << item["status"].get<std::string>() << "  "
+                     << item["id"].get<std::string>() << "  "
+                     << item["goal"].get<std::string>() << "  (" << item["lines"].get<int>()
+                     << " lines)";
+            }
+            ctx->out.print_both(text.str(), {{"command", "plan.list"}, {"items", items}});
         } catch (const std::exception& error) {
             fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
         }

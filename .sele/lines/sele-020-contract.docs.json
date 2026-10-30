@@ -1,0 +1,21 @@
+{
+  "acceptance": [
+    {
+      "desc": "文件可用",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-30T15:30:26Z",
+  "depends": [],
+  "goal": "文档",
+  "id": "docs",
+  "modules": [
+    "docs"
+  ],
+  "plan": "sele-020-contract",
+  "status": "active"
+}

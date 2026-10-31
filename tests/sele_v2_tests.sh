@@ -639,6 +639,40 @@ test_no_backward_compat() {
     rm -rf "$root"
 }
 
+test_task_view() {
+    setup_project
+    "$BIN" line new b --root "$ROOT" --plan p --goal "gb" --acceptance "lb" --modules core >/dev/null
+    "$BIN" task add "a1" --root "$ROOT" --line a >/dev/null
+    "$BIN" task add "a2" --root "$ROOT" --line a --depends T1 >/dev/null
+    "$BIN" task add "b1" --root "$ROOT" --line b >/dev/null
+    "$BIN" line switch a --root "$ROOT" --plan p >/dev/null
+    if "$BIN" task --root "$ROOT" --output json |
+        jq -e '.lines | length == 1 and .lines[0].tasks[0].id == "T1" and .lines[0].tasks[1].id == "T2"' >/dev/null; then
+        pass "task view shows current line in topo order"
+    else
+        fail "task view shows current line in topo order"
+    fi
+    if "$BIN" task --root "$ROOT" --all --output json | jq -e '.lines | length == 2' >/dev/null; then
+        pass "task --all shows all lines in the plan"
+    else
+        fail "task --all shows all lines in the plan"
+    fi
+    if "$BIN" task --root "$ROOT" --global --output json | jq -e '.lines | length == 2' >/dev/null; then
+        pass "task --global shows all plans"
+    else
+        fail "task --global shows all plans"
+    fi
+    local empty
+    empty=$(mktemp -d)
+    "$BIN" init --root "$empty" >/dev/null
+    if expect_code 1 "$BIN" task --root "$empty"; then
+        pass "task without context fails"
+    else
+        fail "task without context fails"
+    fi
+    rm -rf "$empty" "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -856,6 +890,7 @@ test_list_text
 test_list_color
 test_color_config
 test_no_backward_compat
+test_task_view
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

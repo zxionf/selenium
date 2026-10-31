@@ -13,7 +13,10 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <functional>
+#include <map>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -184,6 +187,30 @@ struct UpdateTaskArgs {
     std::string review_policy;
 };
 
+std::vector<core::model::Task> topo_sort(const std::vector<core::model::Task>& tasks) {
+    std::map<std::string, const core::model::Task*> by_uid;
+    for (const auto& task : tasks) by_uid[task.uid] = &task;
+    std::vector<core::model::Task> result;
+    std::set<std::string> visited;
+    std::set<std::string> visiting;
+    std::function<void(const core::model::Task&)> visit = [&](const core::model::Task& task) {
+        if (visited.count(task.uid) != 0 || visiting.count(task.uid) != 0) return;
+        visiting.insert(task.uid);
+        for (const auto& dep : task.depends) {
+            if (dep.value("type", "") != "task") continue;
+            const auto uid = dep.value("uid", "");
+            if (uid.empty()) continue;
+            const auto found = by_uid.find(uid);
+            if (found != by_uid.end()) visit(*found->second);
+        }
+        visiting.erase(task.uid);
+        visited.insert(task.uid);
+        result.push_back(task);
+    };
+    for (const auto& task : tasks) visit(task);
+    return result;
+}
+
 bool find_line_by_id(Context& ctx, int& exit_code, const std::string& plan,
                      const std::string& line_id, core::model::Line& out) {
     std::vector<core::model::Line> matches;
@@ -214,6 +241,84 @@ bool find_line_by_id(Context& ctx, int& exit_code, const std::string& plan,
 void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     auto* task = app.add_subcommand("task", "Manage tasks");
     add_global_opts(task, global);
+
+    struct TaskViewArgs {
+        bool all{false};
+        bool global{false};
+    };
+    auto view_args = std::make_shared<TaskViewArgs>();
+    task->add_flag("--all", view_args->all, "Show all lines in the current plan");
+    task->add_flag("--global", view_args->global, "Show all plans");
+    task->callback([&global, &exit_code, view_args, task]() {
+        for (const auto* sub : task->get_subcommands()) {
+            if (sub->count() > 0) return;
+        }
+        const auto ctx = make_context(global);
+        std::string plan_id;
+        std::string line_id;
+        if (core::fsys::exists(ctx->paths.context)) {
+            try {
+                const auto value = nlohmann::json::parse(core::fsys::read_file(ctx->paths.context));
+                plan_id = value.value("plan", "");
+                line_id = value.value("line", "");
+            } catch (...) {
+            }
+        }
+
+        std::vector<core::model::Line> selected;
+        try {
+            for (const auto& line : core::store::load_lines(ctx->paths)) {
+                if (view_args->global) {
+                    selected.push_back(line);
+                    continue;
+                }
+                if (view_args->all) {
+                    if (plan_id.empty() || line.plan == plan_id) selected.push_back(line);
+                    continue;
+                }
+                if (line_id.empty()) continue;
+                if (line.id != line_id) continue;
+                if (!plan_id.empty() && line.plan != plan_id) continue;
+                selected.push_back(line);
+            }
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        if (selected.empty() && !view_args->global && !view_args->all) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "No current line; run sele line switch <id> or sele task --all");
+            return;
+        }
+
+        std::ostringstream text;
+        nlohmann::json lines_json = nlohmann::json::array();
+        for (const auto& line : selected) {
+            std::vector<core::model::Task> visible;
+            for (const auto& candidate : line.tasks) {
+                if (candidate.status == "archived") continue;
+                visible.push_back(candidate);
+            }
+            const auto ordered = topo_sort(visible);
+            text << "Line " << line.plan << "." << line.id << " [" << line.status << "]\n";
+            nlohmann::json items = nlohmann::json::array();
+            for (const auto& candidate : ordered) {
+                const std::string marker = candidate.status == "in_progress" ? "  → " : "    ";
+                text << marker << candidate.id << "  " << candidate.title << "  "
+                     << util::color::status(candidate.status) << "\n";
+                items.push_back({{"id", candidate.id},
+                                 {"uid", candidate.uid},
+                                 {"title", candidate.title},
+                                 {"status", candidate.status},
+                                 {"depends", candidate.depends}});
+            }
+            lines_json.push_back({{"plan", line.plan},
+                                  {"line", line.id},
+                                  {"status", line.status},
+                                  {"tasks", items}});
+        }
+        ctx->out.print_both(text.str(), {{"command", "task"}, {"lines", lines_json}});
+    });
 
     auto add_args = std::make_shared<AddArgs>();
     auto* add_cmd = task->add_subcommand("add", "Add a task to an active line");
@@ -893,7 +998,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     list_cmd->add_option("--plan", list_args->plan, "Filter by plan");
     list_cmd->add_option("--line", list_args->line, "Filter by line");
     list_cmd->add_option("--status", list_args->status, "Filter by status");
-    list_cmd->add_flag("--all", list_args->all, "Include archived tasks");
+    list_cmd->add_flag("--include-archived", list_args->all, "Include archived tasks");
     list_cmd->callback([&global, &exit_code, list_args]() {
         const auto ctx = make_context(global);
         try {

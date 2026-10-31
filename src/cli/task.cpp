@@ -281,7 +281,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             nlohmann::json items = nlohmann::json::array();
             for (const auto& candidate : ordered) {
                 const std::string display = util::color::short_status(candidate.status);
-                const std::size_t padding = display.size() < 12 ? 12 - display.size() : 1;
+                const std::size_t padding = display.size() < 7 ? 7 - display.size() : 1;
                 text << "  " << candidate.id << "  "
                      << util::color::status(candidate.status) << std::string(padding, ' ')
                      << candidate.title << "\n";

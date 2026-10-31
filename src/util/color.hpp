@@ -16,7 +16,7 @@ bool enabled();
 // Colors the value according to its workflow status; unknown values pass through.
 std::string status(const std::string& value);
 
-// Short display name: in_progress -> active, pending_review -> review.
+// Short display name, at most 6 chars.
 std::string short_status(const std::string& value);
 
 // Colors an event op by prefix (done=green, fail/abort=red, pause/block=yellow, start=cyan).

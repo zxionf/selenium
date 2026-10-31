@@ -1,7 +1,7 @@
 {
   "acceptance": [
     {
-      "desc": "状态短名、颜色、前置",
+      "desc": "所有状态显示 ≤6 且对齐",
       "id": "PA1",
       "requires_human": false,
       "status": "unverified",
@@ -9,11 +9,11 @@
       "verified_by": null
     }
   ],
-  "approved_at": "2026-10-31T08:00:46Z",
+  "approved_at": "2026-10-31T08:06:13Z",
   "approved_by": "human:zxionf",
-  "created_at": "2026-10-31T08:00:46Z",
-  "goal": "step 视图状态前置",
-  "id": "sele-034",
+  "created_at": "2026-10-31T08:06:13Z",
+  "goal": "状态短词统一 ≤6",
+  "id": "sele-035",
   "lines": [
     {
       "depends": [],

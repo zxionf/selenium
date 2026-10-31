@@ -55,6 +55,13 @@ bool enabled() {
 std::string short_status(const std::string& value) {
     if (value == "in_progress") return "active";
     if (value == "pending_review") return "review";
+    if (value == "pending_approval") return "pend";
+    if (value == "failed") return "fail";
+    if (value == "blocked") return "block";
+    if (value == "skipped") return "skip";
+    if (value == "aborted") return "abort";
+    if (value == "archived") return "arch";
+    if (value == "abandoned") return "aband";
     return value;
 }
 

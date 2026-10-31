@@ -1,8 +1,8 @@
 # sele 0.21.3 Agent 操作手册
 
 > 面向执行 agent。接口依据 `docs/sele-f.md`，概念依据 `docs/sele-f-d.md`。
-> 命令细节以 `sele <cmd> --help` 为准。**0.21 绝不向后兼容**：pre-0.20 的 `.sele`
-> 布局会被直接拒绝（退出码 4），不提供迁移。
+> 命令细节以 `sele <cmd> --help` 为准。**0.21 只支持当前 `.sele` 结构**：结构不匹配
+> 会被拒绝（退出码 4）。
 
 ## 1. 入口与规则
 
@@ -156,7 +156,7 @@ Plan → Line → Task（内嵌于 line.json）→ Step（内嵌于 task）
 | `git health` | HEAD/branch/dirty |
 | `git reconcile --sync-to <sha>` | 漂移后承认当前 HEAD |
 
-**没有 checkpoint、没有 `task revert`、没有自动提交**：唯一的 `git commit` 由上面这条命令手动触发。
+**没有自动提交**：唯一的 `git commit` 由上面这条命令手动触发。
 
 ## 5. 迁移前置（必须记住）
 
@@ -189,7 +189,7 @@ Plan → Line → Task（内嵌于 line.json）→ Step（内嵌于 task）
 - 所有迁移写 `log.jsonl`（append-only），`git commit` 写 `git.commit`（`after` = commit sha）。
 - 漂移：D1 HEAD 前进（自动更新指纹）、D2 回退（阻断 commit）、D3 分叉（阻断）、D6 分支切换（记录）。
 - 漂移阻断时：`git reconcile --sync-to <当前 HEAD>` 承认现实，再继续。
-- 没有任何 checkpoint 文件；`git health` 只报告 HEAD/branch/dirty。
+- `git health` 只报告 HEAD/branch/dirty。
 
 ## 8. 归档与恢复
 
@@ -247,4 +247,4 @@ Plan → Line → Task（内嵌于 line.json）→ Step（内嵌于 task）
 - 不直接 `git commit` / `git reset` / `git push`；提交经 `sele git commit`。
 - 不修改 plan/line 定义、不创建 task（这是人的权限）。
 - 不在 `check` 失败时继续推进。
-- 不尝试迁移 pre-0.20 的 `.sele` 布局。
+- 不尝试迁移不支持的 `.sele` 结构。

@@ -1,0 +1,32 @@
+{
+  "acceptance": [
+    {
+      "desc": "文档反映 0.21.3 现状",
+      "id": "PA1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "提交经 sele git commit",
+      "id": "PA2",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "approved_at": "2026-10-31T07:05:47Z",
+  "approved_by": "human:zxionf",
+  "created_at": "2026-10-31T07:05:47Z",
+  "goal": "重写 AGENTS/CONTRACT/模板与实现文档",
+  "id": "sele-031",
+  "lines": [
+    {
+      "depends": [],
+      "id": "docs"
+    }
+  ],
+  "status": "active"
+}

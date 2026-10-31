@@ -4,8 +4,7 @@
 
 它只做三件事：**记录意图、记录进度、留下证据**。所有状态存放在工具私有目录 `.sele/`（类比 `.git/`），只能通过 `sele` 命令读写。
 
-> 当前版本 **0.21.3**。**绝不向后兼容**：pre-0.20 的 `.sele` 布局（`tasks/`、`checkpoints/`、
-> `epics/`、`session`、`runtime`、`lines/<id>/`）会被直接拒绝（退出码 4），不提供迁移；旧命令已删除。
+> 当前版本 **0.21.3**。**只支持当前 `.sele` 结构**：结构不匹配会直接拒绝（退出码 4），不提供迁移。
 
 ## 特性
 
@@ -89,7 +88,7 @@ sele git    status|diff|log|commit
 sele version
 ```
 
-完整参数见 `sele <命令> --help`；实现说明见 [`docs/sele-0.20.0.md`](docs/sele-0.20.0.md)。
+完整参数见 `sele <命令> --help`；实现说明见 [`docs/sele-0.21.3.md`](docs/sele-0.21.3.md)。
 
 ## 文档
 
@@ -97,7 +96,7 @@ sele version
 |---|---|
 | [`docs/sele-f.md`](docs/sele-f.md) | 接口契约：命令、字段、状态、目录 |
 | [`docs/sele-f-d.md`](docs/sele-f-d.md) | 概念模型：为什么这样设计、边界 |
-| [`docs/sele-0.20.0.md`](docs/sele-0.20.0.md) | 0.20.0 实际实现、状态机、范围裁剪 |
+| [`docs/sele-0.21.3.md`](docs/sele-0.21.3.md) | 0.21.3 实际实现、状态机、范围裁剪 |
 | [`docs/README.md`](docs/README.md) | 文档索引 |
 
 ## 开发

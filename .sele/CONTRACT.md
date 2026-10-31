@@ -1,11 +1,12 @@
 # sele contract
 
 > 本文档是 agent 在 `.sele` 项目中的不可违反清单。操作手册见
-> `docs/sele-0.20.0-agent.md`；需要修改本文件时先与用户确认。
+> `docs/sele-0.21.3-agent.md`；需要修改本文件时先与用户确认。
 
 ## 入口
 
 - 状态：`sele status --output json`、`sele next --output json`
+- 视图：`sele task`、`sele step`
 - 当前任务提示词：`sele agent`
 - 一致性：`sele check`
 - 命令：`sele --help`、`sele plan --help`、`sele line --help`、
@@ -17,13 +18,11 @@
 
 - `.sele/` 是工具私有目录，只通过 `sele` 命令读写；不要手改
   `plans/`、`lines/`、`log.jsonl`。
-- **绝不向后兼容**：检测到 pre-0.20 布局（`tasks/`、`checkpoints/`、`epics/`、`session`、
-  `runtime`、`lines/<id>/`）或旧 `config.json` version 时，所有命令退 4；不要尝试迁移，
-  删除 `.sele/` 后重新 `sele init`。
+- Task 内嵌于 `lines/<plan>.<line>.json` 的 `tasks` 数组。
 - `log.jsonl` 是 append-only 审计记录；`log compact` 只归档，不删除。
 - `cache/` 是本地派生数据，可 `cache rebuild` 重建，不进版本控制。
-- 结构（状态、depends、步骤、验收）只由命令写；goal/desc/title 等散文可写，
-  但仍应通过命令落盘。
+- **只支持当前 `.sele` 结构**：结构不匹配时所有命令退 4；不要尝试迁移，
+  删除 `.sele/` 后重新 `sele init`。
 
 ### 状态机
 
@@ -37,11 +36,10 @@
 
 ### Git
 
-- 提交统一经 `sele git commit --task <id> --step <id> --message "<msg>"`；
-  不要直接 `git commit`。
-- 不使用 `git reset --hard` / `git rebase` / `git push`；漂移用
-  `sele git reconcile`。
-- 不跳过提交：在 step 边界用 `sele git commit` 留下代码证据。
+- **提交统一经** `sele git commit --task <id> --step <id> --message "<msg>" [--files ...]`；
+  绝不直接直接 `git commit`。
+- 不使用 `git reset --hard` / `git rebase` / `git push`；漂移用 `sele git reconcile --sync-to`。
+- 不做回滚。
 - 暂存用 `sele git stash --task <id>`（自动排除 `.sele`）。
 
 ### 权限

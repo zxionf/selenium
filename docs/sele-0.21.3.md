@@ -1,7 +1,7 @@
-# sele 0.20.0 实现说明
+# sele 0.21.3 实现说明
 
-> 本文描述 0.20.0 的实际实现。设计依据是 `docs/sele-f.md`（接口契约）与
-> `docs/sele-f-d.md`（概念模型）。0.20.0 不兼容 0.12 及更早版本：旧命令、旧
+> 本文描述 0.21.3 的实际实现。设计依据是 `docs/sele-f.md`（接口契约）与
+> `docs/sele-f-d.md`（概念模型）。0.21 只支持当前 `.sele` 结构。
 > `.sele` 结构、旧文档全部不再支持。
 
 ## 1. 定位
@@ -204,7 +204,7 @@ todo → in_progress → done
 旧格式 `{"type":"task","plan":...,"line":...,"id":...}` 仍可解析（回退）。
 全限定引用 `T1` / `line.T1` / `plan.line.T1` 在 CLI 层解析后同样落到 uid。
 
-## 7. 与 sele-f 规范的差异（0.20 进度）
+## 7. 与 sele-f 规范的差异（0.21 进度）
 
 已实现 M1–M3 与 P0–P3 主体：
 
@@ -216,7 +216,7 @@ todo → in_progress → done
 - `plan abort`、`line block/unblock`、`task reject/update/status`、`step fail/block/unblock`。
 - 状态配色（`done` 绿等）与 `color` 配置。
 
-**已移除**：checkpoint 与 `task revert`（0.20.1 起不做回滚）。
+**不做回滚**。
 
 未实现：
 
@@ -234,8 +234,7 @@ ctest --test-dir build
 覆盖：初始化、版本、plan 审批、line 前置、task/step 完整流程、I1 自动暂停、
 I2 单 step、done 前置、next 依赖、check 引用、log/tree。
 
-## 9. 向后兼容
+## 9. 结构校验
 
-**绝不向后兼容**。检测到 pre-0.20 布局（`tasks/`、`checkpoints/`、`epics/`、`session`、
-`runtime`、`lines/<id>/` 目录）或旧 `config.json` version 时，所有命令以退出码 4 拒绝，
-不提供迁移。处理方式：删除 `.sele/`，重新 `sele init`。
+只支持当前 `.sele` 结构；结构不匹配时所有命令以退出码 4 拒绝，不提供迁移。
+处理方式：删除 `.sele/`，重新 `sele init`。

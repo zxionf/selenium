@@ -1,0 +1,70 @@
+{
+  "acceptance": [
+    {
+      "desc": "step 视图",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-31T06:40:57Z",
+  "depends": [],
+  "goal": "视图",
+  "id": "cli",
+  "modules": [
+    "cli"
+  ],
+  "plan": "sele-025",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "视图可用",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-10-31T06:40:57Z",
+      "current_step": "S1",
+      "depends": [],
+      "finished_at": null,
+      "goal": "step 视图与状态格式",
+      "id": "T1",
+      "line": "cli",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "cli"
+      ],
+      "pause_context": null,
+      "plan": "sele-025",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "cli"
+        }
+      ],
+      "title": "step 视图与状态格式",
+      "uid": "tsk_01M68B18PZDX7S9BEMP3WZPZ5B"
+    }
+  ]
+}

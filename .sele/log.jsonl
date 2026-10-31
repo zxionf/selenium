@@ -729,3 +729,14 @@
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-024","type":"plan"},"op":"plan.verify","reason":"PA2","ts":"2026-10-31T06:19:58Z"}
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-024","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-31T06:19:58Z"}
 {"actor":"human","after":"archived","before":"done","context":{},"entity":{"plan":"sele-024","type":"plan"},"op":"plan.archive","reason":"完成后归档","ts":"2026-10-31T06:19:58Z"}
+{"actor":"sele","after":"089ca1b4da9c21a08a65d10b99e65d4046b51276","before":"6e4e66238fe862b7a794ecfd5e3cfd3c3b739007","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-31T06:20:02Z"}
+{"actor":"agent","after":"draft","before":null,"context":{},"entity":{"plan":"sele-025","type":"plan"},"op":"plan.new","reason":"create plan","ts":"2026-10-31T06:40:57Z"}
+{"actor":"agent","after":"pending_approval","before":"draft","context":{},"entity":{"plan":"sele-025","type":"plan"},"op":"plan.submit","reason":"submit for approval","ts":"2026-10-31T06:40:57Z"}
+{"actor":"human:zxionf","after":"active","before":"pending_approval","context":{},"entity":{"plan":"sele-025","type":"plan"},"op":"plan.approve","reason":"approve plan","ts":"2026-10-31T06:40:57Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"cli","plan":"sele-025","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-31T06:40:57Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"docs","plan":"sele-025","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-31T06:40:57Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"cli","plan":"sele-025","task":"T1","type":"task","uid":"tsk_01M68B18PZDX7S9BEMP3WZPZ5B"},"op":"task.add","reason":"create task","ts":"2026-10-31T06:40:57Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"docs","plan":"sele-025","task":"T1","type":"task","uid":"tsk_01M68B18Q7XJQYV7QP16BDP96G"},"op":"task.add","reason":"create task","ts":"2026-10-31T06:40:57Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"cli","plan":"sele-025","task":"T1","type":"task","uid":"tsk_01M68B18PZDX7S9BEMP3WZPZ5B"},"op":"task.start","reason":"start task","ts":"2026-10-31T06:40:57Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"cli","plan":"sele-025","step":"S1","task":"T1","type":"step"},"op":"step.add","reason":"create step","ts":"2026-10-31T06:42:56Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"cli","plan":"sele-025","step":"S1","task":"T1","type":"step"},"op":"step.start","reason":"start step","ts":"2026-10-31T06:42:56Z"}

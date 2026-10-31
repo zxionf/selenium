@@ -1,0 +1,36 @@
+{
+  "acceptance": [
+    {
+      "desc": "sele step 显示当前 task 的 step",
+      "id": "PA1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "task/step 输出为 id title status",
+      "id": "PA2",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "approved_at": "2026-10-31T06:40:57Z",
+  "approved_by": "human:zxionf",
+  "created_at": "2026-10-31T06:40:57Z",
+  "goal": "step 默认视图；task/step 状态用单词",
+  "id": "sele-025",
+  "lines": [
+    {
+      "depends": [],
+      "id": "cli"
+    },
+    {
+      "depends": [],
+      "id": "docs"
+    }
+  ],
+  "status": "active"
+}

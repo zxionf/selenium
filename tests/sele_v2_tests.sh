@@ -673,6 +673,37 @@ test_task_view() {
     rm -rf "$empty" "$ROOT"
 }
 
+test_step_view() {
+    setup_project
+    "$BIN" task add "t1" --root "$ROOT" --line a >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step add T1 "s1" --root "$ROOT" --line a >/dev/null
+    "$BIN" step add T1 "s2" --root "$ROOT" --line a >/dev/null
+    "$BIN" step start T1 S1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step done T1 S1 --root "$ROOT" --line a >/dev/null
+    "$BIN" step start T1 S2 --root "$ROOT" --line a >/dev/null
+    if "$BIN" step --root "$ROOT" --output json |
+        jq -e '.tasks[0].id == "T1" and .tasks[0].steps[0].status == "done" and .tasks[0].steps[1].status == "in_progress"' >/dev/null; then
+        pass "step view shows the active task steps"
+    else
+        fail "step view shows the active task steps"
+    fi
+    if "$BIN" step --root "$ROOT" --all --output json | jq -e '.tasks | length == 1' >/dev/null; then
+        pass "step --all shows the line tasks"
+    else
+        fail "step --all shows the line tasks"
+    fi
+    local empty
+    empty=$(mktemp -d)
+    "$BIN" init --root "$empty" >/dev/null
+    if expect_code 1 "$BIN" step --root "$empty"; then
+        pass "step without active task fails"
+    else
+        fail "step without active task fails"
+    fi
+    rm -rf "$empty" "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -891,6 +922,7 @@ test_list_color
 test_color_config
 test_no_backward_compat
 test_task_view
+test_step_view
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

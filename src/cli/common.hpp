@@ -38,6 +38,9 @@ TaskRef parse_task_ref(const std::string& raw, const std::string& plan, const st
 
 std::vector<std::string> split_csv(const std::string& value);
 
+// Stable dependency-first order; cycles fall back in place.
+std::vector<core::model::Task> topo_sort(std::vector<core::model::Task> tasks);
+
 // Print an error in the active output format and set the process exit code.
 void fail(Context& ctx, int& exit_code, int code, const std::string& message,
           const std::string& suggestion = "");

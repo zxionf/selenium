@@ -7,6 +7,9 @@
 #include "util/color.hpp"
 
 #include <cstdlib>
+#include <functional>
+#include <map>
+#include <set>
 #include <sstream>
 
 void add_global_opts(CLI::App* app, GlobalOptions& options) {
@@ -68,6 +71,30 @@ std::vector<std::string> split_csv(const std::string& value) {
     while (std::getline(stream, item, ',')) {
         if (!item.empty()) result.push_back(item);
     }
+    return result;
+}
+
+std::vector<core::model::Task> topo_sort(std::vector<core::model::Task> tasks) {
+    std::map<std::string, const core::model::Task*> by_uid;
+    for (const auto& task : tasks) by_uid[task.uid] = &task;
+    std::vector<core::model::Task> result;
+    std::set<std::string> visited;
+    std::set<std::string> visiting;
+    std::function<void(const core::model::Task&)> visit = [&](const core::model::Task& task) {
+        if (visited.count(task.uid) != 0 || visiting.count(task.uid) != 0) return;
+        visiting.insert(task.uid);
+        for (const auto& dep : task.depends) {
+            if (dep.value("type", "") != "task") continue;
+            const auto uid = dep.value("uid", "");
+            if (uid.empty()) continue;
+            const auto found = by_uid.find(uid);
+            if (found != by_uid.end()) visit(*found->second);
+        }
+        visiting.erase(task.uid);
+        visited.insert(task.uid);
+        result.push_back(task);
+    };
+    for (const auto& task : tasks) visit(task);
     return result;
 }
 

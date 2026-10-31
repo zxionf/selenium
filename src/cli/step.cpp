@@ -2,13 +2,16 @@
 
 #include "cli/commands.hpp"
 #include "core/entity.hpp"
+#include "core/fs.hpp"
 #include "core/state.hpp"
 #include "core/store.hpp"
+#include "util/color.hpp"
 
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -158,6 +161,80 @@ struct GotoArgs {
 void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     auto* step = app.add_subcommand("step", "Manage steps inside a task");
     add_global_opts(step, global);
+
+    struct StepViewArgs {
+        bool all{false};
+        bool global{false};
+    };
+    auto view_args = std::make_shared<StepViewArgs>();
+    step->add_flag("--all", view_args->all, "Show steps of all tasks in the current line");
+    step->add_flag("--global", view_args->global, "Show steps of all plans");
+    step->callback([&global, &exit_code, view_args, step]() {
+        for (const auto* sub : step->get_subcommands()) {
+            if (sub->count() > 0) return;
+        }
+        const auto ctx = make_context(global);
+        std::string plan_id;
+        std::string line_id;
+        if (core::fsys::exists(ctx->paths.context)) {
+            try {
+                const auto value = nlohmann::json::parse(core::fsys::read_file(ctx->paths.context));
+                plan_id = value.value("plan", "");
+                line_id = value.value("line", "");
+            } catch (...) {
+            }
+        }
+
+        std::vector<core::model::Task> selected;
+        try {
+            for (const auto& task : core::store::load_tasks(ctx->paths)) {
+                if (view_args->global) {
+                    selected.push_back(task);
+                    continue;
+                }
+                if (view_args->all) {
+                    if (!line_id.empty() && task.line != line_id) continue;
+                    if (!plan_id.empty() && task.plan != plan_id) continue;
+                    selected.push_back(task);
+                    continue;
+                }
+                if (task.status == "in_progress") selected.push_back(task);
+            }
+        } catch (const std::exception& error) {
+            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
+            return;
+        }
+        if (selected.empty() && !view_args->all && !view_args->global) {
+            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
+                 "No active task; run sele task start <id> or sele step --all");
+            return;
+        }
+        if (view_args->all || view_args->global) selected = topo_sort(selected);
+
+        std::ostringstream text;
+        nlohmann::json tasks_json = nlohmann::json::array();
+        for (const auto& task : selected) {
+            text << "Task " << task.id << " " << task.title << " [" << task.status << "]\n";
+            nlohmann::json items = nlohmann::json::array();
+            for (const auto& item : task.steps) {
+                text << "  " << item.id << "  " << item.title << "  "
+                     << util::color::status(item.status) << "\n";
+                items.push_back({{"id", item.id},
+                                 {"title", item.title},
+                                 {"status", item.status},
+                                 {"requires_review", item.requires_review},
+                                 {"locked", item.locked}});
+            }
+            tasks_json.push_back({{"id", task.id},
+                                  {"title", task.title},
+                                  {"status", task.status},
+                                  {"current_step", task.current_step.empty()
+                                                       ? nlohmann::json(nullptr)
+                                                       : nlohmann::json(task.current_step)},
+                                  {"steps", items}});
+        }
+        ctx->out.print_both(text.str(), {{"command", "step"}, {"tasks", tasks_json}});
+    });
 
     auto add_args = std::make_shared<AddArgs>();
     auto* add_cmd = step->add_subcommand("add", "Add a step to a task");

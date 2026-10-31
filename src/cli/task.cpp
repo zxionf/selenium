@@ -187,30 +187,6 @@ struct UpdateTaskArgs {
     std::string review_policy;
 };
 
-std::vector<core::model::Task> topo_sort(const std::vector<core::model::Task>& tasks) {
-    std::map<std::string, const core::model::Task*> by_uid;
-    for (const auto& task : tasks) by_uid[task.uid] = &task;
-    std::vector<core::model::Task> result;
-    std::set<std::string> visited;
-    std::set<std::string> visiting;
-    std::function<void(const core::model::Task&)> visit = [&](const core::model::Task& task) {
-        if (visited.count(task.uid) != 0 || visiting.count(task.uid) != 0) return;
-        visiting.insert(task.uid);
-        for (const auto& dep : task.depends) {
-            if (dep.value("type", "") != "task") continue;
-            const auto uid = dep.value("uid", "");
-            if (uid.empty()) continue;
-            const auto found = by_uid.find(uid);
-            if (found != by_uid.end()) visit(*found->second);
-        }
-        visiting.erase(task.uid);
-        visited.insert(task.uid);
-        result.push_back(task);
-    };
-    for (const auto& task : tasks) visit(task);
-    return result;
-}
-
 bool find_line_by_id(Context& ctx, int& exit_code, const std::string& plan,
                      const std::string& line_id, core::model::Line& out) {
     std::vector<core::model::Line> matches;
@@ -303,8 +279,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             text << "Line " << line.plan << "." << line.id << " [" << line.status << "]\n";
             nlohmann::json items = nlohmann::json::array();
             for (const auto& candidate : ordered) {
-                const std::string marker = candidate.status == "in_progress" ? "  → " : "    ";
-                text << marker << candidate.id << "  " << candidate.title << "  "
+                text << "  " << candidate.id << "  " << candidate.title << "  "
                      << util::color::status(candidate.status) << "\n";
                 items.push_back({{"id", candidate.id},
                                  {"uid", candidate.uid},

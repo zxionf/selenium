@@ -30,7 +30,6 @@ Paths make_paths(const std::filesystem::path& root) {
     paths.sele = root / ".sele";
     paths.plans = paths.sele / "plans";
     paths.lines = paths.sele / "lines";
-    paths.tasks = paths.sele / "tasks";
     paths.archive = paths.sele / "archive";
     paths.cache = paths.sele / "cache";
     paths.log = paths.sele / "log.jsonl";
@@ -42,7 +41,6 @@ Paths make_paths(const std::filesystem::path& root) {
 void ensure_layout(const Paths& paths) {
     core::fsys::ensure_dir(paths.plans);
     core::fsys::ensure_dir(paths.lines);
-    core::fsys::ensure_dir(paths.tasks);
     core::fsys::ensure_dir(paths.archive);
     core::fsys::ensure_dir(paths.cache);
     if (!core::fsys::exists(paths.config)) {
@@ -67,10 +65,23 @@ std::filesystem::path line_path(const Paths& paths, const std::string& plan,
     return paths.lines / (plan + "." + id + ".json");
 }
 
-std::filesystem::path task_path(const Paths& paths, const std::string& uid) {
-    return paths.tasks / core::id::task_bucket(uid) / (core::id::task_file(uid) + ".json");
+void save_task(const Paths& paths, const model::Task& task) {
+    const auto path = line_path(paths, task.plan, task.line);
+    model::Line line;
+    try {
+        line = model::line_from_json(parse(path));
+    } catch (const std::exception&) {
+        throw std::runtime_error("Line not found for task " + task.id + ": " + path.string());
+    }
+    bool found = false;
+    for (auto& existing : line.tasks) {
+        if (existing.uid != task.uid) continue;
+        existing = task;
+        found = true;
+    }
+    if (!found) line.tasks.push_back(task);
+    save_line(paths, line);
 }
-
 void save_plan(const Paths& paths, const model::Plan& plan) {
     core::fsys::ensure_dir(paths.plans);
     core::fsys::write_atomic(plan_path(paths, plan.id), model::to_json(plan).dump(2) + "\n");
@@ -82,11 +93,6 @@ void save_line(const Paths& paths, const model::Line& line) {
                              model::to_json(line).dump(2) + "\n");
 }
 
-void save_task(const Paths& paths, const model::Task& task) {
-    const auto path = task_path(paths, task.uid);
-    core::fsys::ensure_dir(path.parent_path());
-    core::fsys::write_atomic(path, model::to_json(task).dump(2) + "\n");
-}
 
 std::vector<model::Plan> load_plans(const Paths& paths) {
     std::vector<model::Plan> result;
@@ -116,13 +122,8 @@ std::vector<model::Line> load_lines(const Paths& paths) {
 
 std::vector<model::Task> load_tasks(const Paths& paths) {
     std::vector<model::Task> result;
-    if (!core::fsys::exists(paths.tasks)) return result;
-    for (const auto& bucket : std::filesystem::directory_iterator(paths.tasks)) {
-        if (!bucket.is_directory()) continue;
-        for (const auto& entry : std::filesystem::directory_iterator(bucket.path())) {
-            if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
-            result.push_back(model::task_from_json(parse(entry.path())));
-        }
+    for (const auto& line : load_lines(paths)) {
+        for (const auto& task : line.tasks) result.push_back(task);
     }
     std::sort(result.begin(), result.end(), [](const model::Task& left, const model::Task& right) {
         return left.uid < right.uid;

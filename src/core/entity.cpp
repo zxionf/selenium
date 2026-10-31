@@ -98,6 +98,8 @@ nlohmann::json to_json(const Task& value) {
 nlohmann::json to_json(const Line& value) {
     nlohmann::json acceptance = nlohmann::json::array();
     for (const auto& item : value.acceptance) acceptance.push_back(to_json(item));
+    nlohmann::json tasks = nlohmann::json::array();
+    for (const auto& item : value.tasks) tasks.push_back(to_json(item));
     return {{"id", value.id},
             {"plan", value.plan},
             {"goal", value.goal},
@@ -105,7 +107,8 @@ nlohmann::json to_json(const Line& value) {
             {"created_at", value.created_at},
             {"modules", value.modules},
             {"depends", value.depends},
-            {"acceptance", acceptance}};
+            {"acceptance", acceptance},
+            {"tasks", tasks}};
 }
 
 nlohmann::json to_json(const Plan& value) {
@@ -213,6 +216,9 @@ Line line_from_json(const nlohmann::json& value) {
     if (const auto found = value.find("depends"); found != value.end()) result.depends = *found;
     if (const auto found = value.find("acceptance"); found != value.end() && found->is_array()) {
         for (const auto& item : *found) result.acceptance.push_back(acceptance_from_json(item));
+    }
+    if (const auto found = value.find("tasks"); found != value.end() && found->is_array()) {
+        for (const auto& item : *found) result.tasks.push_back(task_from_json(item));
     }
     return result;
 }

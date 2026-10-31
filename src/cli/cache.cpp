@@ -44,7 +44,7 @@ void register_cache_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             for (const auto& task : core::store::load_tasks(ctx->paths)) {
                 index["tasks"][task.plan + "." + task.line + "." + task.id] = {
                     {"uid", task.uid},
-                    {"file", relative_to(core::store::task_path(ctx->paths, task.uid),
+                    {"file", relative_to(core::store::line_path(ctx->paths, task.plan, task.line),
                                          ctx->paths.sele)}};
             }
             core::fsys::write_atomic(ctx->paths.cache / "index.json", index.dump(2) + "\n");

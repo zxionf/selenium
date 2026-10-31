@@ -1,0 +1,58 @@
+{
+  "acceptance": [
+    {
+      "desc": "文档不再提 tasks/",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-31T05:36:20Z",
+  "depends": [],
+  "goal": "文档",
+  "id": "docs",
+  "modules": [
+    "docs"
+  ],
+  "plan": "sele-021",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "文档更新",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-10-31T05:40:56Z",
+      "current_step": null,
+      "depends": [],
+      "finished_at": null,
+      "goal": "文档同步",
+      "id": "T1",
+      "line": "docs",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "sele-021",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "todo",
+      "steps": [],
+      "title": "文档同步",
+      "uid": "tsk_01M687KCC3PVHKF1YDE5XKKN6Y"
+    }
+  ]
+}

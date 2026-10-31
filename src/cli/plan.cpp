@@ -44,20 +44,6 @@ std::vector<std::filesystem::path> collect_plan_files(const core::store::Paths& 
             files.push_back(entry.path());
         }
     }
-    if (core::fsys::exists(paths.tasks)) {
-        for (const auto& bucket : std::filesystem::directory_iterator(paths.tasks)) {
-            if (!bucket.is_directory()) continue;
-            for (const auto& entry : std::filesystem::directory_iterator(bucket.path())) {
-                if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
-                try {
-                    const auto task = core::model::task_from_json(
-                        nlohmann::json::parse(core::fsys::read_file(entry.path())));
-                    if (task.plan == plan_id) files.push_back(entry.path());
-                } catch (...) {
-                }
-            }
-        }
-    }
     return files;
 }
 

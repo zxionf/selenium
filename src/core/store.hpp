@@ -13,7 +13,6 @@ struct Paths {
     std::filesystem::path sele;
     std::filesystem::path plans;
     std::filesystem::path lines;
-    std::filesystem::path tasks;
     std::filesystem::path archive;
     std::filesystem::path cache;
     std::filesystem::path log;
@@ -27,7 +26,6 @@ void ensure_layout(const Paths& paths);
 std::filesystem::path plan_path(const Paths& paths, const std::string& id);
 std::filesystem::path line_path(const Paths& paths, const std::string& plan,
                                 const std::string& id);
-std::filesystem::path task_path(const Paths& paths, const std::string& uid);
 
 void save_plan(const Paths& paths, const model::Plan& plan);
 void save_line(const Paths& paths, const model::Line& line);

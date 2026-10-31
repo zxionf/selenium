@@ -1,0 +1,52 @@
+{
+  "acceptance": [
+    {
+      "desc": "line.json 含 tasks，load_tasks 聚合",
+      "id": "PA1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "构建与测试通过",
+      "id": "PA2",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    },
+    {
+      "desc": "文档同步",
+      "id": "PA3",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "approved_at": "2026-10-31T05:36:20Z",
+  "approved_by": "human:zxionf",
+  "created_at": "2026-10-31T05:36:20Z",
+  "goal": "task 内嵌 line.json，移除 tasks/ 目录",
+  "id": "sele-021",
+  "lines": [
+    {
+      "depends": [],
+      "id": "model"
+    },
+    {
+      "depends": [],
+      "id": "cli"
+    },
+    {
+      "depends": [],
+      "id": "tests"
+    },
+    {
+      "depends": [],
+      "id": "docs"
+    }
+  ],
+  "status": "active"
+}

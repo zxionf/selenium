@@ -60,6 +60,7 @@ struct Line {
     std::vector<std::string> modules;
     nlohmann::json depends = nlohmann::json::array();
     std::vector<Acceptance> acceptance;
+    std::vector<Task> tasks;
 };
 
 struct LineRef {

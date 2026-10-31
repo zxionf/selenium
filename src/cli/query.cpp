@@ -544,38 +544,6 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 problems.push_back(std::string("event log: ") + error.what());
             }
 
-            for (const auto& task : tasks) {
-                if (!check_args->plan.empty() && task.plan != check_args->plan) continue;
-                if (!core::fsys::exists(core::store::task_path(ctx->paths, task.uid))) {
-                    problems.push_back("task file missing for uid " + task.uid);
-                }
-            }
-            if (core::fsys::exists(ctx->paths.tasks)) {
-                for (const auto& bucket : std::filesystem::directory_iterator(ctx->paths.tasks)) {
-                    if (!bucket.is_directory()) continue;
-                    for (const auto& entry : std::filesystem::directory_iterator(bucket.path())) {
-                        if (!entry.is_regular_file() || entry.path().extension() != ".json") {
-                            continue;
-                        }
-                        try {
-                            const auto task = core::model::task_from_json(
-                                nlohmann::json::parse(core::fsys::read_file(entry.path())));
-                            const auto relative =
-                                std::filesystem::relative(entry.path(), ctx->paths.tasks)
-                                    .generic_string();
-                            const auto expected = core::id::task_bucket(task.uid) + "/" +
-                                                  core::id::task_file(task.uid) + ".json";
-                            if (relative != expected) {
-                                problems.push_back(
-                                    "task file name does not match uid: " + relative);
-                            }
-                        } catch (...) {
-                            problems.push_back("invalid task file: " +
-                                               entry.path().filename().string());
-                        }
-                    }
-                }
-            }
             const auto index_file = ctx->paths.cache / "index.json";
             if (core::fsys::exists(index_file)) {
                 try {

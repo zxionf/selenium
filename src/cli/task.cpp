@@ -798,7 +798,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                        item)) {
             return;
         }
-        const auto path = core::store::task_path(ctx->paths, item.uid);
+        const auto path = core::store::line_path(ctx->paths, item.plan, item.line);
         const auto relative =
             std::filesystem::relative(path, ctx->paths.sele).generic_string();
         ctx->out.print_both(relative,
@@ -962,6 +962,16 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                     return;
                 }
             }
+            const auto source_path = core::store::line_path(ctx->paths, item.plan, item.line);
+            auto source = core::model::line_from_json(
+                nlohmann::json::parse(core::fsys::read_file(source_path)));
+            source.tasks.erase(
+                std::remove_if(source.tasks.begin(), source.tasks.end(),
+                               [&](const core::model::Task& candidate) {
+                                   return candidate.uid == item.uid;
+                               }),
+                source.tasks.end());
+            core::store::save_line(ctx->paths, source);
             item.plan = target.plan;
             item.line = target.id;
             core::store::save_task(ctx->paths, item);

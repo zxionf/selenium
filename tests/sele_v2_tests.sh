@@ -122,7 +122,7 @@ test_cache_index() {
         fail "cache rebuild writes the index"
     fi
     if "$BIN" task locate T1 --root "$ROOT" --line a --output json |
-        jq -e '.file | startswith("tasks/")' >/dev/null; then
+        jq -e '.file | startswith("lines/")' >/dev/null; then
         pass "task locate returns the task file"
     else
         fail "task locate returns the task file"
@@ -211,7 +211,8 @@ test_cross_line_dep() {
 test_pause_snapshot() {
     setup_git_project
     "$BIN" task pause T1 --root "$ROOT" --line a --reason "switch" >/dev/null
-    if jq -e '.pause_context.git_snapshot.head != null' "$ROOT"/.sele/tasks/*/*.json >/dev/null 2>&1; then
+    if jq -e '.tasks[] | select(.pause_context.git_snapshot.head != null)' \
+        "$ROOT/.sele/lines/p.a.json" >/dev/null 2>&1; then
         pass "pause records a git snapshot"
     else
         fail "pause records a git snapshot"
@@ -384,9 +385,9 @@ test_depends_uid() {
     else
         fail "depends stores uid"
     fi
-    local file
-    file=$(jq -r 'select(.id == "T2") | input_filename' "$ROOT"/.sele/tasks/*/*.json)
-    jq '.depends = [{"type":"task","plan":"p","line":"b","id":"T1"}]' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+    local file="$ROOT/.sele/lines/p.a.json"
+    jq '(.tasks[] | select(.id == "T2") | .depends) = [{"type":"task","plan":"p","line":"b","id":"T1"}]' \
+        "$file" > "$file.tmp" && mv "$file.tmp" "$file"
     if "$BIN" task start T2 --root "$ROOT" --line a >/dev/null 2>&1; then
         fail "legacy depends blocks start"
     else
@@ -398,21 +399,9 @@ test_depends_uid() {
 test_check_extended() {
     setup_project
     "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
-    local file
-    file=$(jq -r 'select(.id == "T1") | input_filename' "$ROOT"/.sele/tasks/*/*.json | head -1)
-    mv "$file" "$(dirname "$file")/wrong.json"
-    if expect_code 3 "$BIN" check --root "$ROOT"; then
-        pass "check detects task file name mismatch"
-    else
-        fail "check detects task file name mismatch"
-    fi
-    rm -rf "$ROOT"
-
-    setup_project
-    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
     "$BIN" cache rebuild --root "$ROOT" >/dev/null
-    file=$(jq -r 'select(.id == "T1") | input_filename' "$ROOT"/.sele/tasks/*/*.json | head -1)
-    rm "$file"
+    jq '.tasks = []' "$ROOT/.sele/lines/p.a.json" > "$ROOT/.sele/lines/p.a.json.tmp" &&
+        mv "$ROOT/.sele/lines/p.a.json.tmp" "$ROOT/.sele/lines/p.a.json"
     if expect_code 3 "$BIN" check --root "$ROOT"; then
         pass "check detects stale index"
     else
@@ -432,13 +421,14 @@ test_check_extended() {
     setup_project
     "$BIN" task add "t1" --root "$ROOT" --line a >/dev/null
     "$BIN" task add "t2" --root "$ROOT" --line a >/dev/null
-    local f1 f2 u1 u2
-    f1=$(jq -r 'select(.id == "T1") | input_filename' "$ROOT"/.sele/tasks/*/*.json | head -1)
-    f2=$(jq -r 'select(.id == "T2") | input_filename' "$ROOT"/.sele/tasks/*/*.json | head -1)
-    u1=$(jq -r '.uid' "$f1")
-    u2=$(jq -r '.uid' "$f2")
-    jq --arg uid "$u2" '.depends = [{"type":"task","uid":$uid}]' "$f1" > "$f1.tmp" && mv "$f1.tmp" "$f1"
-    jq --arg uid "$u1" '.depends = [{"type":"task","uid":$uid}]' "$f2" > "$f2.tmp" && mv "$f2.tmp" "$f2"
+    local file u1 u2
+    file="$ROOT/.sele/lines/p.a.json"
+    u1=$(jq -r '.tasks[0].uid' "$file")
+    u2=$(jq -r '.tasks[1].uid' "$file")
+    jq --arg uid "$u2" '(.tasks[0].depends) = [{"type":"task","uid":$uid}]' "$file" > "$file.tmp" &&
+        mv "$file.tmp" "$file"
+    jq --arg uid "$u1" '(.tasks[1].depends) = [{"type":"task","uid":$uid}]' "$file" > "$file.tmp" &&
+        mv "$file.tmp" "$file"
     if expect_code 3 "$BIN" check --root "$ROOT"; then
         pass "check detects task dependency cycle"
     else
@@ -616,7 +606,7 @@ test_init() {
     local root
     root=$(mktemp -d)
     "$BIN" init --root "$root" >/dev/null
-    if [ -d "$root/.sele/plans" ] && [ -d "$root/.sele/lines" ] && [ -d "$root/.sele/tasks" ] &&
+    if [ -d "$root/.sele/plans" ] && [ -d "$root/.sele/lines" ] &&
         [ -f "$root/.sele/log.jsonl" ]; then
         pass "init creates the .sele layout"
     else

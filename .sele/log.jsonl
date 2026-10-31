@@ -667,3 +667,14 @@
 {"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"docs","plan":"sele-022","task":"T1","type":"task","uid":"tsk_01M6886ASVK2J492N21PJQHWDV"},"op":"task.start","reason":"start task","ts":"2026-10-31T05:53:42Z"}
 {"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"docs","plan":"sele-022","step":"S1","task":"T1","type":"step"},"op":"step.add","reason":"create step","ts":"2026-10-31T05:53:42Z"}
 {"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"docs","plan":"sele-022","step":"S1","task":"T1","type":"step"},"op":"step.start","reason":"start step","ts":"2026-10-31T05:53:42Z"}
+{"actor":"agent","after":"035f5acaeb9eefa1907263d4a0dbfc39d5c5feec","before":null,"context":{},"entity":{"line":"docs","plan":"sele-022","step":"S1","task":"T1","type":"step"},"op":"git.commit","reason":"docs: 声明绝不向后兼容","ts":"2026-10-31T05:53:42Z"}
+{"actor":"sele","after":"035f5acaeb9eefa1907263d4a0dbfc39d5c5feec","before":"58ad328b086252f6455438e4b025b876df9af3a1","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-31T05:53:42Z"}
+{"actor":"agent","after":"done","before":"in_progress","context":{},"entity":{"line":"docs","plan":"sele-022","step":"S1","task":"T1","type":"step"},"op":"step.done","reason":"finish step","ts":"2026-10-31T05:53:42Z"}
+{"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"line":"docs","plan":"sele-022","task":"T1","type":"task","uid":"tsk_01M6886ASVK2J492N21PJQHWDV"},"op":"task.verify","reason":"A1","ts":"2026-10-31T05:53:42Z"}
+{"actor":"agent","after":"done","before":"in_progress","context":{},"entity":{"line":"docs","plan":"sele-022","task":"T1","type":"task","uid":"tsk_01M6886ASVK2J492N21PJQHWDV"},"op":"task.done","reason":"task done","ts":"2026-10-31T05:53:42Z"}
+{"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"line":"docs","plan":"sele-022","type":"line"},"op":"line.verify","reason":"A1","ts":"2026-10-31T05:53:42Z"}
+{"actor":"human","after":"done","before":"active","context":{},"entity":{"line":"docs","plan":"sele-022","type":"line"},"op":"line.done","reason":"line complete","ts":"2026-10-31T05:53:42Z"}
+{"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-022","type":"plan"},"op":"plan.verify","reason":"PA1","ts":"2026-10-31T05:53:42Z"}
+{"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-022","type":"plan"},"op":"plan.verify","reason":"PA2","ts":"2026-10-31T05:53:42Z"}
+{"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-022","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-31T05:53:42Z"}
+{"actor":"human","after":"archived","before":"done","context":{},"entity":{"plan":"sele-022","type":"plan"},"op":"plan.archive","reason":"完成后归档","ts":"2026-10-31T05:53:49Z"}

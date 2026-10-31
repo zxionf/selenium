@@ -4,9 +4,9 @@
       "desc": "声明不兼容",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:53:42Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "created_at": "2026-10-31T05:51:17Z",
@@ -17,7 +17,7 @@
     "docs"
   ],
   "plan": "sele-022",
-  "status": "active",
+  "status": "done",
   "tasks": [
     {
       "acceptance": [
@@ -25,17 +25,17 @@
           "desc": "文档更新",
           "id": "A1",
           "requires_human": false,
-          "status": "unverified",
-          "verified_at": null,
-          "verified_by": null
+          "status": "pass",
+          "verified_at": "2026-10-31T05:53:42Z",
+          "verified_by": "human:zxionf"
         }
       ],
       "archived_at": null,
       "archived_git_head": null,
       "created_at": "2026-10-31T05:51:17Z",
-      "current_step": "S1",
+      "current_step": null,
       "depends": [],
-      "finished_at": null,
+      "finished_at": "2026-10-31T05:53:42Z",
       "goal": "文档声明",
       "id": "T1",
       "line": "docs",
@@ -49,7 +49,7 @@
       "plan": "sele-022",
       "review_policy": "mixed",
       "skipped_count": 0,
-      "status": "in_progress",
+      "status": "done",
       "steps": [
         {
           "desc": "",
@@ -59,7 +59,7 @@
           "locked": false,
           "requires_review": false,
           "skipped_reason": null,
-          "status": "in_progress",
+          "status": "done",
           "title": "docs"
         }
       ],

@@ -4,17 +4,17 @@
       "desc": "旧布局命令退 4",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:53:42Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "文档声明不兼容",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:53:42Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T05:51:17Z",
@@ -32,5 +32,5 @@
       "id": "docs"
     }
   ],
-  "status": "active"
+  "status": "archived"
 }

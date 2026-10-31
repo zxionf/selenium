@@ -280,8 +280,11 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             text << "Line " << line.plan << "." << line.id << " [" << line.status << "]\n";
             nlohmann::json items = nlohmann::json::array();
             for (const auto& candidate : ordered) {
+                const std::string display = util::color::short_status(candidate.status);
+                const std::size_t padding = display.size() < 12 ? 12 - display.size() : 1;
                 text << "  " << candidate.id << "  "
-                     << util::color::status(candidate.status) << "  " << candidate.title << "\n";
+                     << util::color::status(candidate.status) << std::string(padding, ' ')
+                     << candidate.title << "\n";
                 items.push_back({{"id", candidate.id},
                                  {"uid", candidate.uid},
                                  {"title", candidate.title},

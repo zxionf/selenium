@@ -52,17 +52,24 @@ bool enabled() {
     return tty();
 }
 
+std::string short_status(const std::string& value) {
+    if (value == "in_progress") return "active";
+    if (value == "pending_review") return "review";
+    return value;
+}
+
 std::string status(const std::string& value) {
-    if (value == "done") return paint("32", value);
-    if (value == "in_progress") return paint("36", value);
+    const std::string text = short_status(value);
+    if (value == "done") return paint("32", text);
+    if (value == "in_progress") return paint("36", text);
     if (value == "paused" || value == "pending_review" || value == "blocked") {
-        return paint("33", value);
+        return paint("33", text);
     }
     if (value == "failed" || value == "abandoned" || value == "aborted") {
-        return paint("31", value);
+        return paint("31", text);
     }
-    if (value == "archived" || value == "skipped") return paint("2", value);
-    return value;
+    if (value == "archived" || value == "skipped") return paint("2", text);
+    return text;
 }
 
 std::string op(const std::string& value) {

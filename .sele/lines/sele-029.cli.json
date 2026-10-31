@@ -1,0 +1,70 @@
+{
+  "acceptance": [
+    {
+      "desc": "短名与对齐",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-31T07:00:20Z",
+  "depends": [],
+  "goal": "短名",
+  "id": "cli",
+  "modules": [
+    "cli"
+  ],
+  "plan": "sele-029",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "active/review",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-10-31T07:00:20Z",
+      "current_step": "S1",
+      "depends": [],
+      "finished_at": null,
+      "goal": "短显示名",
+      "id": "T1",
+      "line": "cli",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "cli"
+      ],
+      "pause_context": null,
+      "plan": "sele-029",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "cli"
+        }
+      ],
+      "title": "短显示名",
+      "uid": "tsk_01M68C4R4YVX7X5RY5X1VWH8C6"
+    }
+  ]
+}

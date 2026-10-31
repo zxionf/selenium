@@ -4,25 +4,25 @@
       "desc": "line.json 含 tasks，load_tasks 聚合",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:42:55Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "构建与测试通过",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:42:55Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "文档同步",
       "id": "PA3",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:42:55Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T05:36:20Z",
@@ -48,5 +48,5 @@
       "id": "docs"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

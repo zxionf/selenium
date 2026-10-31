@@ -4,17 +4,17 @@
       "desc": "各状态按表着色",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T03:43:40Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "color=auto/always/never 生效",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T03:43:45Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T03:42:18Z",
@@ -28,5 +28,5 @@
       "id": "color"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

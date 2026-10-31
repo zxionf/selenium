@@ -4,9 +4,9 @@
       "desc": "输出为 id status title 且对齐",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T06:47:56Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T06:47:56Z",
@@ -20,5 +20,5 @@
       "id": "cli"
     }
   ],
-  "status": "active"
+  "status": "archived"
 }

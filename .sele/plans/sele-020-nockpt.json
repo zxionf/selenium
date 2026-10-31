@@ -4,17 +4,17 @@
       "desc": "代码不再引用 checkpoint/revert",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:14:18Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "测试与文档同步为 0.20 现状",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:14:18Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T05:01:59Z",
@@ -32,5 +32,5 @@
       "id": "docs"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

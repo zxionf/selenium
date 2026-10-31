@@ -4,9 +4,9 @@
       "desc": "文档不再描述 checkpoint/revert",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:14:18Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "created_at": "2026-10-31T05:01:59Z",
@@ -17,5 +17,5 @@
     "docs"
   ],
   "plan": "sele-020-nockpt",
-  "status": "active"
+  "status": "done"
 }

@@ -4,17 +4,17 @@
       "desc": "文档无 checkpoint/revert",
       "id": "A1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T05:14:18Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "archived_at": null,
   "archived_git_head": null,
   "created_at": "2026-10-31T05:02:06Z",
-  "current_step": "S1",
+  "current_step": null,
   "depends": [],
-  "finished_at": null,
+  "finished_at": "2026-10-31T05:14:18Z",
   "goal": "同步文档",
   "id": "T1",
   "line": "docs",
@@ -28,7 +28,7 @@
   "plan": "sele-020-nockpt",
   "review_policy": "mixed",
   "skipped_count": 0,
-  "status": "in_progress",
+  "status": "done",
   "steps": [
     {
       "desc": "",
@@ -38,7 +38,7 @@
       "locked": false,
       "requires_review": false,
       "skipped_reason": null,
-      "status": "in_progress",
+      "status": "done",
       "title": "docs"
     }
   ],

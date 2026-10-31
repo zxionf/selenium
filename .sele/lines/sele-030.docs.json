@@ -1,7 +1,7 @@
 {
   "acceptance": [
     {
-      "desc": "短名与对齐",
+      "desc": "文档/版本",
       "id": "A1",
       "requires_human": false,
       "status": "unverified",
@@ -9,20 +9,20 @@
       "verified_by": null
     }
   ],
-  "created_at": "2026-10-31T07:00:20Z",
+  "created_at": "2026-10-31T07:01:09Z",
   "depends": [],
-  "goal": "短名",
-  "id": "cli",
+  "goal": "文档",
+  "id": "docs",
   "modules": [
-    "cli"
+    "docs"
   ],
-  "plan": "sele-029",
+  "plan": "sele-030",
   "status": "active",
   "tasks": [
     {
       "acceptance": [
         {
-          "desc": "active/review",
+          "desc": "文档/版本",
           "id": "A1",
           "requires_human": false,
           "status": "unverified",
@@ -32,21 +32,21 @@
       ],
       "archived_at": null,
       "archived_git_head": null,
-      "created_at": "2026-10-31T07:00:20Z",
+      "created_at": "2026-10-31T07:01:09Z",
       "current_step": "S1",
       "depends": [],
       "finished_at": null,
-      "goal": "短显示名",
+      "goal": "版本与短名文档",
       "id": "T1",
-      "line": "cli",
+      "line": "docs",
       "locked": {
         "locked": false
       },
       "modules": [
-        "cli"
+        "docs"
       ],
       "pause_context": null,
-      "plan": "sele-029",
+      "plan": "sele-030",
       "review_policy": "mixed",
       "skipped_count": 0,
       "status": "in_progress",
@@ -60,11 +60,11 @@
           "requires_review": false,
           "skipped_reason": null,
           "status": "in_progress",
-          "title": "cli"
+          "title": "docs"
         }
       ],
-      "title": "短显示名",
-      "uid": "tsk_01M68C4R4YVX7X5RY5X1VWH8C6"
+      "title": "版本与短名文档",
+      "uid": "tsk_01M68C68G6QQKEQQSYQ6G5EJ94"
     }
   ]
 }

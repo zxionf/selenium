@@ -4,9 +4,9 @@
       "desc": "0.21.0 手册替换旧版",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T06:03:47Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T06:03:47Z",
@@ -20,5 +20,5 @@
       "id": "docs"
     }
   ],
-  "status": "active"
+  "status": "archived"
 }

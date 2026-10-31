@@ -232,7 +232,8 @@ ctest --test-dir build
 覆盖：初始化、版本、plan 审批、line 前置、task/step 完整流程、I1 自动暂停、
 I2 单 step、done 前置、next 依赖、check 引用、log/tree。
 
-## 9. 旧数据
+## 9. 向后兼容
 
-0.20.0 不读取 0.12 的 `.sele` 结构。旧数据（`lines/<id>/`、`tasks/T1.json`、
-`epics/`、`session`、旧 `log.jsonl`）保留为只读历史，不参与新命令。
+**绝不向后兼容**。检测到 pre-0.20 布局（`tasks/`、`checkpoints/`、`epics/`、`session`、
+`runtime`、`lines/<id>/` 目录）或旧 `config.json` version 时，所有命令以退出码 4 拒绝，
+不提供迁移。处理方式：删除 `.sele/`，重新 `sele init`。

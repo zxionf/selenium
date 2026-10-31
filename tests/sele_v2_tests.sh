@@ -555,18 +555,22 @@ test_list_text() {
 }
 
 test_list_color() {
-    if [ "$("$BIN" plan list --root "$PWD" | grep -c $'\033' || true)" = "0" ]; then
+    local root
+    root=$(mktemp -d)
+    "$BIN" init --root "$root" >/dev/null
+    jq -n '{id:"x",goal:"g",status:"done",acceptance:[],lines:[]}' > "$root/.sele/plans/x.json"
+    if [ "$("$BIN" plan list --root "$root" | grep -c $'\033' || true)" = "0" ]; then
         pass "list output has no color when piped"
     else
         fail "list output has no color when piped"
     fi
     if command -v script >/dev/null 2>&1; then
-        if script -qec "'$BIN' plan list --root '$PWD'" /dev/null 2>/dev/null | grep -q $'\033\[32m'; then
+        if script -qec "'$BIN' plan list --root '$root'" /dev/null 2>/dev/null | grep -q $'\033\[32m'; then
             pass "done is green on a tty"
         else
             fail "done is green on a tty"
         fi
-        if NO_COLOR=1 script -qec "'$BIN' plan list --root '$PWD'" /dev/null 2>/dev/null | grep -q $'\033'; then
+        if NO_COLOR=1 script -qec "'$BIN' plan list --root '$root'" /dev/null 2>/dev/null | grep -q $'\033'; then
             fail "NO_COLOR disables color"
         else
             pass "NO_COLOR disables color"
@@ -575,6 +579,7 @@ test_list_color() {
         pass "tty color checks skipped (script unavailable)"
         pass "NO_COLOR check skipped (script unavailable)"
     fi
+    rm -rf "$root"
 }
 
 test_color_config() {

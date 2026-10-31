@@ -17,6 +17,9 @@
 
 - `.sele/` 是工具私有目录，只通过 `sele` 命令读写；不要手改
   `plans/`、`lines/`、`log.jsonl`。
+- **绝不向后兼容**：检测到 pre-0.20 布局（`tasks/`、`checkpoints/`、`epics/`、`session`、
+  `runtime`、`lines/<id>/`）或旧 `config.json` version 时，所有命令退 4；不要尝试迁移，
+  删除 `.sele/` 后重新 `sele init`。
 - `log.jsonl` 是 append-only 审计记录；`log compact` 只归档，不删除。
 - `cache/` 是本地派生数据，可 `cache rebuild` 重建，不进版本控制。
 - 结构（状态、depends、步骤、验收）只由命令写；goal/desc/title 等散文可写，

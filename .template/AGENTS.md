@@ -46,6 +46,7 @@ sele plan done <plan>
    并请求用户。
 7. 验证：`sele check` 通过。
 8. 禁止 python/nodejs 脚本；改文件用 `edit`/`write`；校验脚本经 stdin 就地执行。
+9. **绝不向后兼容**：pre-0.20 的 `.sele` 布局会被拒绝（退 4），不要迁移；删除 `.sele/` 后重新 `sele init`。
 
 ## 常用
 

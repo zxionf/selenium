@@ -70,7 +70,6 @@ sele plan done demo
 | line | 执行线：一个目标 + 线级验收 + 允许的模块 |
 | task | 功能节点：内嵌多个 step 与验收点 |
 | step | 待办事项：顺序执行，可跳过、可跳转 |
-| checkpoint | 某一时刻的完整凭据（M2 起由 `sele git commit` 生成） |
 | event | `log.jsonl` 中的一条迁移记录，append-only |
 | paused / blocked / pending_review | 暂停 / 阻塞 / 待人工审核 |
 

@@ -89,21 +89,20 @@ Plan → Line → Task → Step
 
 | 命令 | 说明 |
 |---|---|
-| `task add "<title>" --line <l> [--plan] [--modules a,b] [--depends <ref>]... [--acceptance <desc>]... [--review-policy strict\|lenient\|mixed] [--checkpoint-strategy per-step\|per-task]` | `--depends` 支持 `T1` / `line.T1` / `plan.line.T1`，落库为 uid |
+| `task add "<title>" --line <l> [--plan] [--modules a,b] [--depends <ref>]... [--acceptance <desc>]... [--review-policy strict\|lenient\|mixed]` | `--depends` 支持 `T1` / `line.T1` / `plan.line.T1`，落库为 uid |
 | `task insert "<title>" --line <l> --after T1\|--before T1 [--pause-current]` | 相对锚点插入 |
 | `task start <id> [--line] [--plan] [--reason]` | depends 全 done/archived；自动暂停当前 in_progress（I1） |
 | `task pause <id> --reason <r> [--hint <h>]` | 写 `pause_context`（含 git_snapshot） |
 | `task resume <id> [--reason]` | paused → in_progress |
 | `task keep <id>` | 重置 skipped_count |
-| `task done <id>` | step 全 done/skipped；验收未满足 review_policy → pending_review；无 checkpoint 时自动创建 |
+| `task done <id>` | step 全 done/skipped；验收未满足 review_policy → pending_review |
 | `task approve <id> [--reason]` / `task reject <id> --reason <r>` | pending_review → done / in_progress |
 | `task fail <id> --reason <r>` / `task retry <id>` | failed / 重试 |
 | `task block <id> --reason <r>` / `task unblock <id> [--reason]` | blocked / 恢复 |
 | `task verify <id> <A-id> [--by]` | 验收点置 pass |
-| `task revert <id> --to <ck> [--with-git] [--exec --yes]` | sele-only；`--exec` 需 clean 工作区（忽略 `.sele`） |
 | `task archive <id> [--reason]` / `task revive <id> [--reason]` | 归档/复活 |
 | `task move <id> --to-line <l> [--plan]` | 跨线移动，uid 不变 |
-| `task update <id> [--modules a,b] [--review-policy] [--checkpoint-strategy]` | 元数据更新 |
+| `task update <id> [--modules a,b] [--review-policy]` | 元数据更新 |
 | `task locate <id>` / `task status <id>` / `task list [--line] [--plan] [--status] [--all]` | 查询 |
 
 ### 4.4 Step
@@ -112,7 +111,7 @@ Plan → Line → Task → Step
 |---|---|
 | `step add <task> "<title>" [--after <S>] [--requires-review]` | 追加/插入 |
 | `step start <task> <step>` | task 必须 in_progress；同 task 无其他 in_progress（I2） |
-| `step done <task> <step> [--checkpoint <ck>]` | `requires_review` → pending_review |
+| `step done <task> <step>` | `requires_review` → pending_review |
 | `step approve/reject <task> <step> [--reason]` | 审核 |
 | `step skip <task> <step> --reason <r>` / `step goto <task> <step> --reason <r>` | 跳过/跳转（中间标 skipped） |
 | `step fail/block <task> <step> --reason <r>` / `step unblock <task> <step>` | 失败/阻塞/恢复 |
@@ -141,10 +140,10 @@ Plan → Line → Task → Step
 | 命令 | 说明 |
 |---|---|
 | `git status [--short]` / `git diff [--stat]` / `git log [--limit]` | 透传 |
-| `git commit --task <t> --step <s> --message <m> [--files a,b] [--plan] [--line]` | 校验 task/step in_progress → add → commit → checkpoint → `git.commit` 事件 |
+| `git commit --task <t> --step <s> --message <m> [--files a,b] [--plan] [--line]` | 校验 task/step in_progress → add → commit → `git.commit` 事件 |
 | `git stash --task <t> [--message]` / `git stash pop` | stash 排除 `.sele` |
 | `git branch create <name>` / `git branch switch <name>` | 分支 |
-| `git health` | HEAD/branch/dirty + checkpoint 状态计数 |
+| `git health` | HEAD/branch/dirty |
 | `git reconcile --check` / `--sync-to <sha>` / `--remap <ck> --to <sha>` / `--keep-audit <ck>` | 漂移协调 |
 
 ## 5. 迁移前置（必须记住）
@@ -173,17 +172,15 @@ Plan → Line → Task → Step
 - `task done` 未满足 review_policy 时转 `pending_review`，需 `task approve` 或补充 `task verify` 后再 done。
 - `pending_review` 会阻塞依赖它的 task（不是 done）。
 
-## 7. 事件、checkpoint 与漂移
+## 7. 事件与漂移
 
 - 所有迁移写 `log.jsonl`（append-only）。
-- `git commit` 生成 checkpoint：`checkpoints/<yyyy-mm>/ck-<yyyymmdd>-<seq>.json`，含 commit/tree/branch/files_changed/diff_stat。
-- `task done` 若该 task 没有任何 checkpoint，自动创建 task 级 checkpoint（P5）。
-- 漂移：D1 HEAD 前进（自动更新指纹）、D2 回退（阻断 commit）、D3 分叉（阻断）、D4 commit 丢失（`reconcile --check` → orphaned）、D5 tree 改写（→ stale）、D6 分支切换（记录）。
+- 漂移：D1 HEAD 前进（自动更新指纹）、D2 回退（阻断 commit）、D3 分叉（阻断）、D6 分支切换（记录）。
 - 漂移阻断时：`git reconcile --sync-to <当前 HEAD>` 承认现实，再继续。
 
 ## 8. 归档与恢复
 
-- `plan archive` 把 plan/lines/tasks/checkpoints 移到 `archive/<id>-<ts>/`，写 `_manifest.json`。
+- `plan archive` 把 plan/lines/tasks 移到 `archive/<id>-<ts>/`，写 `_manifest.json`。
 - `plan restore [--from <ts>]` 按 manifest 移回。
 - `task archive` 只改状态（`archived`），文件仍在 `tasks/`。
 - 归档的 task 不参与 `next`，`task list` 默认隐藏（`--all` 显示）。
@@ -225,7 +222,7 @@ Plan → Line → Task → Step
 | `Step ... is locked` | `step unlock` |
 | `Dependency ... is not done` | 先完成依赖，或检查 uid 引用 |
 | `Acceptance not found` | 用 `task status` / `line status` 查验收 id |
-| `Working tree is not clean`（revert --exec） | 先 commit 或 stash（`sele git stash`） |
+| `Working tree is not clean` | 先 commit 或 stash（`sele git stash`） |
 | `Git drift D2/D3` | `sele git reconcile --sync-to <HEAD>` |
 | `check failed` | 按 problems 逐项修；索引问题用 `cache rebuild` |
 | `cache/index.json ... mismatch` | `sele cache rebuild` |
@@ -234,6 +231,6 @@ Plan → Line → Task → Step
 
 - 不手改 `.sele/` 下的 JSON 与 `log.jsonl`。
 - 不直接 `git commit` / `git reset` / `git push`；提交经 `sele git commit`。
-- 不跳过 checkpoint（`task done` 会自动补，但显式 `git commit` 才是证据）。
+- 不跳过提交：在 step 边界用 `sele git commit` 留下代码证据。
 - 不修改 plan/line 定义、不创建 task（这是人的权限）。
 - 不在 `check` 失败时继续推进。

@@ -16,7 +16,7 @@
 ### 数据
 
 - `.sele/` 是工具私有目录，只通过 `sele` 命令读写；不要手改
-  `plans/`、`lines/`、`tasks/`、`checkpoints/`、`log.jsonl`。
+  `plans/`、`lines/`、`tasks/`、`log.jsonl`。
 - `log.jsonl` 是 append-only 审计记录；`log compact` 只归档，不删除。
 - `cache/` 是本地派生数据，可 `cache rebuild` 重建，不进版本控制。
 - 结构（状态、depends、步骤、验收）只由命令写；goal/desc/title 等散文可写，
@@ -36,10 +36,9 @@
 
 - 提交统一经 `sele git commit --task <id> --step <id> --message "<msg>"`；
   不要直接 `git commit`。
-- 不使用 `git reset --hard` / `git rebase` / `git push`；回滚用
-  `sele task revert`，漂移用 `sele git reconcile`。
-- 不跳过 checkpoint：`task done` 会自动补 task 级 checkpoint，但显式
-  `sele git commit` 才是代码证据。
+- 不使用 `git reset --hard` / `git rebase` / `git push`；漂移用
+  `sele git reconcile`。
+- 不跳过提交：在 step 边界用 `sele git commit` 留下代码证据。
 - 暂存用 `sele git stash --task <id>`（自动排除 `.sele`）。
 
 ### 权限

@@ -23,7 +23,6 @@
 ├── plans/<plan-id>.json
 ├── lines/<plan-id>.<line-id>.json
 ├── tasks/<sha256(uid)[:2]>/<sha256(uid)[2:16]>.json
-├── checkpoints/<yyyy-mm>/<ck-id>.json
 ├── log.jsonl
 ├── archive/
 └── cache/context.json
@@ -100,7 +99,7 @@
 |---|---|
 | `step add <task> "<title>" [--after <S>] [--requires-review] [--line <l>]` | 追加/插入 step |
 | `step start <task> <step>` | 检查 I2，设置 `current_step` |
-| `step done <task> <step> [--checkpoint <ck>]` | 需审核时转 `pending_review` |
+| `step done <task> <step>` | 需审核时转 `pending_review` |
 | `step approve <task> <step>` / `step reject <task> <step> --reason <r>` | 审核 |
 | `step skip <task> <step> --reason <r>` | → skipped |
 | `step goto <task> <step> --reason <r>` | 跳转；中间 todo/in_progress 标 skipped |
@@ -123,7 +122,7 @@
 | `git status [--short]` | 透传 `git status` |
 | `git diff [--stat]` | 透传 `git diff` |
 | `git log [--limit <n>]` | 透传 `git log --oneline` |
-| `git commit --task <t> --step <s> --message <m> [--files a,b]` | 校验状态 → `git add` → `git commit` → 生成 checkpoint → 写 `git.commit` 事件 |
+| `git commit --task <t> --step <s> --message <m> [--files a,b]` | 校验状态 → `git add` → `git commit` → 写 `git.commit` 事件 |
 
 ## 4. 状态机
 
@@ -204,27 +203,25 @@ todo → in_progress → done
 旧格式 `{"type":"task","plan":...,"line":...,"id":...}` 仍可解析（回退）。
 全限定引用 `T1` / `line.T1` / `plan.line.T1` 在 CLI 层解析后同样落到 uid。
 
-## 7. 与 sele-f 规范的差异（0.20.0 进度）
+## 7. 与 sele-f 规范的差异（0.20 进度）
 
-已实现 **M1（账本）** 与 **M2（Git 代理）**：
+已实现 M1–M3 与 P0–P3 主体：
 
-- M1：四层模型、状态机、事件、`next/status/tree/log/check`。
-- M2：`sele git status/diff/log` 透传；`sele git commit --task --step --message [--files]`
-  校验 task/step 状态、执行 `git add` + `git commit`、生成 checkpoint JSON
-  （commit/tree/branch/files_changed/diff_stat），并写 `git.commit` 事件。
-- 漂移 D1（HEAD 前进，自动更新指纹 + 写 `git.drift` 事件）、D2（回退阻断）、D3（分叉阻断）；
-  D2/D3 时 `sele git commit` 退 4。
+- 四层模型、状态机、事件、`next/status/tree/log/check`。
+- Git 代理：`status/diff/log/commit/stash/branch/health/reconcile`；
+  D1–D3 漂移检测与 `reconcile --sync-to`。
+- 归档（plan 物理 + task 状态）、`cache rebuild`、`log compact`。
+- `task insert/move`、跨线依赖、`decision record`、`log --replay`。
+- `plan abort`、`line block/unblock`、`task reject/update/status`、`step fail/block/unblock`。
+- 状态配色（`done` 绿等）与 `color` 配置。
 
-未实现（M3/M4）：
+**已移除**：checkpoint 与 `task revert`（0.20.1 起不做回滚）。
 
-- `reconcile`、D4–D6、checkpoint 的 remap/invalidate；
-- `task revert`（三档回滚）；
-- `cache/index.json` 索引（当前直接扫描目录）；
-- `log compact`、`decision record`、`task keep`、`plan switch`、`--full`、`--replay`；
-- task 级跨线依赖（当前 `--depends` 限同 line）；
-- step 依赖、step 锁、`task insert`、`task move`；
-- Plan 的物理归档/恢复（当前只改状态）；
-- `sele git reset` 与 `--exec` 回滚。
+未实现：
+
+- step 依赖；
+- 多仓库、`sele git reset`；
+- 批量归档。
 
 ## 8. 测试
 

@@ -7,9 +7,9 @@
 - **第一用户是 Agent**：Sele 让 agent 知道「要做什么、做到哪、怎么切回、下一步做什么」。
 - **第二用户是开发者**：用 Sele 做计划制订、审批、验收、审计、归档。
 - **不做**：推理、规划、Agent 本体、CI/CD、多机调度、质量评判。
-- **只保证**：产出可审计、进度可恢复、状态可回滚。
-- **借鉴 Git**：节点化、可追溯、可回滚、扁平存储。不套用分支合并模型。
-- **Git 关系**：Agent **永不直接操作 Git 写操作**，所有写操作经 Sele 代理。Sele 承担一致性与回滚同步责任。
+- **只保证**：产出可审计、进度可恢复、状态可追溯。
+- **借鉴 Git**：节点化、可追溯、可追溯、扁平存储。不套用分支合并模型。
+- **Git 关系**：Agent **永不直接操作 Git 写操作**，所有写操作经 Sele 代理。Sele 承担一致性责任。
 
 ## 二、设计原则
 
@@ -19,7 +19,7 @@
 | P2 | 线内任务默认串行；并行是逻辑并行（挂起轮换），非物理并发 |
 | P3 | Step 是 Task 的待办事项，内嵌于 Task，顺序即执行顺序，支持跳过与跳转 |
 | P4 | 所有状态迁移必须带 `reason`，即决策记录 |
-| P5 | 任何 Task 完成必须产生 Checkpoint |
+| P5 | 任何 Task 完成必须留下 `task.done` 事件 |
 | P6 | 状态变更必须由显式命令驱动，禁止后台静默推进 |
 | P7 | Agent 对 Git 只读自由，写操作必须经 `sele git *` 代理 |
 | P8 | Sele 不能阻止外部 Git 操作，但必须检测漂移并给出一致化路径 |
@@ -186,12 +186,11 @@ todo ──start──> in_progress ──┬──> done
     {"id": "A2", "desc": "错误密码 401", "status": "unverified"}
   ],
   "steps": [
-    {"id": "S1", "title": "设计 schema", "status": "done", "checkpoint": "ck-20261030-001", "requires_review": false, "depends": []},
-    {"id": "S2", "title": "实现 refresh 接口", "status": "in_progress", "checkpoint": null, "requires_review": false, "depends": []},
-    {"id": "S3", "title": "端到端测试", "status": "todo", "checkpoint": null, "requires_review": true, "depends": []}
+    {"id": "S1", "title": "设计 schema", "status": "done", "requires_review": false, "depends": []},
+    {"id": "S2", "title": "实现 refresh 接口", "status": "in_progress", "requires_review": false, "depends": []},
+    {"id": "S3", "title": "端到端测试", "status": "todo", "requires_review": true, "depends": []}
   ],
   "current_step": "S2",
-  "checkpoint_strategy": "per-step",
   "pause_context": null,
   "locked": {"locked": false, "by": null, "type": null},
   "archived_at": null,
@@ -230,39 +229,7 @@ todo ──start──> in_progress ──┬──> done
 | `depends` | 默认为空数组（v0.1 不做 step 依赖，保留字段） |
 | `requires_review` | 完成后是否转 `pending_review` |
 | `locked` | 人工/依赖锁 |
-| `checkpoint` | 完成时的 checkpoint id |
 | `skipped_reason` / `jump_meta` | 跳转/跳过记录 |
-
-### 5.4 Checkpoint
-
-```json
-{
-  "id": "ck-20261030-001",
-  "ts": "2026-10-30T11:30:00Z",
-  "entity": {
-    "type": "step",
-    "plan": "login-system",
-    "line": "auth-core",
-    "task": "T1",
-    "step": "S2",
-    "task_uid": "tsk_01H2XABCDEFGHJKMNPQRSTVWXY"
-  },
-  "git": {
-    "commit": "abc1234def567890",
-    "tree": "tree_sha_xxx",
-    "parents": ["def5678..."],
-    "branch": "main",
-    "dirty": false,
-    "files_changed": ["src/auth/token.py"],
-    "diff_stat": "1 file, +47/-12",
-    "blobs": {"src/auth/token.py": "blob_sha_yyy"},
-    "source": "sele"
-  },
-  "status": "valid"
-}
-```
-
-`status`：`valid | stale | orphaned | invalidated`
 
 ### 5.5 事件日志
 
@@ -283,7 +250,6 @@ append-only JSONL，条目：
   "before": "in_progress",
   "after": "done",
   "reason": "实现完成并通过本地测试",
-  "checkpoint": "ck-20261030-001",
   "context": {"files": ["src/auth/token.py"]}
 }
 ```
@@ -385,7 +351,7 @@ sele task insert "紧急修复登录崩溃" --after T1 --pause-current
 | 重排 | `sele step move T1 S3 --after S1` | 仅 `todo` 可移 |
 | 锁定 | `sele step lock T1 S2 --type manual --reason` | 锁后禁改/删/移 |
 | 开始 | `sele step start T1 S2` | 无其他 in_progress |
-| 完成 | `sele step done T1 S2 [--checkpoint ck]` | 若 `requires_review` → `pending_review` |
+| 完成 | `sele step done T1 S2` | 若 `requires_review` → `pending_review` |
 | 跳过 | `sele step skip T1 S2 --reason` | → `skipped` |
 | 跳转 | `sele step goto T1 S4 --reason` | 中间 step 标 `skipped` |
 
@@ -448,17 +414,13 @@ sele next
 ├── tasks/
 │   └── <hash[:2]>/
 │       └── <hash[2:]>.json
-├── checkpoints/
-│   └── <yyyy-mm>/
-│       └── <ck-id>.json
 ├── log.jsonl
 ├── archive/
 │   └── <plan-id>-<ts>/
 │       ├── _manifest.json
 │       ├── plans/
 │       ├── lines/
-│       ├── tasks/
-│       └── checkpoints/
+│       └── tasks/
 └── cache/
     ├── git-fingerprint.json
     └── index.json
@@ -530,7 +492,7 @@ lines/<plan-id>.<line-id>.json
 
 ```
 1. 读 plan.json 的 lines 字段
-2. 依赖索引定位所有 line/task/checkpoint 文件
+2. 依赖索引定位所有 line/task 文件
 3. 建 archive/login-system-<ts>/，按类型建子目录
 4. 逐个 mv
 5. 写 archive/login-system-<ts>/_manifest.json（原始路径清单）
@@ -543,7 +505,7 @@ lines/<plan-id>.<line-id>.json
 
 ### 7.7 版本控制
 
-**纳入 git**：`config.json`、`plans/`、`lines/`、`tasks/`、`checkpoints/`、`log.jsonl`、`archive/`
+**纳入 git**：`config.json`、`plans/`、`lines/`、`tasks/`、`log.jsonl`、`archive/`
 
 **排除**：`cache/`、`*.lock`
 
@@ -613,7 +575,7 @@ sele step move <task> <step> --after <step>
 sele step lock <task> <step> --type manual|dependency --reason
 sele step unlock <task> <step>
 sele step start <task> <step>
-sele step done <task> <step> [--checkpoint <ck-id>]
+sele step done <task> <step>
 sele step fail <task> <step> --reason
 sele step block <task> <step> --reason
 sele step unblock <task> <step>
@@ -680,7 +642,7 @@ Sele 校验：
 3. message 格式符合约定
 4. 工作区无冲突标记
 
-通过后执行 `git add <files> && git commit`，生成 checkpoint（含 commit/tree/blobs/diff_stat）。
+通过后执行 `git add <files> && git commit`。
 
 **Message 格式**（`message_convention: sele`）：
 
@@ -692,7 +654,6 @@ task: T1
 step: S2
 line: auth-core
 plan: login-system
-checkpoint: ck-20261030-003
 ```
 
 ### 9.3 漂移检测
@@ -704,7 +665,6 @@ checkpoint: ck-20261030-003
 | D1 | HEAD 前进 | 旧 HEAD 是新 HEAD 祖先 | `auto_update` |
 | D2 | HEAD 回退 | 新 HEAD 是旧 HEAD 祖先 | `block` |
 | D3 | HEAD 分叉 | 无祖先关系 | `block` |
-| D4 | Checkpoint commit 丢失 | `git cat-file -e` 失败 | `mark_orphaned` |
 | D5 | Commit 被改写 | tree hash 不匹配 | `mark_stale` |
 | D6 | 分支切换 | `branch --show-current` 变化 | `warn` |
 
@@ -712,7 +672,6 @@ checkpoint: ck-20261030-003
 
 ```
 Git 漂移：HEAD 从 abc1234 回退到 def5678
-受影响 checkpoint：ck-003 (T1/S2), ck-004 (T1/S3)
 请运行: sele git reconcile
 ```
 
@@ -725,38 +684,10 @@ sele git reconcile --sync-to def5678
 流程：
 
 1. 展示漂移报告
-2. 对每个受影响 checkpoint 选动作：`remap` / `invalidate` / `keep_audit`
-3. 展示对 Sele 状态的影响
-4. 确认后执行
-5. 写 reconcile 事件
+2. 确认后用 `--sync-to <sha>` 更新指纹
+3. 写 reconcile 事件
 
-**Remap 算法**：
-
-```
-for each stale checkpoint:
-  candidates = git rev-list --all | filter(commit.tree == ck.git.tree)
-  if len == 1: remap
-  elif len > 1: 让用户选
-  else: 标 orphaned
-```
-
-### 9.5 回滚
-
-```bash
-sele task revert T1 --to ck-001                  # 默认：只回 Sele 状态
-sele task revert T1 --to ck-001 --with-git       # 提示 git 命令
-sele task revert T1 --to ck-001 --with-git --exec # 自动执行（需确认）
-```
-
-| 模式 | Sele 状态 | Git | 前置 |
-|---|---|---|---|
-| 默认 | 回退 | 不动 | 无 |
-| `--with-git` | 回退 | **打印**命令 | 无 |
-| `--with-git --exec` | 回退 | 自动 `git reset --hard` | 工作区 clean + 二次确认 |
-
-后置 checkpoint 全部标 `invalidated`。
-
-### 9.6 配置
+### 9.5 配置
 
 ```json
 {
@@ -778,10 +709,6 @@ sele task revert T1 --to ck-001 --with-git --exec # 自动执行（需确认）
       "on_d5_rewritten": "mark_stale",
       "on_d6_branch": "warn"
     },
-    "revert": {
-      "default_mode": "sele-only",
-      "require_clean_worktree": true
-    },
     "pause_strategy": "advisory"
   },
   "pause_policy": {
@@ -800,7 +727,7 @@ sele task revert T1 --to ck-001 --with-git --exec # 自动执行（需确认）
 | C1 | 文件名格式合法（hash 长度、line 前缀） |
 | C2 | 文件名 ↔ JSON 字段一致（task uid hash、line plan 前缀） |
 | C3 | ID 字符集合法（禁 `.`） |
-| C4 | 父实体存在（line 的 plan、task 的 line、checkpoint 的 task_uid） |
+| C4 | 父实体存在（line 的 plan、task 的 line） |
 | C5 | 无孤儿实体 |
 | C6 | Plan 至少一条 Line |
 | C7 | 索引与磁盘一致（可 `cache rebuild` 修复） |
@@ -832,7 +759,7 @@ Agent 启动时注入：
 - 岔路决策记录: sele decision record "<内容>" --task T1
 - 需要切换任务: sele task pause T1 --reason "<原因>"
 
-禁止: 修改 plan/line 定义、创建新 task、跳过 checkpoint
+禁止: 修改 plan/line 定义、创建新 task、跳过提交
 ```
 
 
@@ -842,10 +769,8 @@ Agent 启动时注入：
 |---|---|---|
 | 1 | Agent 只读 Git | 直接使用，不经代理 |
 | 2 | `module_scope` | `warn` |
-| 3 | Checkpoint 冗余粒度 | tree + blobs + diff_stat |
 | 4 | 漂移 D2/D3 | `block` |
 | 5 | `log.jsonl` 进 Git | 是，支持 compact |
-| 6 | `task revert` 默认 | `sele-only` |
 | 7 | Agent stash | 允许，须关联 task |
 | 8 | 归档旧 step | 只读保留，新 step 纯追加 |
 | 9 | 线归属 | 唯一 Plan；Plan 恒含至少一条 Line，轻量用显式 `main` |
@@ -853,7 +778,6 @@ Agent 启动时注入：
 | 11 | Task 文件命名 | `sha256(uid)[:16]`，前 2 位分桶 |
 | 12 | Line 文件命名 | `<plan>.<line>.json`，CLI 可简写 |
 | 13 | 索引 | `cache/index.json`，不纳入 git，可重建 |
-| 14 | Checkpoint 分桶 | `<yyyy-mm>/` |
 
 
 ## 十三、版本规划
@@ -875,6 +799,5 @@ Agent 启动时注入：
 
 - Plan 级审批流强化
 - `sele tree` 图形化
-- Checkpoint 增量压缩
 - 跨仓库支持
 - 多 Plan 视图

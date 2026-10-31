@@ -11,9 +11,8 @@
   ],
   "archived_at": null,
   "archived_git_head": null,
-  "checkpoint_strategy": "per-step",
   "created_at": "2026-10-31T05:02:06Z",
-  "current_step": null,
+  "current_step": "S1",
   "depends": [],
   "finished_at": null,
   "goal": "同步文档",
@@ -29,8 +28,20 @@
   "plan": "sele-020-nockpt",
   "review_policy": "mixed",
   "skipped_count": 0,
-  "status": "todo",
-  "steps": [],
+  "status": "in_progress",
+  "steps": [
+    {
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "docs"
+    }
+  ],
   "title": "同步文档",
   "uid": "tsk_01M685C8YMPBGPFBCGXKZA1631"
 }

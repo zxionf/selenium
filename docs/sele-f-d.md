@@ -550,7 +550,7 @@ Sele 保证的一致性分三层：
 | 权限级别 | 语义 | 例子 |
 |---|---|---|
 | **完全禁止** | 命令拒绝执行 | agent 不能 `git push` |
-| **受限允许** | 满足条件才执行 | agent 可 `git commit` 但需 active task/step |
+| **受限允许** | 满足条件才执行 | agent 可经 sele git 提交，但需用户审查 |
 | **完全允许** | 无额外约束 | 读操作对双方开放 |
 
 **"完全允许"很少**。绝大多数命令都有某种约束，只是强弱不同。
@@ -569,6 +569,7 @@ Plan/Line 是**意图的载体**，代表"人要达成什么"。
 `git reset --hard`、`git rebase`、`git push --force` 这类命令：
 
 - **agent 永远不可执行**（无论约束松紧）
+- **agent 的 `sele git` 写操作需用户授权**（提交、stash、分支、reconcile）
 - **developer 需二次确认**
 - **Sele 永不自动执行**
 

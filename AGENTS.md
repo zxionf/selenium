@@ -54,11 +54,12 @@ sele plan done <plan>
 2. `log.jsonl` 是 append-only 审计记录；`log compact` 只归档，不删除。
 3. I1 / I2 如上；`task done` 前所有 step 必须是 `done`/`skipped`。
 4. `task done` 未满足 review_policy 时转 `pending_review`；`line done` / `plan done` 要求所有下层结束且本层验收通过。
-5. **提交统一经 `sele git commit --task <id> --step <id> --message "<msg>" [--files ...]`；不要直接 `git commit`。**
-6. 不做回滚：需要回滚代码时明确告知用户，由用户决定。
-7. 不改 plan/line 定义、不创建 task（这是人的权限）；需要变更时 `sele decision record` 并请求用户。
-8. 禁止 python/nodejs 脚本；改文件用 `edit`/`write`；校验脚本经 stdin 就地执行；思考与输出用中文。
-9. 检测到不支持的 `.sele` 结构时：删除 `.sele/` 后重新 `sele init`，不要迁移。
+5. **git 只读**：只查询（`status`/`diff`/`log`/`show` 等），禁止任何 git 写命令；`sele git` 写命令（`commit`/`stash`/`branch create`/`branch switch`/`reconcile`）执行前必须把命令、`git status --short`、`git diff --stat` 和影响报给用户，获授权后才执行。
+6. 提交频率：一个 task 最多一次提交，在 task 完成时提交；小修合并，不逐 step 提交。
+7. 不做回滚：需要回滚代码时明确告知用户，由用户决定。
+8. 不改 plan/line 定义、不创建 task（这是人的权限）；需要变更时 `sele decision record` 并请求用户。
+9. 禁止 python/nodejs 脚本；改文件用 `edit`/`write`；校验脚本经 stdin 就地执行；思考与输出用中文。
+10. 检测到不支持的 `.sele` 结构时：删除 `.sele/` 后重新 `sele init`，不要迁移。
 
 ## 视图
 

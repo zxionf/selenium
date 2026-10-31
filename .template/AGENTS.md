@@ -39,14 +39,15 @@ sele plan done <plan>
 
 1. 只经 `sele` 读写 `.sele/`；`log.jsonl` 是 append-only。
 2. 显式迁移；I1（全局单 `in_progress` task）、I2（单 task 单 `in_progress` step）。
-3. 提交经 `sele git commit --task <id> --step <id>`；不直接 `git commit` / `git reset` / `git push`。
-4. `task done` 前 step 全 `done`/`skipped`；`line done` / `plan done` 有各自前置。
-5. 验收只记账，不伪造 `--by`。
-6. agent 不改 plan/line 定义、不创建 task；需要变更时用 `sele decision record`
+3. git 只读（`status`/`diff`/`log`/`show`）；`sele git` 写命令执行前先报命令与影响，获用户授权后才执行。
+4. 提交频率：一个 task 最多一次，在 task 完成时提交；小修合并。
+5. `task done` 前 step 全 `done`/`skipped`；`line done` / `plan done` 有各自前置。
+6. 验收只记账，不伪造 `--by`。
+7. agent 不改 plan/line 定义、不创建 task；需要变更时用 `sele decision record`
    并请求用户。
-7. 不做回滚；不迁移不支持的 `.sele` 结构。
-8. 禁止 python/nodejs 脚本；改文件用 `edit`/`write`；校验脚本经 stdin 就地执行。
-9. 验证：`sele check` 通过。
+8. 不做回滚；不迁移不支持的 `.sele` 结构。
+9. 禁止 python/nodejs 脚本；改文件用 `edit`/`write`；校验脚本经 stdin 就地执行。
+10. 验证：`sele check` 通过。
 
 ## 常用
 

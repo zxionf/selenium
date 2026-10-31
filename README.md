@@ -84,7 +84,7 @@ sele step   add|start|done|skip|goto|approve|reject|list
 sele task [--all|--global]
 sele step [--all|--global]
 sele next / status / tree / log / check
-sele git    status|diff|log|commit
+sele git    status|diff|log|commit   # 写操作需用户审查
 sele version
 ```
 

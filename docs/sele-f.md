@@ -21,7 +21,7 @@
 | P4 | 所有状态迁移必须带 `reason`，即决策记录 |
 | P5 | 任何 Task 完成必须留下 `task.done` 事件 |
 | P6 | 状态变更必须由显式命令驱动，禁止后台静默推进 |
-| P7 | Agent 对 Git 只读自由，写操作必须经 `sele git *` 代理 |
+| P7 | Agent 对 Git 只读；写操作经 `sele git *` 代理且需用户审查 |
 | P8 | Sele 不能阻止外部 Git 操作，但必须检测漂移并给出一致化路径 |
 | P9 | 审计日志 append-only，不可修改 |
 | P10 | 存储格式为 JSON |
@@ -615,7 +615,7 @@ sele git health
 | 命令类别 | Agent | Developer | Sele 校验 |
 |---|---|---|---|
 | 只读（status/diff/log/show） | 直接用 | 直接用 | 无 |
-| 提交（commit） | 经 sele 代理 | 经 sele 代理（推荐） | 强 |
+| 提交（commit） | 经 sele 代理 + 用户审查 | 经 sele 代理（推荐） | 强 |
 | 暂存（stash/pop） | 经 sele 代理 | 经 sele 代理 | 中 |
 | 分支（create/switch） | 受限 | 可 | 强 |
 | 破坏（reset/rebase/push） | **禁止** | 仅手动或 `sele git reset --confirm` | 强 + 二次确认 |
@@ -635,7 +635,7 @@ Sele 校验：
 3. message 格式符合约定
 4. 工作区无冲突标记
 
-通过后执行 `git add <files> && git commit`。
+通过后执行 `git add <files> && git commit`；agent 执行前必须先把命令与 diff 报用户审查。
 
 **Message 格式**（`message_convention: sele`）：
 

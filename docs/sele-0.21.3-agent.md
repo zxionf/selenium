@@ -156,7 +156,8 @@ Plan → Line → Task（内嵌于 line.json）→ Step（内嵌于 task）
 | `git health` | HEAD/branch/dirty |
 | `git reconcile --sync-to <sha>` | 漂移后承认当前 HEAD |
 
-**没有自动提交**：唯一的 `git commit` 由上面这条命令手动触发。
+**Git 只读**：agent 只允许 `git status/diff/log/show` 等查询；上表写命令（`commit`/`stash`/`branch`/`reconcile`）必须先获用户授权。
+**没有自动提交**：唯一的 `git commit` 由上面这条命令手动触发，且是用户批准后。
 
 ## 5. 迁移前置（必须记住）
 
@@ -225,7 +226,7 @@ Plan → Line → Task（内嵌于 line.json）→ Step（内嵌于 task）
 - 进入 `in_progress` 必须对应一次退出迁移（pause/done/fail/block）。
 - 切换 task 用 `task start <other>`（自动 pause 当前）。
 - 长时间离开用 `task pause --reason --hint`。
-- **提交时机**：没有自动提交；在 step 边界手动 `sele git commit`。
+- **提交时机**：一个 task 最多一次，在 task 完成时；先审查命令与 diff 再执行。
 
 ## 11. 常见错误与处理
 
@@ -244,7 +245,7 @@ Plan → Line → Task（内嵌于 line.json）→ Step（内嵌于 task）
 ## 12. 禁止项
 
 - 不手改 `.sele/` 下的 JSON 与 `log.jsonl`。
-- 不直接 `git commit` / `git reset` / `git push`；提交经 `sele git commit`。
+- git 只读；`sele git` 写命令（commit/stash/branch/reconcile）需用户授权。
 - 不修改 plan/line 定义、不创建 task（这是人的权限）。
 - 不在 `check` 失败时继续推进。
 - 不尝试迁移不支持的 `.sele` 结构。

@@ -36,11 +36,14 @@
 
 ### Git
 
-- **提交统一经** `sele git commit --task <id> --step <id> --message "<msg>" [--files ...]`；
-  绝不直接直接 `git commit`。
-- 不使用 `git reset --hard` / `git rebase` / `git push`；漂移用 `sele git reconcile --sync-to`。
-- 不做回滚。
-- 暂存用 `sele git stash --task <id>`（自动排除 `.sele`）。
+- **agent 对 git 只读**：只允许 `status`/`diff`/`log`/`show`/`rev-parse`/
+  `branch -a`/`remote -v`/`describe`；禁止 `add`/`commit`/`push`/`pull`/`fetch`/
+  `reset`/`checkout`/`switch`/`merge`/`rebase`/`stash`/`clean`/`tag`/`restore` 等写操作。
+- **`sele git` 写命令先审查**：`commit`/`stash`/`branch create`/`branch switch`/
+  `reconcile` 执行前，先把完整命令、`git status --short`、`git diff --stat` 和影响
+  报给用户，获明确授权后才执行。
+- 提交频率：**一个 task 最多一次提交**，在 task 完成时提交；小修合并，不逐 step 提交。
+- 不做回滚；漂移只报告，不自行 `reconcile`。
 
 ### 权限
 

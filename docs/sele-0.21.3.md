@@ -123,7 +123,7 @@
 | `git status [--short]` | 透传 `git status` |
 | `git diff [--stat]` | 透传 `git diff` |
 | `git log [--limit <n>]` | 透传 `git log --oneline` |
-| `git commit --task <t> --step <s> --message <m> [--files a,b]` | 校验状态 → `git add` → `git commit` → 写 `git.commit` 事件 |
+| `git commit --task <t> --step <s> --message <m> [--files a,b]` | 校验状态 → `git add` → `git commit` → 写 `git.commit` 事件（需用户审查） |
 
 ## 4. 状态机
 

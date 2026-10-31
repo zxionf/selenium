@@ -4,17 +4,17 @@
       "desc": "文档反映 0.21.3 现状",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T07:08:22Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "提交经 sele git commit",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T07:08:22Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T07:05:47Z",
@@ -28,5 +28,5 @@
       "id": "docs"
     }
   ],
-  "status": "active"
+  "status": "archived"
 }

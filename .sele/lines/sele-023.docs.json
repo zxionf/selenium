@@ -1,0 +1,70 @@
+{
+  "acceptance": [
+    {
+      "desc": "手册可用",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-31T06:03:47Z",
+  "depends": [],
+  "goal": "手册",
+  "id": "docs",
+  "modules": [
+    "docs"
+  ],
+  "plan": "sele-023",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "手册命令与实现一致",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-10-31T06:03:47Z",
+      "current_step": "S1",
+      "depends": [],
+      "finished_at": null,
+      "goal": "agent 手册 0.21.0",
+      "id": "T1",
+      "line": "docs",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "docs"
+      ],
+      "pause_context": null,
+      "plan": "sele-023",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "docs"
+        }
+      ],
+      "title": "agent 手册 0.21.0",
+      "uid": "tsk_01M688X70EYFG3K606X84Y9DTY"
+    }
+  ]
+}

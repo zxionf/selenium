@@ -136,7 +136,6 @@ nlohmann::json to_json(const Event& value) {
                              {"after", value.after},
                              {"context", value.context}};
     if (!value.reason.empty()) result["reason"] = value.reason;
-    if (!value.checkpoint.empty()) result["checkpoint"] = value.checkpoint;
     return result;
 }
 
@@ -246,7 +245,6 @@ Event event_from_json(const nlohmann::json& value) {
     result.actor = string_or(value, "actor", "");
     result.op = string_or(value, "op", "");
     result.reason = string_or(value, "reason", "");
-    result.checkpoint = string_or(value, "checkpoint", "");
     if (const auto found = value.find("entity"); found != value.end()) result.entity = *found;
     if (const auto found = value.find("before"); found != value.end()) result.before = *found;
     if (const auto found = value.find("after"); found != value.end()) result.after = *found;

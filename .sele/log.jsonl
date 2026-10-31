@@ -564,3 +564,4 @@
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-020-nockpt","type":"plan"},"op":"plan.verify","reason":"PA1","ts":"2026-10-31T05:14:18Z"}
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-020-nockpt","type":"plan"},"op":"plan.verify","reason":"PA2","ts":"2026-10-31T05:14:18Z"}
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-020-nockpt","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-31T05:14:18Z"}
+{"actor":"sele","after":"4e4683895720eb2a83b655c518d73fa90ebd0dd2","before":"5440f920fb7c728ddeec8dac8e6e509213b26b74","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-31T05:15:20Z"}

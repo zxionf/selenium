@@ -83,7 +83,6 @@ struct Event {
     std::string actor;
     std::string op;
     std::string reason;
-    std::string checkpoint;
     nlohmann::json entity = nlohmann::json::object();
     nlohmann::json before = nullptr;
     nlohmann::json after = nullptr;

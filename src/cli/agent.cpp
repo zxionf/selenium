@@ -101,7 +101,7 @@ void register_agent_cmd(CLI::App& app, GlobalOptions& global, int& exit_code) {
         } else {
             text << "当前没有 in_progress 任务；用 sele next 查看就绪任务。\n";
         }
-        text << "\n禁止: 修改 plan/line 定义、创建新 task、跳过 checkpoint\n";
+        text << "\n禁止: 修改 plan/line 定义、创建新 task、跳过提交\n";
         ctx->out.print_both(text.str(), {{"command", "agent"}, {"prompt", text.str()}});
     });
 }

@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": "plans/sele-020-m4.json"
+    },
+    {
+      "path": "lines/sele-020-m4.ctx.json"
+    },
+    {
+      "path": "lines/sele-020-m4.log.json"
+    },
+    {
+      "path": "lines/sele-020-m4.task.json"
+    }
+  ],
+  "plan": "sele-020-m4",
+  "ts": "20261031054605"
+}

@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": "plans/sele-020-m5.json"
+    },
+    {
+      "path": "lines/sele-020-m5.lock.json"
+    },
+    {
+      "path": "lines/sele-020-m5.counter.json"
+    },
+    {
+      "path": "lines/sele-020-m5.pause.json"
+    }
+  ],
+  "plan": "sele-020-m5",
+  "ts": "20261031054605"
+}

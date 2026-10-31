@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "path": "plans/sele-021.json"
+    },
+    {
+      "path": "lines/sele-021.tests.json"
+    },
+    {
+      "path": "lines/sele-021.model.json"
+    },
+    {
+      "path": "lines/sele-021.cli.json"
+    },
+    {
+      "path": "lines/sele-021.docs.json"
+    }
+  ],
+  "plan": "sele-021",
+  "ts": "20261031054605"
+}

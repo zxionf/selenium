@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "path": "plans/sele-020-p2b.json"
+    },
+    {
+      "path": "lines/sele-020-p2b.query.json"
+    },
+    {
+      "path": "lines/sele-020-p2b.config.json"
+    }
+  ],
+  "plan": "sele-020-p2b",
+  "ts": "20261031054605"
+}

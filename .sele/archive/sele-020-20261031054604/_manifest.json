@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "path": "plans/sele-020.json"
+    },
+    {
+      "path": "lines/sele-020.docs.json"
+    },
+    {
+      "path": "lines/sele-020.git-proxy.json"
+    }
+  ],
+  "plan": "sele-020",
+  "ts": "20261031054604"
+}

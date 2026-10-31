@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "path": "plans/sele-020-p1.json"
+    },
+    {
+      "path": "lines/sele-020-p1.task.json"
+    },
+    {
+      "path": "lines/sele-020-p1.step.json"
+    },
+    {
+      "path": "lines/sele-020-p1.line.json"
+    },
+    {
+      "path": "lines/sele-020-p1.plan.json"
+    }
+  ],
+  "plan": "sele-020-p1",
+  "ts": "20261031054605"
+}

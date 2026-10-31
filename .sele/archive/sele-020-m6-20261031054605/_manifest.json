@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": "plans/sele-020-m6.json"
+    },
+    {
+      "path": "lines/sele-020-m6.ref.json"
+    },
+    {
+      "path": "lines/sele-020-m6.step.json"
+    },
+    {
+      "path": "lines/sele-020-m6.gitreset.json"
+    }
+  ],
+  "plan": "sele-020-m6",
+  "ts": "20261031054605"
+}

@@ -1,4 +1,4 @@
-# sele 0.21.1 Agent 操作手册
+# sele 0.21.2 Agent 操作手册
 
 > 面向执行 agent。接口依据 `docs/sele-f.md`，概念依据 `docs/sele-f-d.md`。
 > 命令细节以 `sele <cmd> --help` 为准。**0.21 绝不向后兼容**：pre-0.20 的 `.sele`
@@ -131,6 +131,7 @@ Plan → Line → Task（内嵌于 line.json）→ Step（内嵌于 task）
 | 命令 | 说明 |
 |---|---|
 | `task [--all] [--global]` | 当前 line（`--all` 当前 plan，`--global` 全部）的 task，按依赖拓扑序 |
+| `step [--all] [--global]` | 当前 task 的 step（`--all` 当前 line，`--global` 全部），按数组顺序 |
 | `next [--plan] [--line] [--resume]` | 就绪 task（存在 in_progress 时为空），按 created_at/uid |
 | `status [--plan] [--with-git]` | plan/line/task 摘要、warnings、git 信息 |
 | `tree [--plan] [--all]` | 四层结构 |

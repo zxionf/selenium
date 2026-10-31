@@ -108,6 +108,7 @@
 
 | 命令 | 说明 |
 |---|---|
+| `task [--all] [--global]` | 当前 line（或 plan/全局）的 task，按依赖拓扑序 |
 | `next [--plan <p>] [--line <l>] [--resume]` | 就绪 task，拓扑序 |
 | `status [--plan <p>]` | plan/line/task 状态摘要 |
 | `tree [--plan <p>] [--all]` | 四层结构视图 |

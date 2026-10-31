@@ -82,6 +82,7 @@ sele plan   new|submit|approve|reject|done|verify|status|show|archive|restore|li
 sele line   new|activate|switch|status|verify|done|abandon|dep-add|dep-remove|check|list
 sele task   add|start|pause|resume|done|approve|fail|retry|block|unblock|verify|archive|revive|list
 sele step   add|start|done|skip|goto|approve|reject|list
+sele task [--all|--global]
 sele next / status / tree / log / check
 sele git    status|diff|log|commit
 sele version

@@ -460,7 +460,7 @@ test_query_options() {
     "$BIN" task approve T1 --root "$ROOT" --line a >/dev/null
     "$BIN" task archive T1 --root "$ROOT" --line a >/dev/null
     if [ "$("$BIN" task list --root "$ROOT" --line a --output json | jq '.items | length')" = "0" ] &&
-        [ "$("$BIN" task list --root "$ROOT" --line a --all --output json | jq '.items | length')" = "1" ]; then
+        [ "$("$BIN" task list --root "$ROOT" --line a --include-archived --output json | jq '.items | length')" = "1" ]; then
         pass "task list hides archived unless --all"
     else
         fail "task list hides archived unless --all"
@@ -647,7 +647,7 @@ test_task_view() {
     "$BIN" task add "b1" --root "$ROOT" --line b >/dev/null
     "$BIN" line switch a --root "$ROOT" --plan p >/dev/null
     if "$BIN" task --root "$ROOT" --output json |
-        jq -e '.lines | length == 1 and .lines[0].tasks[0].id == "T1" and .lines[0].tasks[1].id == "T2"' >/dev/null; then
+        jq -e '(.lines | length) == 1 and .lines[0].tasks[0].id == "T1" and .lines[0].tasks[1].id == "T2"' >/dev/null; then
         pass "task view shows current line in topo order"
     else
         fail "task view shows current line in topo order"

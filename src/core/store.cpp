@@ -82,6 +82,39 @@ void save_task(const Paths& paths, const model::Task& task) {
     if (!found) line.tasks.push_back(task);
     save_line(paths, line);
 }
+void check_compatible(const Paths& paths) {
+    if (!core::fsys::exists(paths.sele)) return;
+
+    for (const char* name : {"tasks", "checkpoints", "epics", "session", "runtime"}) {
+        if (core::fsys::exists(paths.sele / name)) {
+            throw std::runtime_error("incompatible .sele layout: " + std::string(name) +
+                                     " (pre-0.20); remove .sele and run sele init");
+        }
+    }
+    if (core::fsys::exists(paths.lines)) {
+        for (const auto& entry : std::filesystem::directory_iterator(paths.lines)) {
+            if (!entry.is_directory()) continue;
+            throw std::runtime_error("incompatible .sele/lines layout: directory " +
+                                     entry.path().filename().string() +
+                                     " (pre-0.20); remove .sele and run sele init");
+        }
+    }
+    if (core::fsys::exists(paths.config)) {
+        try {
+            const auto config = nlohmann::json::parse(core::fsys::read_file(paths.config));
+            if (!config.contains("version") || !config["version"].is_number_integer() ||
+                config["version"].get<int>() != 2) {
+                throw std::runtime_error(
+                    "incompatible config.json: expected version 2; remove .sele and re-init");
+            }
+        } catch (const std::runtime_error&) {
+            throw;
+        } catch (const std::exception& error) {
+            throw std::runtime_error(std::string("invalid config.json: ") + error.what());
+        }
+    }
+}
+
 void save_plan(const Paths& paths, const model::Plan& plan) {
     core::fsys::ensure_dir(paths.plans);
     core::fsys::write_atomic(plan_path(paths, plan.id), model::to_json(plan).dump(2) + "\n");

@@ -1,0 +1,72 @@
+{
+  "acceptance": [
+    {
+      "desc": "旧布局拒绝",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-31T05:51:17Z",
+  "depends": [],
+  "goal": "兼容性检查",
+  "id": "core",
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "plan": "sele-022",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "旧布局退 4",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-10-31T05:51:17Z",
+      "current_step": "S1",
+      "depends": [],
+      "finished_at": null,
+      "goal": "旧布局检测与拒绝",
+      "id": "T1",
+      "line": "core",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "core",
+        "cli"
+      ],
+      "pause_context": null,
+      "plan": "sele-022",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "core"
+        }
+      ],
+      "title": "旧布局检测与拒绝",
+      "uid": "tsk_01M6886ASKM2RMAH8WM3KQ6ZB8"
+    }
+  ]
+}

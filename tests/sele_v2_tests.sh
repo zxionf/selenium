@@ -602,6 +602,38 @@ test_color_config() {
     rm -rf "$ROOT"
 }
 
+test_no_backward_compat() {
+    local root
+    root=$(mktemp -d)
+    mkdir -p "$root/.sele/tasks"
+    if expect_code 4 "$BIN" status --root "$root"; then
+        pass "legacy tasks/ is rejected"
+    else
+        fail "legacy tasks/ is rejected"
+    fi
+    rm -rf "$root"
+
+    root=$(mktemp -d)
+    "$BIN" init --root "$root" >/dev/null
+    echo '{"version":1}' > "$root/.sele/config.json"
+    if expect_code 4 "$BIN" status --root "$root"; then
+        pass "legacy config version is rejected"
+    else
+        fail "legacy config version is rejected"
+    fi
+    rm -rf "$root"
+
+    root=$(mktemp -d)
+    mkdir -p "$root/.sele/lines/20261030-x"
+    echo '{}' > "$root/.sele/lines/20261030-x/line.json"
+    if expect_code 4 "$BIN" status --root "$root"; then
+        pass "legacy line directories are rejected"
+    else
+        fail "legacy line directories are rejected"
+    fi
+    rm -rf "$root"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -818,6 +850,7 @@ test_agent_prompt
 test_list_text
 test_list_color
 test_color_config
+test_no_backward_compat
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

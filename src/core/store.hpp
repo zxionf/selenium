@@ -23,6 +23,9 @@ struct Paths {
 Paths make_paths(const std::filesystem::path& root);
 void ensure_layout(const Paths& paths);
 
+// Throws when .sele looks like a pre-0.20 layout. Never migrate, never read it.
+void check_compatible(const Paths& paths);
+
 std::filesystem::path plan_path(const Paths& paths, const std::string& id);
 std::filesystem::path line_path(const Paths& paths, const std::string& plan,
                                 const std::string& id);

@@ -6,6 +6,7 @@
 #include "core/git.hpp"
 #include "util/color.hpp"
 
+#include <cstdlib>
 #include <sstream>
 
 void add_global_opts(CLI::App* app, GlobalOptions& options) {
@@ -20,6 +21,12 @@ std::shared_ptr<Context> make_context(const GlobalOptions& options) {
     ctx->paths = core::store::make_paths(options.root);
     ctx->out = util::Output(options.output == "json" ? util::Output::Format::JSON
                                                      : util::Output::Format::TEXT);
+    try {
+        core::store::check_compatible(ctx->paths);
+    } catch (const std::exception& error) {
+        ctx->out.error(error.what());
+        std::exit(exit_codes::ENV_ERROR);
+    }
     const auto config = core::config::load(ctx->paths);
     if (config.color == "always") {
         util::color::configure(util::color::Mode::ALWAYS);

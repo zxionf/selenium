@@ -1,7 +1,7 @@
 {
   "acceptance": [
     {
-      "desc": "文档一致",
+      "desc": "全限定引用可用",
       "id": "PA1",
       "requires_human": false,
       "status": "unverified",
@@ -9,15 +9,15 @@
       "verified_by": null
     }
   ],
-  "approved_at": "2026-10-31T07:18:04Z",
+  "approved_at": "2026-10-31T07:46:10Z",
   "approved_by": "human:zxionf",
-  "created_at": "2026-10-31T07:18:04Z",
-  "goal": "Git 只读与提交审查规则",
-  "id": "sele-032",
+  "created_at": "2026-10-31T07:46:10Z",
+  "goal": "line switch 支持 plan.line",
+  "id": "sele-033",
   "lines": [
     {
       "depends": [],
-      "id": "docs"
+      "id": "cli"
     }
   ],
   "status": "active"

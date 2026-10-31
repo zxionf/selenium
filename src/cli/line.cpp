@@ -254,9 +254,25 @@ void register_line_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     switch_cmd->callback([&global, &exit_code, switch_args]() {
         const auto ctx = make_context(global);
         std::string plan = switch_args->plan;
+        std::string id = switch_args->id;
+        if (!plan.empty() && id.rfind(plan + ".", 0) == 0) {
+            id = id.substr(plan.size() + 1);
+        }
+        if (plan.empty()) {
+            const auto dot = id.find('.');
+            if (dot != std::string::npos) {
+                const auto candidate_plan = id.substr(0, dot);
+                const auto candidate_line = id.substr(dot + 1);
+                if (core::fsys::exists(
+                        core::store::line_path(ctx->paths, candidate_plan, candidate_line))) {
+                    plan = candidate_plan;
+                    id = candidate_line;
+                }
+            }
+        }
         try {
             for (const auto& item : core::store::load_lines(ctx->paths)) {
-                if (item.id != switch_args->id) continue;
+                if (item.id != id) continue;
                 if (plan.empty()) plan = item.plan;
             }
         } catch (const std::exception& error) {
@@ -268,7 +284,7 @@ void register_line_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             return;
         }
         core::model::Line item;
-        if (!load_line(*ctx, exit_code, plan, switch_args->id, item)) return;
+        if (!load_line(*ctx, exit_code, plan, id, item)) return;
         nlohmann::json context = nlohmann::json::object();
         if (core::fsys::exists(ctx->paths.context)) {
             try {

@@ -652,6 +652,12 @@ test_task_view() {
     else
         fail "task view shows current line in topo order"
     fi
+    "$BIN" line switch p.a --root "$ROOT" >/dev/null
+    if "$BIN" task --root "$ROOT" --output json | jq -e '.lines[0].line == "a"' >/dev/null; then
+        pass "line switch accepts plan.line"
+    else
+        fail "line switch accepts plan.line"
+    fi
     if "$BIN" task --root "$ROOT" --all --output json | jq -e '.lines | length == 2' >/dev/null; then
         pass "task --all shows all lines in the plan"
     else

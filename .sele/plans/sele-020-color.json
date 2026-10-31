@@ -4,9 +4,9 @@
       "desc": "text 模式 done 绿色；JSON 无颜色；非 tty 无色",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T03:36:38Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T03:34:40Z",
@@ -20,5 +20,5 @@
       "id": "color"
     }
   ],
-  "status": "active"
+  "status": "done"
 }

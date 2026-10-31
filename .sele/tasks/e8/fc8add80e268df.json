@@ -1,0 +1,50 @@
+{
+  "acceptance": [
+    {
+      "desc": "text 模式绿色，管道无色",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "archived_at": null,
+  "archived_git_head": null,
+  "checkpoint_strategy": "per-step",
+  "created_at": "2026-10-31T03:34:40Z",
+  "current_step": "S1",
+  "depends": [],
+  "finished_at": null,
+  "goal": "done 绿色",
+  "id": "T1",
+  "line": "color",
+  "locked": {
+    "locked": false
+  },
+  "modules": [
+    "util",
+    "cli"
+  ],
+  "pause_context": null,
+  "plan": "sele-020-color",
+  "review_policy": "mixed",
+  "skipped_count": 0,
+  "status": "in_progress",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "color"
+    }
+  ],
+  "title": "done 绿色",
+  "uid": "tsk_01M680C58XX3EK80QPV07EBAW1"
+}

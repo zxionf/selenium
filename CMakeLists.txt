@@ -75,6 +75,7 @@ add_executable(sele
     src/core/state.cpp
     src/core/store.cpp
     src/util/output.cpp
+    src/util/color.cpp
 )
 
 # Single source of truth for the version: project(VERSION) above. The generated

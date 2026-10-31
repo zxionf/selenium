@@ -8,6 +8,7 @@
 #include "core/git.hpp"
 #include "core/id.hpp"
 #include "core/store.hpp"
+#include "util/color.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -213,7 +214,7 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             text << "Ready tasks: " << ready.size();
             for (const auto& task : ready) {
                 text << "\n  " << task.id << " (" << task.plan << "." << task.line << ") "
-                     << task.status << "  " << task.title;
+                     << util::color::green(task.status) << "  " << task.title;
             }
             nlohmann::json result = {{"command", "next"}, {"items", items}};
             result["current"] = current.empty() ? nlohmann::json(nullptr) : nlohmann::json(current);
@@ -275,12 +276,14 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             text << "Plan: " << (plan_id.empty() ? "<none>" : plan_id);
             text << "\nLines: " << line_items.size();
             for (const auto& line : line_items) {
-                text << "\n  " << line["status"].get<std::string>() << "  "
+                text << "\n  " << util::color::green(line["status"].get<std::string>()) << "  "
                      << line["plan"].get<std::string>() << "." << line["id"].get<std::string>();
             }
             text << "\nTasks:";
             for (const auto& item : task_counts.items()) {
-                text << " " << item.key() << "=" << item.value().get<int>();
+                text << " "
+                     << (item.key() == "done" ? util::color::green(item.key()) : item.key())
+                     << "=" << item.value().get<int>();
             }
             text << "\nCurrent: " << (current.empty() ? "<none>" : current);
             for (const auto& warning : warnings) {
@@ -330,26 +333,29 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             std::ostringstream text;
             for (const auto& plan : plans) {
                 if (!tree_args->plan.empty() && plan.id != tree_args->plan) continue;
-                text << plan.id << " [" << plan.status << "] " << plan.goal << "\n";
+                text << plan.id << " [" << util::color::green(plan.status) << "] "
+                     << plan.goal << "\n";
                 nlohmann::json plan_item = {{"id", plan.id}, {"status", plan.status},
                                             {"goal", plan.goal}, {"lines", nlohmann::json::array()}};
                 for (const auto& line : lines) {
                     if (line.plan != plan.id) continue;
-                    text << "  " << line.id << " [" << line.status << "] " << line.goal << "\n";
+                    text << "  " << line.id << " [" << util::color::green(line.status) << "] "
+                         << line.goal << "\n";
                     nlohmann::json line_item = {{"id", line.id}, {"status", line.status},
                                                 {"goal", line.goal}, {"tasks", nlohmann::json::array()}};
                     for (const auto& task : tasks) {
                         if (task.plan != plan.id || task.line != line.id) continue;
                         if (!tree_args->all && task.status == "archived") continue;
-                        text << "    " << task.id << " [" << task.status << "] " << task.title
-                             << "\n";
+                        text << "    " << task.id << " [" << util::color::green(task.status)
+                             << "] " << task.title << "\n";
                         nlohmann::json task_item = {{"id", task.id},
                                                     {"status", task.status},
                                                     {"title", task.title},
                                                     {"steps", nlohmann::json::array()}};
                         for (const auto& step : task.steps) {
-                            text << "      " << step.id << " [" << step.status << "] "
-                                 << step.title << "\n";
+                            text << "      " << step.id << " ["
+                                 << util::color::green(step.status) << "] " << step.title
+                                 << "\n";
                             task_item["steps"].push_back(
                                 {{"id", step.id}, {"status", step.status}, {"title", step.title}});
                         }

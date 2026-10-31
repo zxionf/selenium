@@ -6,6 +6,7 @@
 #include "core/id.hpp"
 #include "core/state.hpp"
 #include "core/store.hpp"
+#include "util/color.hpp"
 
 #include <nlohmann/json.hpp>
 
@@ -453,8 +454,8 @@ void register_line_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             std::ostringstream text;
             text << "Lines: " << items.size();
             for (const auto& item : items) {
-                text << "\n  " << item["status"].get<std::string>() << "  "
-                     << item["plan"].get<std::string>() << "."
+                text << "\n  " << util::color::green(item["status"].get<std::string>())
+                     << "  " << item["plan"].get<std::string>() << "."
                      << item["id"].get<std::string>() << "  "
                      << item["goal"].get<std::string>();
             }

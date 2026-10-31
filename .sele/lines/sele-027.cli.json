@@ -1,0 +1,70 @@
+{
+  "acceptance": [
+    {
+      "desc": "颜色与对齐",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-31T06:50:54Z",
+  "depends": [],
+  "goal": "颜色",
+  "id": "cli",
+  "modules": [
+    "cli"
+  ],
+  "plan": "sele-027",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "颜色恢复且对齐",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-10-31T06:50:54Z",
+      "current_step": "S1",
+      "depends": [],
+      "finished_at": null,
+      "goal": "视图颜色与对齐",
+      "id": "T1",
+      "line": "cli",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "cli"
+      ],
+      "pause_context": null,
+      "plan": "sele-027",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "cli"
+        }
+      ],
+      "title": "视图颜色与对齐",
+      "uid": "tsk_01M68BKFTVFYZ7YM5YFQVM6RGY"
+    }
+  ]
+}

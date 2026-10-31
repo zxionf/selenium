@@ -1,8 +1,10 @@
 #include "cli/common.hpp"
 
+#include "core/config.hpp"
 #include "core/entity.hpp"
 #include "core/event.hpp"
 #include "core/git.hpp"
+#include "util/color.hpp"
 
 #include <sstream>
 
@@ -18,6 +20,14 @@ std::shared_ptr<Context> make_context(const GlobalOptions& options) {
     ctx->paths = core::store::make_paths(options.root);
     ctx->out = util::Output(options.output == "json" ? util::Output::Format::JSON
                                                      : util::Output::Format::TEXT);
+    const auto config = core::config::load(ctx->paths);
+    if (config.color == "always") {
+        util::color::configure(util::color::Mode::ALWAYS);
+    } else if (config.color == "never") {
+        util::color::configure(util::color::Mode::NEVER);
+    } else {
+        util::color::configure(util::color::Mode::AUTO);
+    }
     const auto drift = core::git::detect_drift(ctx->paths);
     ctx->drift = static_cast<int>(drift.kind);
     if (drift.kind != core::git::DriftKind::NONE) {

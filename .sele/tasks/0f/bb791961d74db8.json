@@ -1,0 +1,50 @@
+{
+  "acceptance": [
+    {
+      "desc": "映射与开关生效",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "archived_at": null,
+  "archived_git_head": null,
+  "checkpoint_strategy": "per-step",
+  "created_at": "2026-10-31T03:42:22Z",
+  "current_step": "S1",
+  "depends": [],
+  "finished_at": null,
+  "goal": "状态配色与 color 开关",
+  "id": "T1",
+  "line": "color",
+  "locked": {
+    "locked": false
+  },
+  "modules": [
+    "util",
+    "cli"
+  ],
+  "pause_context": null,
+  "plan": "sele-020-color2",
+  "review_policy": "mixed",
+  "skipped_count": 0,
+  "status": "in_progress",
+  "steps": [
+    {
+      "checkpoint": null,
+      "desc": "",
+      "id": "S1",
+      "jump_meta": null,
+      "lock_reason": null,
+      "locked": false,
+      "requires_review": false,
+      "skipped_reason": null,
+      "status": "in_progress",
+      "title": "color2"
+    }
+  ],
+  "title": "状态配色与 color 开关",
+  "uid": "tsk_01M680T8TPEQKCG92DN6BP1T9K"
+}

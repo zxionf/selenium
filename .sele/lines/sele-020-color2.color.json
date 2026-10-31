@@ -1,0 +1,22 @@
+{
+  "acceptance": [
+    {
+      "desc": "状态与开关可用",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-31T03:42:18Z",
+  "depends": [],
+  "goal": "配色",
+  "id": "color",
+  "modules": [
+    "util",
+    "cli"
+  ],
+  "plan": "sele-020-color2",
+  "status": "active"
+}

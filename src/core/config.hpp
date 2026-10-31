@@ -10,6 +10,7 @@ struct Config {
     std::string git_mode{"read"};
     std::string module_scope{"warn"};        // off | warn | block
     std::string message_convention{"auto"};  // auto | sele
+    std::string color{"auto"};               // auto | always | never
     int warn_after_skips{3};
     int escalate_after_skips{5};
 };

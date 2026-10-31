@@ -1096,7 +1096,7 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             std::ostringstream text;
             text << "Tasks: " << items.size();
             for (const auto& item : items) {
-                text << "\n  " << util::color::green(item["status"].get<std::string>())
+                text << "\n  " << util::color::status(item["status"].get<std::string>())
                      << "  " << item["plan"].get<std::string>() << "."
                      << item["line"].get<std::string>() << "."
                      << item["id"].get<std::string>() << "  "

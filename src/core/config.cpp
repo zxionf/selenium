@@ -14,6 +14,7 @@ Config load(const store::Paths& paths) {
         config.git_mode = value.value("git_mode", config.git_mode);
         config.module_scope = value.value("module_scope", config.module_scope);
         config.message_convention = value.value("message_convention", config.message_convention);
+        config.color = value.value("color", config.color);
         config.warn_after_skips = value.value("warn_after_skips", config.warn_after_skips);
         config.escalate_after_skips =
             value.value("escalate_after_skips", config.escalate_after_skips);
@@ -29,6 +30,7 @@ void save(const store::Paths& paths, const Config& config) {
                         {"git_mode", config.git_mode},
                         {"module_scope", config.module_scope},
                         {"message_convention", config.message_convention},
+                        {"color", config.color},
                         {"warn_after_skips", config.warn_after_skips},
                         {"escalate_after_skips", config.escalate_after_skips}})
                 .dump(2) +

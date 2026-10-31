@@ -513,3 +513,12 @@
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"line":"color","plan":"sele-020-color","type":"line"},"op":"line.done","reason":"line complete","ts":"2026-10-31T03:36:38Z"}
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-020-color","type":"plan"},"op":"plan.verify","reason":"PA1","ts":"2026-10-31T03:36:38Z"}
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-020-color","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-31T03:36:38Z"}
+{"actor":"sele","after":"c5004415608f4e8ceab2ca7bdc2083ab84eeba73","before":"781518f95184116642241f3e18a737e05f392c5e","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-31T03:42:14Z"}
+{"actor":"agent","after":"draft","before":null,"context":{},"entity":{"plan":"sele-020-color2","type":"plan"},"op":"plan.new","reason":"create plan","ts":"2026-10-31T03:42:18Z"}
+{"actor":"agent","after":"pending_approval","before":"draft","context":{},"entity":{"plan":"sele-020-color2","type":"plan"},"op":"plan.submit","reason":"submit for approval","ts":"2026-10-31T03:42:18Z"}
+{"actor":"human:zxionf","after":"active","before":"pending_approval","context":{},"entity":{"plan":"sele-020-color2","type":"plan"},"op":"plan.approve","reason":"approve plan","ts":"2026-10-31T03:42:18Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"color","plan":"sele-020-color2","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-31T03:42:18Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"color","plan":"sele-020-color2","task":"T1","type":"task","uid":"tsk_01M680T8TPEQKCG92DN6BP1T9K"},"op":"task.add","reason":"create task","ts":"2026-10-31T03:42:22Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"color","plan":"sele-020-color2","task":"T1","type":"task","uid":"tsk_01M680T8TPEQKCG92DN6BP1T9K"},"op":"task.start","reason":"start task","ts":"2026-10-31T03:42:22Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"color","plan":"sele-020-color2","step":"S1","task":"T1","type":"step"},"op":"step.add","reason":"create step","ts":"2026-10-31T03:43:40Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"color","plan":"sele-020-color2","step":"S1","task":"T1","type":"step"},"op":"step.start","reason":"start step","ts":"2026-10-31T03:43:40Z"}

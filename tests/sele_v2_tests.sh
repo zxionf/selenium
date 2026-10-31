@@ -703,6 +703,31 @@ test_list_color() {
     fi
 }
 
+test_color_config() {
+    setup_project
+    "$BIN" task add "t" --root "$ROOT" --line a >/dev/null
+    "$BIN" task start T1 --root "$ROOT" --line a >/dev/null
+    jq '.color="always"' "$ROOT/.sele/config.json" > "$ROOT/.sele/config.json.tmp" &&
+        mv "$ROOT/.sele/config.json.tmp" "$ROOT/.sele/config.json"
+    if "$BIN" task list --root "$ROOT" --line a | grep -q $'\033\[36m'; then
+        pass "color=always forces colors through a pipe"
+    else
+        fail "color=always forces colors through a pipe"
+    fi
+    jq '.color="never"' "$ROOT/.sele/config.json" > "$ROOT/.sele/config.json.tmp" &&
+        mv "$ROOT/.sele/config.json.tmp" "$ROOT/.sele/config.json"
+    if command -v script >/dev/null 2>&1; then
+        if script -qec "'$BIN' task list --root '$ROOT' --line a" /dev/null 2>/dev/null | grep -q $'\033'; then
+            fail "color=never disables colors on a tty"
+        else
+            pass "color=never disables colors on a tty"
+        fi
+    else
+        pass "color=never check skipped (script unavailable)"
+    fi
+    rm -rf "$ROOT"
+}
+
 test_init() {
     local root
     root=$(mktemp -d)
@@ -923,6 +948,7 @@ test_agent_prompt
 test_reconcile_actions
 test_list_text
 test_list_color
+test_color_config
 
 echo
 echo "Passed: $PASS  Failed: $FAIL"

@@ -4,10 +4,19 @@
 
 namespace util::color {
 
-// True when stdout is a TTY, NO_COLOR is unset, and TERM is not "dumb".
+enum class Mode {
+    AUTO,   // TTY + NO_COLOR/TERM checks
+    ALWAYS, // force on
+    NEVER   // force off
+};
+
+void configure(Mode mode);
 bool enabled();
 
-// Wraps text in ANSI green when colors are enabled; returns text unchanged otherwise.
-std::string green(const std::string& text);
+// Colors the value according to its workflow status; unknown values pass through.
+std::string status(const std::string& value);
+
+// Colors an event op by prefix (done=green, fail/abort=red, pause/block=yellow, start=cyan).
+std::string op(const std::string& value);
 
 } // namespace util::color

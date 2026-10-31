@@ -1,0 +1,70 @@
+{
+  "acceptance": [
+    {
+      "desc": "格式对齐",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-31T06:47:56Z",
+  "depends": [],
+  "goal": "格式",
+  "id": "cli",
+  "modules": [
+    "cli"
+  ],
+  "plan": "sele-026",
+  "status": "active",
+  "tasks": [
+    {
+      "acceptance": [
+        {
+          "desc": "格式与示例一致",
+          "id": "A1",
+          "requires_human": false,
+          "status": "unverified",
+          "verified_at": null,
+          "verified_by": null
+        }
+      ],
+      "archived_at": null,
+      "archived_git_head": null,
+      "created_at": "2026-10-31T06:47:56Z",
+      "current_step": "S1",
+      "depends": [],
+      "finished_at": null,
+      "goal": "状态列对齐",
+      "id": "T1",
+      "line": "cli",
+      "locked": {
+        "locked": false
+      },
+      "modules": [
+        "cli"
+      ],
+      "pause_context": null,
+      "plan": "sele-026",
+      "review_policy": "mixed",
+      "skipped_count": 0,
+      "status": "in_progress",
+      "steps": [
+        {
+          "desc": "",
+          "id": "S1",
+          "jump_meta": null,
+          "lock_reason": null,
+          "locked": false,
+          "requires_review": false,
+          "skipped_reason": null,
+          "status": "in_progress",
+          "title": "cli"
+        }
+      ],
+      "title": "状态列对齐",
+      "uid": "tsk_01M68BE20VBEFGD6MQT9YBKXT6"
+    }
+  ]
+}

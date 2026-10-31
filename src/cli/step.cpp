@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <iomanip>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -217,8 +218,8 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             text << "Task " << task.id << " " << task.title << " [" << task.status << "]\n";
             nlohmann::json items = nlohmann::json::array();
             for (const auto& item : task.steps) {
-                text << "  " << item.id << "  " << item.title << "  "
-                     << util::color::status(item.status) << "\n";
+                text << "  " << item.id << "  " << std::left << std::setw(12)
+                     << item.status << std::right << item.title << "\n";
                 items.push_back({{"id", item.id},
                                  {"title", item.title},
                                  {"status", item.status},

@@ -761,3 +761,12 @@
 {"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-025","type":"plan"},"op":"plan.verify","reason":"PA2","ts":"2026-10-31T06:43:33Z"}
 {"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-025","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-31T06:43:33Z"}
 {"actor":"human","after":"archived","before":"done","context":{},"entity":{"plan":"sele-025","type":"plan"},"op":"plan.archive","reason":"完成后归档","ts":"2026-10-31T06:43:34Z"}
+{"actor":"sele","after":"5d6ad04158eabcac66eca91dc6548e2e079ad0f7","before":"86849e79c88659032b2c8b36e525909b3ba6422a","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-31T06:43:42Z"}
+{"actor":"agent","after":"draft","before":null,"context":{},"entity":{"plan":"sele-026","type":"plan"},"op":"plan.new","reason":"create plan","ts":"2026-10-31T06:47:56Z"}
+{"actor":"agent","after":"pending_approval","before":"draft","context":{},"entity":{"plan":"sele-026","type":"plan"},"op":"plan.submit","reason":"submit for approval","ts":"2026-10-31T06:47:56Z"}
+{"actor":"human:zxionf","after":"active","before":"pending_approval","context":{},"entity":{"plan":"sele-026","type":"plan"},"op":"plan.approve","reason":"approve plan","ts":"2026-10-31T06:47:56Z"}
+{"actor":"agent","after":"active","before":null,"context":{},"entity":{"line":"cli","plan":"sele-026","type":"line"},"op":"line.new","reason":"create line","ts":"2026-10-31T06:47:56Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"cli","plan":"sele-026","task":"T1","type":"task","uid":"tsk_01M68BE20VBEFGD6MQT9YBKXT6"},"op":"task.add","reason":"create task","ts":"2026-10-31T06:47:56Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"cli","plan":"sele-026","task":"T1","type":"task","uid":"tsk_01M68BE20VBEFGD6MQT9YBKXT6"},"op":"task.start","reason":"start task","ts":"2026-10-31T06:47:56Z"}
+{"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"cli","plan":"sele-026","step":"S1","task":"T1","type":"step"},"op":"step.add","reason":"create step","ts":"2026-10-31T06:47:56Z"}
+{"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"cli","plan":"sele-026","step":"S1","task":"T1","type":"step"},"op":"step.start","reason":"start step","ts":"2026-10-31T06:47:56Z"}

@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <functional>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <set>
@@ -279,8 +280,8 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             text << "Line " << line.plan << "." << line.id << " [" << line.status << "]\n";
             nlohmann::json items = nlohmann::json::array();
             for (const auto& candidate : ordered) {
-                text << "  " << candidate.id << "  " << candidate.title << "  "
-                     << util::color::status(candidate.status) << "\n";
+                text << "  " << candidate.id << "  " << std::left << std::setw(12)
+                     << candidate.status << std::right << candidate.title << "\n";
                 items.push_back({{"id", candidate.id},
                                  {"uid", candidate.uid},
                                  {"title", candidate.title},

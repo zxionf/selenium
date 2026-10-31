@@ -204,7 +204,7 @@ todo ──start──> in_progress ──┬──> done
 
 | 字段 | 说明 |
 |---|---|
-| `uid` | 不可变，ULID 格式。Task 文件名 hash 基于此，改名/换 line 不影响 |
+| `uid` | 不可变，ULID 格式；用于引用与索引 |
 | `id/plan/line` | 可变语义 ID，仅 JSON 内部与索引使用 |
 | `steps` | 内嵌数组，顺序即执行顺序 |
 | `current_step` | 当前 step id |
@@ -411,31 +411,24 @@ sele next
 │   └── <plan-id>.json
 ├── lines/
 │   └── <plan-id>.<line-id>.json
-├── tasks/
-│   └── <hash[:2]>/
-│       └── <hash[2:]>.json
 ├── log.jsonl
 ├── archive/
 │   └── <plan-id>-<ts>/
 │       ├── _manifest.json
 │       ├── plans/
-│       ├── lines/
-│       └── tasks/
+│       └── lines/
 └── cache/
     ├── git-fingerprint.json
     └── index.json
 ```
 
-### 7.2 Task 文件命名
+### 7.2 Task 存储
 
-```
-hash = sha256(uid)[:16]
-路径 = tasks/<hash[:2]>/<hash[2:]>.json
-```
+Task 内嵌于 `line.json` 的 `tasks` 数组，不再有独立文件：
 
-- 基于不可变 `uid`（ULID），改名/换 plan/换 line **文件名不变**
-- 前 2 位分桶，万级 task 每桶 ≤40 文件
-- 语义 ID 只在 JSON 内和索引中
+- `uid`（ULID）仍用于引用与索引；
+- 语义 ID（`T1`）只在 JSON 与命令中使用；
+- 跨 line 移动通过重写两个 `line.json` 的 `tasks` 完成。
 
 ### 7.3 Line 文件命名
 
@@ -492,7 +485,7 @@ lines/<plan-id>.<line-id>.json
 
 ```
 1. 读 plan.json 的 lines 字段
-2. 依赖索引定位所有 line/task 文件
+2. 依赖索引定位所有 line 文件
 3. 建 archive/login-system-<ts>/，按类型建子目录
 4. 逐个 mv
 5. 写 archive/login-system-<ts>/_manifest.json（原始路径清单）
@@ -505,7 +498,7 @@ lines/<plan-id>.<line-id>.json
 
 ### 7.7 版本控制
 
-**纳入 git**：`config.json`、`plans/`、`lines/`、`tasks/`、`log.jsonl`、`archive/`
+**纳入 git**：`config.json`、`plans/`、`lines/`、`log.jsonl`、`archive/`
 
 **排除**：`cache/`、`*.lock`
 
@@ -775,7 +768,7 @@ Agent 启动时注入：
 | 8 | 归档旧 step | 只读保留，新 step 纯追加 |
 | 9 | 线归属 | 唯一 Plan；Plan 恒含至少一条 Line，轻量用显式 `main` |
 | 10 | `sele next` 排序 | 纯拓扑序 |
-| 11 | Task 文件命名 | `sha256(uid)[:16]`，前 2 位分桶 |
+| 11 | Task 存储 | 内嵌于 `line.json` 的 `tasks` 数组 |
 | 12 | Line 文件命名 | `<plan>.<line>.json`，CLI 可简写 |
 | 13 | 索引 | `cache/index.json`，不纳入 git，可重建 |
 

@@ -182,7 +182,7 @@ Plan → Line → Task → Step
 
 - `plan archive` 把 plan/lines/tasks 移到 `archive/<id>-<ts>/`，写 `_manifest.json`。
 - `plan restore [--from <ts>]` 按 manifest 移回。
-- `task archive` 只改状态（`archived`），文件仍在 `tasks/`。
+- `task archive` 只改状态（`archived`），task 仍在 line.json 的 `tasks` 中。
 - 归档的 task 不参与 `next`，`task list` 默认隐藏（`--all` 显示）。
 
 ## 9. 输出与退出码

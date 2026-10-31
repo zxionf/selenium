@@ -22,13 +22,12 @@
 ├── config.json
 ├── plans/<plan-id>.json
 ├── lines/<plan-id>.<line-id>.json
-├── tasks/<sha256(uid)[:2]>/<sha256(uid)[2:16]>.json
 ├── log.jsonl
 ├── archive/
 └── cache/context.json
 ```
 
-- Task 文件按不可变 `uid`（`tsk_` + ULID）哈希分桶，改名/换线不改文件名。
+- Task 内嵌于 `line.json` 的 `tasks` 数组；`uid` 仍用于引用与索引。
 - Line 文件名带 plan 前缀，避免跨 plan 重名。
 - `log.jsonl` append-only；`cache/` 不进版本控制。
 

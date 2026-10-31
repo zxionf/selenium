@@ -16,7 +16,7 @@
 ### 数据
 
 - `.sele/` 是工具私有目录，只通过 `sele` 命令读写；不要手改
-  `plans/`、`lines/`、`tasks/`、`log.jsonl`。
+  `plans/`、`lines/`、`log.jsonl`。
 - `log.jsonl` 是 append-only 审计记录；`log compact` 只归档，不删除。
 - `cache/` 是本地派生数据，可 `cache rebuild` 重建，不进版本控制。
 - 结构（状态、depends、步骤、验收）只由命令写；goal/desc/title 等散文可写，

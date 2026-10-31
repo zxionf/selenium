@@ -616,8 +616,8 @@ test_init() {
 }
 
 test_version() {
-    if "$BIN" --version | grep -q '0.20'; then
-        pass "version reports 0.20"
+    if "$BIN" --version | grep -q '0.21'; then
+        pass "version reports 0.21"
     else
         fail "version reports 0.20.0"
     fi

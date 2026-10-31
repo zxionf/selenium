@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "path": "plans/sele-025.json"
+    },
+    {
+      "path": "lines/sele-025.docs.json"
+    },
+    {
+      "path": "lines/sele-025.cli.json"
+    }
+  ],
+  "plan": "sele-025",
+  "ts": "20261031064334"
+}

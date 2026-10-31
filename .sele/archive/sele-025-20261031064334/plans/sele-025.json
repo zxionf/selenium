@@ -4,17 +4,17 @@
       "desc": "sele step 显示当前 task 的 step",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T06:43:33Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "task/step 输出为 id title status",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T06:43:33Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T06:40:57Z",
@@ -32,5 +32,5 @@
       "id": "docs"
     }
   ],
-  "status": "active"
+  "status": "archived"
 }

@@ -218,10 +218,7 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             text << "Task " << task.id << " " << task.title << " [" << task.status << "]\n";
             nlohmann::json items = nlohmann::json::array();
             for (const auto& item : task.steps) {
-                const std::string colored = util::color::status(item.status);
-                const std::size_t padding =
-                    item.status.size() < 16 ? 16 - item.status.size() : 1;
-                text << "  " << item.id << "  " << colored << std::string(padding, ' ')
+                text << "  " << item.id << "  " << util::color::status(item.status) << "  "
                      << item.title << "\n";
                 items.push_back({{"id", item.id},
                                  {"title", item.title},

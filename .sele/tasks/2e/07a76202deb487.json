@@ -1,0 +1,36 @@
+{
+  "acceptance": [
+    {
+      "desc": "文档无 checkpoint/revert",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "archived_at": null,
+  "archived_git_head": null,
+  "checkpoint_strategy": "per-step",
+  "created_at": "2026-10-31T05:02:06Z",
+  "current_step": null,
+  "depends": [],
+  "finished_at": null,
+  "goal": "同步文档",
+  "id": "T1",
+  "line": "docs",
+  "locked": {
+    "locked": false
+  },
+  "modules": [
+    "docs"
+  ],
+  "pause_context": null,
+  "plan": "sele-020-nockpt",
+  "review_policy": "mixed",
+  "skipped_count": 0,
+  "status": "todo",
+  "steps": [],
+  "title": "同步文档",
+  "uid": "tsk_01M685C8YMPBGPFBCGXKZA1631"
+}

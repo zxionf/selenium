@@ -58,20 +58,6 @@ std::vector<std::filesystem::path> collect_plan_files(const core::store::Paths& 
             }
         }
     }
-    if (core::fsys::exists(paths.checkpoints)) {
-        for (const auto& month : std::filesystem::directory_iterator(paths.checkpoints)) {
-            if (!month.is_directory()) continue;
-            for (const auto& entry : std::filesystem::directory_iterator(month.path())) {
-                if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
-                try {
-                    const auto checkpoint = core::model::checkpoint_from_json(
-                        nlohmann::json::parse(core::fsys::read_file(entry.path())));
-                    if (checkpoint.entity.value("plan", "") == plan_id) files.push_back(entry.path());
-                } catch (...) {
-                }
-            }
-        }
-    }
     return files;
 }
 

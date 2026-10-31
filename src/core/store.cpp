@@ -22,11 +22,6 @@ nlohmann::json parse(const std::filesystem::path& path) {
     }
 }
 
-std::string year_month(const std::string& ts) {
-    if (ts.size() < 7) return "unknown";
-    return ts.substr(0, 7);
-}
-
 } // namespace
 
 Paths make_paths(const std::filesystem::path& root) {
@@ -36,7 +31,6 @@ Paths make_paths(const std::filesystem::path& root) {
     paths.plans = paths.sele / "plans";
     paths.lines = paths.sele / "lines";
     paths.tasks = paths.sele / "tasks";
-    paths.checkpoints = paths.sele / "checkpoints";
     paths.archive = paths.sele / "archive";
     paths.cache = paths.sele / "cache";
     paths.log = paths.sele / "log.jsonl";
@@ -49,7 +43,6 @@ void ensure_layout(const Paths& paths) {
     core::fsys::ensure_dir(paths.plans);
     core::fsys::ensure_dir(paths.lines);
     core::fsys::ensure_dir(paths.tasks);
-    core::fsys::ensure_dir(paths.checkpoints);
     core::fsys::ensure_dir(paths.archive);
     core::fsys::ensure_dir(paths.cache);
     if (!core::fsys::exists(paths.config)) {
@@ -78,11 +71,6 @@ std::filesystem::path task_path(const Paths& paths, const std::string& uid) {
     return paths.tasks / core::id::task_bucket(uid) / (core::id::task_file(uid) + ".json");
 }
 
-std::filesystem::path checkpoint_path(const Paths& paths, const std::string& ts,
-                                      const std::string& id) {
-    return paths.checkpoints / year_month(ts) / (id + ".json");
-}
-
 void save_plan(const Paths& paths, const model::Plan& plan) {
     core::fsys::ensure_dir(paths.plans);
     core::fsys::write_atomic(plan_path(paths, plan.id), model::to_json(plan).dump(2) + "\n");
@@ -98,12 +86,6 @@ void save_task(const Paths& paths, const model::Task& task) {
     const auto path = task_path(paths, task.uid);
     core::fsys::ensure_dir(path.parent_path());
     core::fsys::write_atomic(path, model::to_json(task).dump(2) + "\n");
-}
-
-void save_checkpoint(const Paths& paths, const model::Checkpoint& checkpoint) {
-    const auto path = checkpoint_path(paths, checkpoint.ts, checkpoint.id);
-    core::fsys::ensure_dir(path.parent_path());
-    core::fsys::write_atomic(path, model::to_json(checkpoint).dump(2) + "\n");
 }
 
 std::vector<model::Plan> load_plans(const Paths& paths) {

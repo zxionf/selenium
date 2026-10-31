@@ -1,7 +1,6 @@
 #include "cli/common.hpp"
 
 #include "cli/commands.hpp"
-#include "core/checkpoint.hpp"
 #include "core/entity.hpp"
 #include "core/fs.hpp"
 #include "core/git.hpp"
@@ -55,33 +54,6 @@ bool find_task(Context& ctx, int& exit_code, const std::string& id, const std::s
     }
     out = matches.front();
     return true;
-}
-
-std::vector<core::model::Checkpoint> load_checkpoints(const core::store::Paths& paths) {
-    std::vector<core::model::Checkpoint> result;
-    if (!core::fsys::exists(paths.checkpoints)) return result;
-    for (const auto& month : std::filesystem::directory_iterator(paths.checkpoints)) {
-        if (!month.is_directory()) continue;
-        for (const auto& entry : std::filesystem::directory_iterator(month.path())) {
-            if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
-            try {
-                result.push_back(core::model::checkpoint_from_json(
-                    nlohmann::json::parse(core::fsys::read_file(entry.path()))));
-            } catch (...) {
-            }
-        }
-    }
-    return result;
-}
-
-bool find_checkpoint(const core::store::Paths& paths, const std::string& id,
-                     core::model::Checkpoint& out) {
-    for (const auto& checkpoint : load_checkpoints(paths)) {
-        if (checkpoint.id != id) continue;
-        out = checkpoint;
-        return true;
-    }
-    return false;
 }
 
 nlohmann::json git_snapshot(const core::store::Paths& paths) {
@@ -141,7 +113,6 @@ struct AddArgs {
     std::vector<std::string> depends;
     std::vector<std::string> acceptance;
     std::string review_policy{"mixed"};
-    std::string checkpoint_strategy{"per-step"};
     std::string actor{"agent"};
 };
 
@@ -188,17 +159,6 @@ struct LocateArgs {
     std::string line;
 };
 
-struct RevertArgs {
-    std::string id;
-    std::string plan;
-    std::string line;
-    std::string to;
-    std::string reason{"revert to checkpoint"};
-    bool with_git{false};
-    bool exec{false};
-    bool yes{false};
-};
-
 struct InsertArgs {
     std::string title;
     std::string line;
@@ -222,7 +182,6 @@ struct UpdateTaskArgs {
     std::string line;
     std::vector<std::string> modules;
     std::string review_policy;
-    std::string checkpoint_strategy;
 };
 
 bool find_line_by_id(Context& ctx, int& exit_code, const std::string& plan,
@@ -270,10 +229,6 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     add_cmd->add_option("--review-policy", add_args->review_policy, "strict|lenient|mixed")
         ->default_val("mixed")
         ->check(CLI::IsMember({"strict", "lenient", "mixed"}));
-    add_cmd->add_option("--checkpoint-strategy", add_args->checkpoint_strategy,
-                        "per-step|per-task")
-        ->default_val("per-step")
-        ->check(CLI::IsMember({"per-step", "per-task"}));
     add_cmd->add_option("--actor", add_args->actor, "Actor recorded in the event log")
         ->default_val("agent");
     add_cmd->callback([&global, &exit_code, add_args]() {
@@ -294,7 +249,6 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         result.goal = add_args->title;
         result.status = "todo";
         result.review_policy = add_args->review_policy;
-        result.checkpoint_strategy = add_args->checkpoint_strategy;
         result.created_at = core::model::now_utc();
         result.modules = add_args->modules.empty() ? line.modules : add_args->modules;
 
@@ -640,23 +594,6 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                 return;
             }
         }
-        const bool per_task = item.checkpoint_strategy == "per-task";
-        bool has_checkpoint = false;
-        for (const auto& checkpoint : load_checkpoints(ctx->paths)) {
-            if (checkpoint.entity.value("task", "") != item.id) continue;
-            has_checkpoint = true;
-            break;
-        }
-        if (per_task || !has_checkpoint) {
-            try {
-                const auto checkpoint = core::checkpoint::create_task(ctx->paths, item);
-                append_event(ctx->paths, "agent", "checkpoint.create", checkpoint.entity,
-                             nullptr, checkpoint.id, "auto checkpoint on done");
-            } catch (const std::exception& error) {
-                fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
-                return;
-            }
-        }
         const bool ready = acceptance_ok(item);
         item.status = ready ? "done" : "pending_review";
         if (ready) item.finished_at = core::model::now_utc();
@@ -872,118 +809,6 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                              {"line", item.line}});
     });
 
-    auto revert_args = std::make_shared<RevertArgs>();
-    auto* revert_cmd = task->add_subcommand("revert", "Revert a task to a checkpoint (sele-only)");
-    add_global_opts(revert_cmd, global);
-    revert_cmd->add_option("id", revert_args->id, "Task id")->required();
-    revert_cmd->add_option("--to", revert_args->to, "Checkpoint id")->required();
-    revert_cmd->add_option("--plan", revert_args->plan, "Plan id");
-    revert_cmd->add_option("--line", revert_args->line, "Line id");
-    revert_cmd->add_option("--reason", revert_args->reason, "Decision reason");
-    revert_cmd->add_flag("--with-git", revert_args->with_git, "Print the git reset command");
-    revert_cmd->add_flag("--exec", revert_args->exec,
-                         "Execute git reset --hard (requires --yes)");
-    revert_cmd->add_flag("--yes", revert_args->yes, "Confirm the destructive reset");
-    revert_cmd->callback([&global, &exit_code, revert_args]() {
-        const auto ctx = make_context(global);
-        core::model::Task item;
-        if (!find_task(*ctx, exit_code, revert_args->id, revert_args->plan, revert_args->line,
-                       item)) {
-            return;
-        }
-        core::model::Checkpoint target;
-        if (!find_checkpoint(ctx->paths, revert_args->to, target)) {
-            fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
-                 "Checkpoint not found: " + revert_args->to);
-            return;
-        }
-        if (target.entity.value("task", "") != item.id) {
-            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
-                 "Checkpoint " + target.id + " belongs to another task");
-            return;
-        }
-        if (revert_args->exec) {
-            if (!revert_args->yes) {
-                fail(*ctx, exit_code, exit_codes::USAGE_ERROR,
-                     "Pass --yes to confirm git reset --hard");
-                return;
-            }
-            const auto status = core::git::run(
-                ctx->paths.root,
-                {"status", "--porcelain", "--", ".", ":(exclude).sele"});
-            if (!status.output.empty()) {
-                fail(*ctx, exit_code, exit_codes::ENV_ERROR,
-                     "Working tree is not clean; commit or stash before --exec");
-                return;
-            }
-            const std::string commit = target.git.value("commit", "");
-            if (commit.empty()) {
-                fail(*ctx, exit_code, exit_codes::ENV_ERROR, "Checkpoint has no commit");
-                return;
-            }
-            const auto reset = core::git::run(ctx->paths.root, {"reset", "--hard", commit});
-            if (reset.code != 0) {
-                fail(*ctx, exit_code, exit_codes::ENV_ERROR, "git reset failed: " + reset.output);
-                return;
-            }
-            ctx->out.print_both("Reset to " + commit + " and reverted " + item.id,
-                                {{"task", item.id},
-                                 {"checkpoint", target.id},
-                                 {"commit", commit}});
-            return;
-        }
-
-        const std::string step_id = target.entity.value("step", "");
-        int index = -1;
-        for (int position = 0; position < static_cast<int>(item.steps.size()); ++position) {
-            if (item.steps[static_cast<std::size_t>(position)].id == step_id) index = position;
-        }
-        if (index < 0) {
-            fail(*ctx, exit_code, exit_codes::STATE_CONFLICT,
-                 "Checkpoint step not found in task: " + step_id);
-            return;
-        }
-
-        for (int position = 0; position < static_cast<int>(item.steps.size()); ++position) {
-            auto& step = item.steps[static_cast<std::size_t>(position)];
-            if (position > index) {
-                step.status = "todo";
-                step.checkpoint.clear();
-                step.skipped_reason.clear();
-            } else if (position == index) {
-                step.status = "in_progress";
-            }
-        }
-        item.status = "in_progress";
-        item.current_step = step_id;
-        item.finished_at.clear();
-
-        try {
-            for (auto& checkpoint : load_checkpoints(ctx->paths)) {
-                if (checkpoint.entity.value("task", "") != item.id) continue;
-                if (checkpoint.id <= target.id) continue;
-                checkpoint.status = "invalidated";
-                core::store::save_checkpoint(ctx->paths, checkpoint);
-            }
-            core::store::save_task(ctx->paths, item);
-            append_event(ctx->paths, "human", "task.revert", task_entity(item),
-                         item.status, target.id, revert_args->reason);
-        } catch (const std::exception& error) {
-            fail(*ctx, exit_code, exit_codes::ENV_ERROR, error.what());
-            return;
-        }
-
-        if (revert_args->with_git) {
-            ctx->out.print_text("Run: git -C " + ctx->paths.root.string() + " reset --hard " +
-                                target.git.value("commit", ""));
-        }
-        ctx->out.print_both("Reverted " + item.id + " to " + target.id,
-                            {{"task", item.id},
-                             {"checkpoint", target.id},
-                             {"status", item.status},
-                             {"step", step_id}});
-    });
-
     auto reject_args = std::make_shared<FailArgs>();
     auto* reject_cmd = task->add_subcommand("reject", "Reject a pending task");
     add_global_opts(reject_cmd, global);
@@ -1022,9 +847,6 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         ->delimiter(',');
     update_cmd->add_option("--review-policy", update_args->review_policy, "strict|lenient|mixed")
         ->check(CLI::IsMember({"strict", "lenient", "mixed"}));
-    update_cmd->add_option("--checkpoint-strategy", update_args->checkpoint_strategy,
-                           "per-step|per-task")
-        ->check(CLI::IsMember({"per-step", "per-task"}));
     update_cmd->callback([&global, &exit_code, update_args]() {
         const auto ctx = make_context(global);
         core::model::Task item;
@@ -1034,9 +856,6 @@ void register_task_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         }
         if (!update_args->modules.empty()) item.modules = update_args->modules;
         if (!update_args->review_policy.empty()) item.review_policy = update_args->review_policy;
-        if (!update_args->checkpoint_strategy.empty()) {
-            item.checkpoint_strategy = update_args->checkpoint_strategy;
-        }
         try {
             core::store::save_task(ctx->paths, item);
             append_event(ctx->paths, "human", "task.update", task_entity(item), nullptr,

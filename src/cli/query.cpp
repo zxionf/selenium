@@ -119,7 +119,6 @@ struct LogArgs {
     std::string step;
     bool decisions{false};
     bool replay{false};
-    bool git_commit{false};
     int limit{20};
 };
 
@@ -141,23 +140,6 @@ std::string compact_stamp() {
         if (character >= '0' && character <= '9') stamp += character;
     }
     return stamp;
-}
-
-std::vector<core::model::Checkpoint> load_checkpoints(const core::store::Paths& paths) {
-    std::vector<core::model::Checkpoint> result;
-    if (!core::fsys::exists(paths.checkpoints)) return result;
-    for (const auto& month : std::filesystem::directory_iterator(paths.checkpoints)) {
-        if (!month.is_directory()) continue;
-        for (const auto& entry : std::filesystem::directory_iterator(month.path())) {
-            if (!entry.is_regular_file() || entry.path().extension() != ".json") continue;
-            try {
-                result.push_back(core::model::checkpoint_from_json(
-                    nlohmann::json::parse(core::fsys::read_file(entry.path()))));
-            } catch (...) {
-            }
-        }
-    }
-    return result;
 }
 
 } // namespace
@@ -380,7 +362,6 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     log_cmd->add_flag("--replay", log_args->replay, "Print the full timeline");
     log_cmd->add_option("--since", log_args->since, "Only events at or after this timestamp");
     log_cmd->add_option("--step", log_args->step, "Filter by step id");
-    log_cmd->add_flag("--git-commit", log_args->git_commit, "Show the checkpoint commit");
     log_cmd->add_option("--limit", log_args->limit, "Maximum events")->default_val(20);
     log_cmd->callback([&global, &exit_code, log_args, log_cmd]() {
         if (log_cmd->got_subcommand("compact")) return;
@@ -414,28 +395,13 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
             }
             nlohmann::json items = nlohmann::json::array();
             std::ostringstream text;
-            std::map<std::string, std::string> commits;
-            if (log_args->git_commit) {
-                for (const auto& checkpoint : load_checkpoints(ctx->paths)) {
-                    commits[checkpoint.id] = checkpoint.git.value("commit", "");
-                }
-            }
             for (const auto& event : filtered) {
                 nlohmann::json item = core::model::to_json(event);
-                if (log_args->git_commit) {
-                    item["git_commit"] =
-                        event.checkpoint.empty()
-                            ? nlohmann::json(nullptr)
-                            : nlohmann::json(commits[event.checkpoint]);
-                }
                 items.push_back(item);
                 text << event.ts << "  " << util::color::op(event.op) << "  "
                      << event.entity.value("plan", "") << "/"
                      << event.entity.value("line", "") << "/"
                      << event.entity.value("task", "") << "  " << event.reason << "\n";
-                if (log_args->git_commit) {
-                    text << "    commit: " << item["git_commit"].dump() << "\n";
-                }
                 if (log_args->replay) {
                     text << "    " << event.before.dump() << " -> " << event.after.dump()
                          << "\n";
@@ -608,22 +574,6 @@ void register_query_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
                                                entry.path().filename().string());
                         }
                     }
-                }
-            }
-            for (const auto& checkpoint : load_checkpoints(ctx->paths)) {
-                const std::string task_id = checkpoint.entity.value("task", "");
-                if (task_id.empty()) continue;
-                const std::string plan_id = checkpoint.entity.value("plan", "");
-                const std::string line_id = checkpoint.entity.value("line", "");
-                bool found = false;
-                for (const auto& task : tasks) {
-                    if (task.id == task_id && task.plan == plan_id && task.line == line_id) {
-                        found = true;
-                    }
-                }
-                if (!found) {
-                    problems.push_back("checkpoint " + checkpoint.id +
-                                       " references missing task " + task_id);
                 }
             }
             const auto index_file = ctx->paths.cache / "index.json";

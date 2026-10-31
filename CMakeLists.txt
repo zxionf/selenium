@@ -65,7 +65,6 @@ add_executable(sele
     src/cli/config.cpp
     src/cli/agent.cpp
     src/core/git.cpp
-    src/core/checkpoint.cpp
     src/core/config.cpp
     src/core/entity.cpp
     src/core/event.cpp

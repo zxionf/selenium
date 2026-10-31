@@ -21,7 +21,6 @@ struct Step {
     std::string title;
     std::string desc;
     std::string status{"todo"}; // todo | in_progress | done | pending_review | blocked | failed | skipped
-    std::string checkpoint;
     std::string skipped_reason;
     std::string jump_meta;
     bool requires_review{false};
@@ -39,7 +38,6 @@ struct Task {
     std::string status{"todo"}; // todo | in_progress | done | pending_review | paused | blocked | failed | archived
     std::string review_policy{"mixed"};
     std::string current_step;
-    std::string checkpoint_strategy{"per-step"};
     int skipped_count{0};
     std::vector<std::string> modules;
     nlohmann::json depends = nlohmann::json::array();
@@ -80,14 +78,6 @@ struct Plan {
     std::vector<LineRef> lines;
 };
 
-struct Checkpoint {
-    std::string id;
-    std::string ts;
-    std::string status{"valid"}; // valid | stale | orphaned | invalidated
-    nlohmann::json entity = nlohmann::json::object();
-    nlohmann::json git = nlohmann::json::object();
-};
-
 struct Event {
     std::string ts;
     std::string actor;
@@ -105,7 +95,6 @@ nlohmann::json to_json(const Step& value);
 nlohmann::json to_json(const Task& value);
 nlohmann::json to_json(const Line& value);
 nlohmann::json to_json(const Plan& value);
-nlohmann::json to_json(const Checkpoint& value);
 nlohmann::json to_json(const Event& value);
 
 Acceptance acceptance_from_json(const nlohmann::json& value);
@@ -113,7 +102,6 @@ Step step_from_json(const nlohmann::json& value);
 Task task_from_json(const nlohmann::json& value);
 Line line_from_json(const nlohmann::json& value);
 Plan plan_from_json(const nlohmann::json& value);
-Checkpoint checkpoint_from_json(const nlohmann::json& value);
 Event event_from_json(const nlohmann::json& value);
 
 // Current UTC timestamp in "2026-10-30T10:00:00Z" form.

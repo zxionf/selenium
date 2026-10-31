@@ -53,8 +53,6 @@ nlohmann::json to_json(const Step& value) {
             {"title", value.title},
             {"desc", value.desc},
             {"status", value.status},
-            {"checkpoint", value.checkpoint.empty() ? nlohmann::json(nullptr)
-                                                    : nlohmann::json(value.checkpoint)},
             {"skipped_reason", value.skipped_reason.empty() ? nlohmann::json(nullptr)
                                                             : nlohmann::json(value.skipped_reason)},
             {"jump_meta", value.jump_meta.empty() ? nlohmann::json(nullptr)
@@ -80,7 +78,6 @@ nlohmann::json to_json(const Task& value) {
             {"review_policy", value.review_policy},
             {"current_step", value.current_step.empty() ? nlohmann::json(nullptr)
                                                         : nlohmann::json(value.current_step)},
-            {"checkpoint_strategy", value.checkpoint_strategy},
             {"skipped_count", value.skipped_count},
             {"modules", value.modules},
             {"depends", value.depends},
@@ -130,14 +127,6 @@ nlohmann::json to_json(const Plan& value) {
             {"lines", lines}};
 }
 
-nlohmann::json to_json(const Checkpoint& value) {
-    return {{"id", value.id},
-            {"ts", value.ts},
-            {"status", value.status},
-            {"entity", value.entity},
-            {"git", value.git}};
-}
-
 nlohmann::json to_json(const Event& value) {
     nlohmann::json result = {{"ts", value.ts},
                              {"actor", value.actor},
@@ -168,7 +157,6 @@ Step step_from_json(const nlohmann::json& value) {
     result.title = string_or(value, "title", "");
     result.desc = string_or(value, "desc", "");
     result.status = string_or(value, "status", "todo");
-    result.checkpoint = string_or(value, "checkpoint", "");
     result.skipped_reason = string_or(value, "skipped_reason", "");
     result.jump_meta = string_or(value, "jump_meta", "");
     result.requires_review = bool_or(value, "requires_review", false);
@@ -188,7 +176,6 @@ Task task_from_json(const nlohmann::json& value) {
     result.status = string_or(value, "status", "todo");
     result.review_policy = string_or(value, "review_policy", "mixed");
     result.current_step = string_or(value, "current_step", "");
-    result.checkpoint_strategy = string_or(value, "checkpoint_strategy", "per-step");
     if (const auto found = value.find("skipped_count"); found != value.end() &&
         found->is_number_integer()) {
         result.skipped_count = found->get<int>();
@@ -250,16 +237,6 @@ Plan plan_from_json(const nlohmann::json& value) {
             result.lines.push_back(ref);
         }
     }
-    return result;
-}
-
-Checkpoint checkpoint_from_json(const nlohmann::json& value) {
-    Checkpoint result;
-    result.id = string_or(value, "id", "");
-    result.ts = string_or(value, "ts", "");
-    result.status = string_or(value, "status", "valid");
-    if (const auto found = value.find("entity"); found != value.end()) result.entity = *found;
-    if (const auto found = value.find("git"); found != value.end()) result.git = *found;
     return result;
 }
 

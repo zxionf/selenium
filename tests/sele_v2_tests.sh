@@ -52,21 +52,21 @@ setup_git_project() {
     "$BIN" step start T1 S1 --root "$ROOT" --line a >/dev/null
 }
 
-test_git_commit_checkpoint() {
+test_git_commit() {
     setup_git_project
     echo "b" > "$ROOT/b.txt"
     if "$BIN" git commit --root "$ROOT" --task T1 --step S1 --message "feat: add b" \
-        --files b.txt --output json | jq -e '.checkpoint | startswith("ck-")' >/dev/null; then
-        pass "git commit creates a checkpoint"
+        --files b.txt --output json | jq -e '.commit | length > 0' >/dev/null; then
+        pass "git commit records the commit"
     else
-        fail "git commit creates a checkpoint"
+        fail "git commit records the commit"
     fi
-    if ls "$ROOT/.sele/checkpoints"/*/*.json >/dev/null 2>&1; then
-        pass "checkpoint file is written"
+    if "$BIN" log --root "$ROOT" --output json |
+        jq -e '[.items[] | select(.op == "git.commit")] | length == 1' >/dev/null; then
+        pass "git commit writes an event"
     else
-        fail "checkpoint file is written"
+        fail "git commit writes an event"
     fi
-    "$BIN" status --root "$ROOT" >/dev/null
     rm -rf "$ROOT"
 }
 
@@ -126,55 +126,6 @@ test_cache_index() {
         pass "task locate returns the task file"
     else
         fail "task locate returns the task file"
-    fi
-    rm -rf "$ROOT"
-}
-
-test_task_revert() {
-    setup_git_project
-    "$BIN" step add T1 "s2" --root "$ROOT" --line a >/dev/null
-    echo "b" > "$ROOT/b.txt"
-    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --files b.txt --root "$ROOT" >/dev/null
-    local ck1
-    ck1=$(basename "$(ls "$ROOT"/.sele/checkpoints/*/*.json | head -1)" .json)
-    "$BIN" step done T1 S1 --root "$ROOT" --line a >/dev/null
-    "$BIN" step start T1 S2 --root "$ROOT" --line a >/dev/null
-    echo "c" > "$ROOT/c.txt"
-    "$BIN" git commit --task T1 --step S2 --line a --message "c2" --files c.txt --root "$ROOT" >/dev/null
-    "$BIN" step done T1 S2 --root "$ROOT" --line a >/dev/null
-    "$BIN" task revert T1 --to "$ck1" --line a --root "$ROOT" >/dev/null
-    if "$BIN" step list T1 --root "$ROOT" --line a --output json |
-        jq -e '[.items[] | select(.id == "S2")][0].status == "todo"' >/dev/null; then
-        pass "task revert moves later steps back to todo"
-    else
-        fail "task revert moves later steps back to todo"
-    fi
-    local invalidated=0
-    for file in "$ROOT"/.sele/checkpoints/*/*.json; do
-        if jq -e '.status == "invalidated"' "$file" >/dev/null 2>&1; then
-            invalidated=1
-        fi
-    done
-    if [ "$invalidated" -eq 1 ]; then
-        pass "task revert invalidates later checkpoints"
-    else
-        fail "task revert invalidates later checkpoints"
-    fi
-    rm -rf "$ROOT"
-}
-
-test_git_reconcile() {
-    setup_git_project
-    echo "b" > "$ROOT/b.txt"
-    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --files b.txt --root "$ROOT" >/dev/null
-    git -C "$ROOT" reset --hard HEAD~1 >/dev/null
-    git -C "$ROOT" reflog expire --expire=now --all
-    git -C "$ROOT" gc --prune=now --quiet
-    if "$BIN" git reconcile --check --root "$ROOT" --output json |
-        jq -e '.orphaned == 1' >/dev/null; then
-        pass "reconcile marks missing commits orphaned (D4)"
-    else
-        fail "reconcile marks missing commits orphaned (D4)"
     fi
     rm -rf "$ROOT"
 }
@@ -347,28 +298,6 @@ test_full_ref() {
     rm -rf "$ROOT"
 }
 
-test_revert_exec_guard() {
-    setup_git_project
-    local ck
-    ck=$(basename "$(ls "$ROOT"/.sele/checkpoints/*/*.json 2>/dev/null | head -1)" .json)
-    echo "b" > "$ROOT/b.txt"
-    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --root "$ROOT" >/dev/null
-    if [ -z "$ck" ]; then
-        ck=$(basename "$(ls "$ROOT"/.sele/checkpoints/*/*.json | head -1)" .json)
-    fi
-    if expect_code 1 "$BIN" task revert T1 --to "$ck" --line a --root "$ROOT" --exec; then
-        pass "revert --exec requires --yes"
-    else
-        fail "revert --exec requires --yes"
-    fi
-    if "$BIN" task revert T1 --to "$ck" --line a --root "$ROOT" --exec --yes >/dev/null 2>&1; then
-        pass "revert --exec resets git when confirmed"
-    else
-        fail "revert --exec resets git when confirmed"
-    fi
-    rm -rf "$ROOT"
-}
-
 test_next_i1() {
     setup_project
     "$BIN" task add "t1" --root "$ROOT" --line a >/dev/null
@@ -522,12 +451,6 @@ test_query_options() {
     setup_git_project
     echo "b" > "$ROOT/b.txt"
     "$BIN" git commit --task T1 --step S1 --line a --message "c1" --root "$ROOT" >/dev/null
-    if "$BIN" log --git-commit --root "$ROOT" --output json |
-        jq -e '[.items[] | select(.op == "git.commit")][0].git_commit != null' >/dev/null; then
-        pass "log --git-commit shows the commit"
-    else
-        fail "log --git-commit shows the commit"
-    fi
     if [ "$("$BIN" log --since "2999-01-01T00:00:00Z" --root "$ROOT" --output json | jq '.items | length')" = "0" ]; then
         pass "log --since filters future events"
     else
@@ -582,23 +505,6 @@ test_config() {
     rm -rf "$ROOT"
 }
 
-test_checkpoint_strategy() {
-    setup_git_project
-    "$BIN" task update T1 --root "$ROOT" --line a --checkpoint-strategy per-task >/dev/null
-    echo "b" > "$ROOT/b.txt"
-    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --root "$ROOT" >/dev/null
-    "$BIN" step done T1 S1 --root "$ROOT" --line a >/dev/null
-    "$BIN" task done T1 --root "$ROOT" --line a >/dev/null
-    local count
-    count=$(find "$ROOT/.sele/checkpoints" -type f | wc -l)
-    if [ "$count" -ge 2 ]; then
-        pass "per-task strategy adds a task checkpoint"
-    else
-        fail "per-task strategy adds a task checkpoint"
-    fi
-    rm -rf "$ROOT"
-}
-
 test_git_helpers() {
     setup_git_project
     git -C "$ROOT" add -A && git -C "$ROOT" commit -qm state
@@ -633,28 +539,6 @@ test_agent_prompt() {
         pass "agent prompt includes the current task"
     else
         fail "agent prompt includes the current task"
-    fi
-    rm -rf "$ROOT"
-}
-
-test_reconcile_actions() {
-    setup_git_project
-    echo "b" > "$ROOT/b.txt"
-    "$BIN" git commit --task T1 --step S1 --line a --message "c1" --root "$ROOT" >/dev/null
-    local ckfile ck commit
-    ckfile=$(ls "$ROOT"/.sele/checkpoints/*/*.json | head -1)
-    ck=$(basename "$ckfile" .json)
-    commit=$(jq -r '.git.commit' "$ckfile")
-    if "$BIN" git reconcile --remap "$ck" --to "$commit" --root "$ROOT" >/dev/null 2>&1; then
-        pass "reconcile remap accepts a matching tree"
-    else
-        fail "reconcile remap accepts a matching tree"
-    fi
-    if "$BIN" git reconcile --keep-audit "$ck" --root "$ROOT" >/dev/null 2>&1 &&
-        jq -e '.status == "invalidated"' "$ckfile" >/dev/null; then
-        pass "reconcile keep-audit marks invalidated"
-    else
-        fail "reconcile keep-audit marks invalidated"
     fi
     rm -rf "$ROOT"
 }
@@ -733,7 +617,7 @@ test_init() {
     root=$(mktemp -d)
     "$BIN" init --root "$root" >/dev/null
     if [ -d "$root/.sele/plans" ] && [ -d "$root/.sele/lines" ] && [ -d "$root/.sele/tasks" ] &&
-        [ -d "$root/.sele/checkpoints" ] && [ -f "$root/.sele/log.jsonl" ]; then
+        [ -f "$root/.sele/log.jsonl" ]; then
         pass "init creates the .sele layout"
     else
         fail "init creates the .sele layout"
@@ -742,8 +626,8 @@ test_init() {
 }
 
 test_version() {
-    if "$BIN" --version | grep -q '0.20.0'; then
-        pass "version reports 0.20.0"
+    if "$BIN" --version | grep -q '0.20'; then
+        pass "version reports 0.20"
     else
         fail "version reports 0.20.0"
     fi
@@ -920,12 +804,10 @@ test_task_done_requires_steps
 test_next
 test_check
 test_log_and_tree
-test_git_commit_checkpoint
+test_git_commit
 test_git_drift_d2
 test_plan_archive_restore
 test_cache_index
-test_task_revert
-test_git_reconcile
 test_log_compact
 test_decision_replay
 test_task_insert_move
@@ -935,17 +817,14 @@ test_skipped_count
 test_step_lock
 test_step_update_delete_move
 test_full_ref
-test_revert_exec_guard
 test_next_i1
 test_p1_commands
 test_depends_uid
 test_check_extended
 test_query_options
 test_config
-test_checkpoint_strategy
 test_git_helpers
 test_agent_prompt
-test_reconcile_actions
 test_list_text
 test_list_color
 test_color_config

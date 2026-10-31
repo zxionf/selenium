@@ -110,7 +110,6 @@ struct DoneArgs {
     std::string step;
     std::string plan;
     std::string line;
-    std::string checkpoint;
 };
 
 struct SkipArgs {
@@ -272,7 +271,6 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
     done_cmd->add_option("step", done_args->step, "Step id")->required();
     done_cmd->add_option("--plan", done_args->plan, "Plan id");
     done_cmd->add_option("--line", done_args->line, "Line id");
-    done_cmd->add_option("--checkpoint", done_args->checkpoint, "Checkpoint id");
     done_cmd->callback([&global, &exit_code, done_args]() {
         const auto ctx = make_context(global);
         core::model::Task task;
@@ -292,7 +290,6 @@ void register_step_cmds(CLI::App& app, GlobalOptions& global, int& exit_code) {
         const std::string target = item->requires_review ? "pending_review" : "done";
         if (!transition_step(*ctx, exit_code, *item, target)) return;
         item->status = target;
-        if (!done_args->checkpoint.empty()) item->checkpoint = done_args->checkpoint;
         if (task.current_step == item->id) task.current_step.clear();
         if (!save_task(*ctx, exit_code, task)) return;
         try {

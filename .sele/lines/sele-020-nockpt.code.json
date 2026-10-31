@@ -1,0 +1,22 @@
+{
+  "acceptance": [
+    {
+      "desc": "构建通过且无 checkpoint 引用",
+      "id": "A1",
+      "requires_human": false,
+      "status": "unverified",
+      "verified_at": null,
+      "verified_by": null
+    }
+  ],
+  "created_at": "2026-10-31T05:01:59Z",
+  "depends": [],
+  "goal": "删除 checkpoint 代码",
+  "id": "code",
+  "modules": [
+    "core",
+    "cli"
+  ],
+  "plan": "sele-020-nockpt",
+  "status": "active"
+}

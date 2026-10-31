@@ -4,17 +4,17 @@
       "desc": "sele task 按拓扑序显示当前 line",
       "id": "PA1",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T06:19:58Z",
+      "verified_by": "human:zxionf"
     },
     {
       "desc": "--all/--global 与 task list --include-archived",
       "id": "PA2",
       "requires_human": false,
-      "status": "unverified",
-      "verified_at": null,
-      "verified_by": null
+      "status": "pass",
+      "verified_at": "2026-10-31T06:19:58Z",
+      "verified_by": "human:zxionf"
     }
   ],
   "approved_at": "2026-10-31T06:17:12Z",
@@ -32,5 +32,5 @@
       "id": "docs"
     }
   ],
-  "status": "active"
+  "status": "archived"
 }

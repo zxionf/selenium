@@ -718,3 +718,14 @@
 {"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"docs","plan":"sele-024","task":"T1","type":"task","uid":"tsk_01M689NSHB2Z1K081T57YWE8HM"},"op":"task.start","reason":"start task","ts":"2026-10-31T06:19:58Z"}
 {"actor":"agent","after":"todo","before":null,"context":{},"entity":{"line":"docs","plan":"sele-024","step":"S1","task":"T1","type":"step"},"op":"step.add","reason":"create step","ts":"2026-10-31T06:19:58Z"}
 {"actor":"agent","after":"in_progress","before":"todo","context":{},"entity":{"line":"docs","plan":"sele-024","step":"S1","task":"T1","type":"step"},"op":"step.start","reason":"start step","ts":"2026-10-31T06:19:58Z"}
+{"actor":"agent","after":"6e4e66238fe862b7a794ecfd5e3cfd3c3b739007","before":null,"context":{},"entity":{"line":"docs","plan":"sele-024","step":"S1","task":"T1","type":"step"},"op":"git.commit","reason":"docs: task 视图与版本 0.21.1","ts":"2026-10-31T06:19:58Z"}
+{"actor":"sele","after":"6e4e66238fe862b7a794ecfd5e3cfd3c3b739007","before":"83d2d9a94e15e750e3a7851cff1aff7e3d26604c","context":{},"entity":{"type":"git"},"op":"git.drift","reason":"D1 HEAD advanced","ts":"2026-10-31T06:19:58Z"}
+{"actor":"agent","after":"done","before":"in_progress","context":{},"entity":{"line":"docs","plan":"sele-024","step":"S1","task":"T1","type":"step"},"op":"step.done","reason":"finish step","ts":"2026-10-31T06:19:58Z"}
+{"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"line":"docs","plan":"sele-024","task":"T1","type":"task","uid":"tsk_01M689NSHB2Z1K081T57YWE8HM"},"op":"task.verify","reason":"A1","ts":"2026-10-31T06:19:58Z"}
+{"actor":"agent","after":"done","before":"in_progress","context":{},"entity":{"line":"docs","plan":"sele-024","task":"T1","type":"task","uid":"tsk_01M689NSHB2Z1K081T57YWE8HM"},"op":"task.done","reason":"task done","ts":"2026-10-31T06:19:58Z"}
+{"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"line":"docs","plan":"sele-024","type":"line"},"op":"line.verify","reason":"A1","ts":"2026-10-31T06:19:58Z"}
+{"actor":"human","after":"done","before":"active","context":{},"entity":{"line":"docs","plan":"sele-024","type":"line"},"op":"line.done","reason":"line complete","ts":"2026-10-31T06:19:58Z"}
+{"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-024","type":"plan"},"op":"plan.verify","reason":"PA1","ts":"2026-10-31T06:19:58Z"}
+{"actor":"human:zxionf","after":"pass","before":"unverified","context":{},"entity":{"plan":"sele-024","type":"plan"},"op":"plan.verify","reason":"PA2","ts":"2026-10-31T06:19:58Z"}
+{"actor":"human","after":"done","before":"active","context":{},"entity":{"plan":"sele-024","type":"plan"},"op":"plan.done","reason":"all lines done","ts":"2026-10-31T06:19:58Z"}
+{"actor":"human","after":"archived","before":"done","context":{},"entity":{"plan":"sele-024","type":"plan"},"op":"plan.archive","reason":"完成后归档","ts":"2026-10-31T06:19:58Z"}

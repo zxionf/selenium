@@ -1,0 +1,24 @@
+{
+  "acceptance": [
+    {
+      "desc": "全限定引用可用",
+      "id": "PA1",
+      "requires_human": false,
+      "status": "pass",
+      "verified_at": "2026-10-31T07:50:31Z",
+      "verified_by": "human:zxionf"
+    }
+  ],
+  "approved_at": "2026-10-31T07:46:10Z",
+  "approved_by": "human:zxionf",
+  "created_at": "2026-10-31T07:46:10Z",
+  "goal": "line switch 支持 plan.line",
+  "id": "sele-033",
+  "lines": [
+    {
+      "depends": [],
+      "id": "cli"
+    }
+  ],
+  "status": "archived"
+}
